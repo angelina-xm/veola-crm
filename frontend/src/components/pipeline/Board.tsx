@@ -39,7 +39,10 @@ export default function Board({
     // ❌ Проверяем корректность исходных данных
     if (!fromStage || fromIndex === undefined) return;
 
-    const toStage = over.data?.current?.stageId;
+    // 🔥 ИСПРАВЛЕНИЕ: Проверяем оба варианта
+    // Если over это карточка, берём stageId из data
+    // Если over это сама колонка, берём ID из over.id
+    const toStage = over.data?.current?.stageId || String(over.id);
 
     // ❌ Если нет целевого этапа - отменяем
     if (!toStage) return;
