@@ -233,3 +233,4 @@ export default function Board({
     </>
   );
 }
+console.log("HELLO BUILD");
