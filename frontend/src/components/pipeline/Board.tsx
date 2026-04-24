@@ -2,8 +2,10 @@
 
 import {
   DndContext,
-  pointerWithin,
+  DragOverlay,
+  closestCorners,
   DragEndEvent,
+  DragStartEvent,
   PointerSensor,
   useSensor,
   useSensors,
@@ -11,23 +13,37 @@ import {
 
 import { useState, useCallback } from "react";
 import Stage from "./Stage";
-import { updateDealStage } from "@/lib/api";
-import { DealsByStage, Deal } from "@/types";
+import { DealCardContent } from "./DealCard";
+import { updateDealStage } from "@/src/lib/api";
+import { DealsByStage, Deal, PipelineStage } from "@/src/types";
 
 interface BoardProps {
-  stages: any[];
+  stages: PipelineStage[];
   dealsByStage: DealsByStage;
-  token: string;
   companyId: number;
+}
+
+type DragMutation = {
+  previous: DealsByStage;
+  movedDealId: string;
+  targetStageId: string;
+};
+
+function parseDealId(dndId: string) {
+  return dndId.startsWith("deal-") ? dndId.slice("deal-".length) : dndId;
+}
+
+function parseStageId(dndId: string) {
+  return dndId.startsWith("stage-") ? dndId.slice("stage-".length) : dndId;
 }
 
 export default function Board({
   stages,
   dealsByStage,
-  token,
   companyId,
 }: BoardProps) {
   const [items, setItems] = useState<DealsByStage>(dealsByStage);
+  const [activeDeal, setActiveDeal] = useState<Deal | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,71 +53,112 @@ export default function Board({
     })
   );
 
+  const findStageIdByDealId = useCallback(
+    (source: DealsByStage, dealId: string) =>
+      Object.keys(source).find((stageId) =>
+        source[stageId]?.some((deal) => String(deal.id) === dealId)
+      ),
+    []
+  );
+
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
       const { active, over } = event;
 
       if (!over) return;
+      const activeDealId = parseDealId(String(active.id));
+      const overRawId = String(over.id);
 
-      const fromStage = active.data.current?.stageId;
-      const fromIndex = active.data.current?.index;
+      let mutationResult: DragMutation | null = null;
 
-      if (!fromStage || fromIndex === undefined) return;
-
-      // 🔥 Определяем целевую колонку
-      const toStage = over.data?.current?.stageId || String(over.id);
-
-      if (!toStage) return;
-
-      // Не перемещаем если drop на той же позиции
-      if (fromStage === toStage && fromIndex === (over.data?.current?.index ?? items[toStage]?.length || 0)) {
-        return;
-      }
-
-      const toIndex =
-        over.data?.current?.index !== undefined
-          ? over.data.current.index
-          : items[toStage]?.length || 0;
-
-      // 🎯 Оптимистичное обновление UI
-      const previousItems = items;
-      
+      // Optimistic UI update based on actual ids instead of stale drag metadata.
       setItems((prev) => {
-        if (!prev[fromStage]) return prev;
+        const fromStageId = findStageIdByDealId(prev, activeDealId);
+        if (!fromStageId) return prev;
 
-        const source = [...prev[fromStage]];
-        const dest =
-          fromStage === toStage ? source : [...(prev[toStage] || [])];
+        const toStageId = overRawId.startsWith("stage-")
+          ? parseStageId(overRawId)
+          : findStageIdByDealId(prev, parseDealId(overRawId));
+        if (!toStageId) return prev;
 
-        const [moved] = source.splice(fromIndex, 1);
+        const sourceDeals = [...(prev[fromStageId] || [])];
+        const targetDeals =
+          fromStageId === toStageId ? sourceDeals : [...(prev[toStageId] || [])];
 
-        if (!moved) return prev;
+        const activeIndex = sourceDeals.findIndex(
+          (deal) => String(deal.id) === activeDealId
+        );
+        if (activeIndex === -1) return prev;
 
-        dest.splice(toIndex, 0, {
-          ...moved,
-          stageId: toStage,
-          stage: toStage,
+        const [movedDeal] = sourceDeals.splice(activeIndex, 1);
+        if (!movedDeal) return prev;
+
+        let targetIndex = targetDeals.findIndex(
+          (deal) => String(deal.id) === parseDealId(overRawId)
+        );
+        if (targetIndex === -1) {
+          targetIndex = targetDeals.length;
+        }
+
+        if (fromStageId === toStageId && activeIndex < targetIndex) {
+          targetIndex -= 1;
+        }
+
+        targetDeals.splice(targetIndex, 0, {
+          ...movedDeal,
+          stageId: toStageId,
+          stage: toStageId,
         });
+
+        mutationResult = {
+          previous: prev,
+          movedDealId: activeDealId,
+          targetStageId: toStageId,
+        };
 
         return {
           ...prev,
-          [fromStage]: source,
-          [toStage]: dest,
+          [fromStageId]: sourceDeals,
+          [toStageId]: targetDeals,
         };
       });
+
+      if (!mutationResult) return;
+
+      const { previous, movedDealId, targetStageId } = mutationResult;
 
       // 🌐 Отправляем обновление на backend
       setLoading(true);
       setError(null);
 
       try {
-        const deal = previousItems[fromStage]?.[fromIndex];
-        if (deal) {
-          await updateDealStage(token, companyId, deal.id, toStage, toIndex);
-        }
+        const updatedDeal = await updateDealStage(
+          companyId,
+          movedDealId,
+          targetStageId
+        );
+
+        // Reconcile local deal fields with backend response.
+        setItems((prev) => {
+          const next: DealsByStage = {};
+          const resolvedStageId = String(updatedDeal?.stage ?? targetStageId);
+          for (const [stageId, deals] of Object.entries(prev)) {
+            next[stageId] = deals.map((deal) =>
+              String(deal.id) === movedDealId
+                ? {
+                    ...deal,
+                    ...updatedDeal,
+                    stage: resolvedStageId,
+                    stageId: resolvedStageId,
+                  }
+                : deal
+            );
+          }
+          return next;
+        });
       } catch (err) {
         // ❌ Откатываем при ошибке
-        setItems(previousItems);
+        setItems(previous);
         setError(
           err instanceof Error ? err.message : "Ошибка при перемещении сделки"
         );
@@ -110,7 +167,34 @@ export default function Board({
         setLoading(false);
       }
     },
-    [items, token, companyId]
+    [companyId, findStageIdByDealId]
+  );
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const activeDealId = parseDealId(String(event.active.id));
+    for (const deals of Object.values(items)) {
+      const deal = deals.find((d) => String(d.id) === activeDealId);
+      if (deal) {
+        setActiveDeal(deal);
+        return;
+      }
+    }
+    setActiveDeal(null);
+  }, [items]);
+
+  const handleDragCancel = useCallback(() => {
+    setActiveDeal(null);
+  }, []);
+
+  const handleDragEndWithCleanup = useCallback(
+    async (event: DragEndEvent) => {
+      try {
+        await handleDragEnd(event);
+      } finally {
+        setActiveDeal(null);
+      }
+    },
+    [handleDragEnd]
   );
 
   return (
@@ -123,8 +207,10 @@ export default function Board({
       
       <DndContext
         sensors={sensors}
-        collisionDetection={pointerWithin}
-        onDragEnd={handleDragEnd}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragCancel={handleDragCancel}
+        onDragEnd={handleDragEndWithCleanup}
       >
         <div className="flex gap-4 overflow-x-auto pb-4">
           {stages.map((stage) => (
@@ -136,6 +222,13 @@ export default function Board({
             />
           ))}
         </div>
+        <DragOverlay>
+          {activeDeal ? (
+            <div className="bg-white p-3 rounded shadow-xl ring-2 ring-blue-300 cursor-grabbing opacity-95 w-60">
+              <DealCardContent deal={activeDeal} />
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
     </>
   );

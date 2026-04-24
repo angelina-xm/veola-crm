@@ -21,7 +21,7 @@ export interface PipelineStage {
 export type DealsByStage = Record<string, Deal[]>;
 
 // API Response
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   data: T;
   error?: string;
   message?: string;
