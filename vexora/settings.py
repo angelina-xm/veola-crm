@@ -9,27 +9,76 @@ https://docs.djangoproject.com/en/6.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
+import os
 from datetime import timedelta
 from pathlib import Path
+
+from django.core.exceptions import ImproperlyConfigured
 from corsheaders.defaults import default_headers
-CORS_ALLOW_HEADERS = list(default_headers) + [
-    "x-company-id",
-]
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
+def _env_bool(name: str, *, default: bool) -> bool:
+    """Пустая строка → default; иначе true/false по явным значениям."""
+    raw = os.environ.get(name, "").strip().lower()
+    if raw == "":
+        return default
+    if raw in ("1", "true", "yes", "on"):
+        return True
+    if raw in ("0", "false", "no", "off"):
+        return False
+    return default
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-6n9h!w5k^7il=wykrnvvtrd0t3g!1cm4asaq4!+*d&bw@+0-hq'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# --- Core (production-ready via env) ---
+# DEBUG: из env; если переменная не задана → True (удобная локальная разработка)
+DEBUG = _env_bool("DEBUG", default=False)
 
-ALLOWED_HOSTS = []
+# SECRET_KEY: в dev можно без env; в production — только из env
+if DEBUG:
+    SECRET_KEY = os.environ.get("SECRET_KEY", "").strip() or "dev-secret-key"
+else:
+    SECRET_KEY = os.environ.get("SECRET_KEY", "").strip()
+    if not SECRET_KEY:
+        raise ImproperlyConfigured(
+            "Set environment variable SECRET_KEY when DEBUG=False."
+        )
+
+# ALLOWED_HOSTS: в dev фиксированный список; в production — из env (+ Render hostname)
+if DEBUG:
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+else:
+    _allowed = [h.strip() for h in os.environ.get("ALLOWED_HOSTS", "").split(",") if h.strip()]
+    _render_host = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "").strip()
+    if _render_host and _render_host not in _allowed:
+        _allowed.append(_render_host)
+    ALLOWED_HOSTS = _allowed
+
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "x-company-id",
+]
+
+# CORS: в продакшене только явные origin-ы (Vercel и т.д.)
+_cors_origins = [o.strip() for o in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if o.strip()]
+if _cors_origins:
+    CORS_ALLOWED_ORIGINS = _cors_origins
+    CORS_ALLOW_ALL_ORIGINS = False
+else:
+    CORS_ALLOWED_ORIGINS = []
+    CORS_ALLOW_ALL_ORIGINS = DEBUG
+
+_csrf_origins = [o.strip() for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()]
+CSRF_TRUSTED_ORIGINS = _csrf_origins
+
+if not DEBUG:
+    if not ALLOWED_HOSTS:
+        raise ImproperlyConfigured("Set ALLOWED_HOSTS when DEBUG=False.")
+    if not CORS_ALLOW_ALL_ORIGINS and not CORS_ALLOWED_ORIGINS:
+        raise ImproperlyConfigured(
+            "Set CORS_ALLOWED_ORIGINS (comma-separated HTTPS origins, e.g. your Vercel URL) when DEBUG=False."
+        )
 
 
 # Application definition
@@ -77,7 +126,8 @@ SIMPLE_JWT = {
 }
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
-    'django.middleware.security.SecurityMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
 
@@ -111,12 +161,23 @@ WSGI_APPLICATION = 'vexora.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# База: PostgreSQL при DATABASE_URL (Render), иначе SQLite для локальной разработки
+if os.environ.get("DATABASE_URL"):
+    import dj_database_url
+
+    DATABASES = {
+        "default": dj_database_url.config(
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 
 # Password validation
@@ -149,10 +210,18 @@ USE_I18N = True
 
 USE_TZ = True
 
-CSRF_TRUSTED_ORIGINS = []
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+}
+
 AUTH_USER_MODEL = 'users.User'
-CORS_ALLOW_ALL_ORIGINS = True
