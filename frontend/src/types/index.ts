@@ -1,3 +1,11 @@
+// Client (CRM)
+export interface Client {
+  id: string | number;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+}
+
 // Deal
 export interface Deal {
   id: string | number;

@@ -13,10 +13,14 @@ export default function Stage({
   stage,
   deals,
   isLoading = false,
+  onDealOpen,
+  onDealDelete,
 }: {
   stage: PipelineStage;
   deals: Deal[];
   isLoading?: boolean;
+  onDealOpen: (deal: Deal) => void;
+  onDealDelete: (deal: Deal) => void;
 }) {
   // ✅ защита от "deals не массив"
   const safeDeals = Array.isArray(deals) ? deals : [];
@@ -47,6 +51,8 @@ export default function Stage({
             deal={deal}
             index={index}
             stageId={String(stage.id)}
+            onOpen={onDealOpen}
+            onDelete={onDealDelete}
           />
         ))}
       </SortableContext>

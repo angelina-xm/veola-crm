@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getLoginReasonMessage, login } from "@/src/lib/auth";
 import { useAuth } from "@/src/components/auth/AuthProvider";
@@ -98,6 +99,16 @@ function LoginPageInner() {
         >
           {loading ? "Signing in..." : "Sign in"}
         </button>
+
+        <p className="mt-4 text-center text-sm text-gray-600">
+          Нет аккаунта?{" "}
+          <Link
+            href="/register"
+            className="font-medium text-blue-600 hover:underline"
+          >
+            Регистрация
+          </Link>
+        </p>
       </form>
     </main>
   );

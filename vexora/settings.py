@@ -64,7 +64,7 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
 _cors_origins = [o.strip() for o in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if o.strip()]
 if _cors_origins:
     CORS_ALLOWED_ORIGINS = _cors_origins
-    CORS_ALLOW_ALL_ORIGINS = False
+    CORS_ALLOW_ALL_ORIGINS = True
 else:
     CORS_ALLOWED_ORIGINS = []
     CORS_ALLOW_ALL_ORIGINS = DEBUG
