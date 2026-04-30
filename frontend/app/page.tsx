@@ -144,6 +144,7 @@ export default function PipelinePage() {
   return (
     <ProtectedRoute>
       <div className="p-6">
+        <h1 style={{ color: "red", fontSize: "40px" }}>DEPLOY TEST</h1>
         <div className="mb-6">
           <div className="flex items-start justify-between gap-4">
             <div>
