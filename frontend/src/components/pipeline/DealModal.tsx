@@ -11,6 +11,7 @@ export interface DealModalProps {
   stages: PipelineStage[];
   clients: Client[];
   submitting: boolean;
+  deletingDeal?: boolean;
   error: string | null;
   onClose: () => void;
   onCreate: (values: {
@@ -34,6 +35,7 @@ export default function DealModal({
   stages,
   clients,
   submitting,
+  deletingDeal = false,
   error,
   onClose,
   onCreate,
@@ -41,6 +43,7 @@ export default function DealModal({
   onDelete,
   onCreateClient,
 }: DealModalProps) {
+  const busy = submitting || deletingDeal;
   const firstStageId = stages[0] ? String(stages[0].id) : "";
 
   const [title, setTitle] = useState(() =>
@@ -99,7 +102,7 @@ export default function DealModal({
       aria-modal="true"
       aria-labelledby="deal-modal-title"
       onMouseDown={(ev) => {
-        if (ev.target === ev.currentTarget) onClose();
+        if (ev.target === ev.currentTarget && !busy) onClose();
       }}
     >
       <div
@@ -113,7 +116,8 @@ export default function DealModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded px-2 py-1 text-sm text-gray-500 hover:bg-gray-100"
+            disabled={busy}
+            className="rounded px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 disabled:opacity-50"
             aria-label="Закрыть"
           >
             ✕
@@ -138,7 +142,7 @@ export default function DealModal({
               onChange={(e) => setTitle(e.target.value)}
               className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
               required
-              disabled={submitting}
+              disabled={busy}
             />
           </div>
 
@@ -156,7 +160,7 @@ export default function DealModal({
               onChange={(e) => setAmount(e.target.value)}
               className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
               required
-              disabled={submitting}
+              disabled={busy}
             />
           </div>
 
@@ -169,7 +173,7 @@ export default function DealModal({
               value={stageId}
               onChange={(e) => setStageId(e.target.value)}
               className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
-              disabled={submitting}
+              disabled={busy}
             >
               {stages.map((s) => (
                 <option key={String(s.id)} value={String(s.id)}>
@@ -189,7 +193,7 @@ export default function DealModal({
                 value={clientId}
                 onChange={(e) => setClientId(e.target.value)}
                 className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
-                disabled={submitting || clients.length === 0}
+                disabled={busy || clients.length === 0}
                 required
               >
                 {clients.length === 0 ? (
@@ -208,7 +212,7 @@ export default function DealModal({
                   <button
                     type="button"
                     onClick={onCreateClient}
-                    disabled={submitting}
+                    disabled={busy}
                     className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700"
                   >
                     Create client
@@ -222,17 +226,17 @@ export default function DealModal({
             <button
               type="submit"
               disabled={
-                submitting ||
+                busy ||
                 (mode === "create" && clients.length === 0)
               }
               className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
             >
-              {submitting ? "Сохранение…" : mode === "create" ? "Создать" : "Сохранить"}
+              {submitting ? "Loading..." : mode === "create" ? "Создать" : "Сохранить"}
             </button>
             <button
               type="button"
               onClick={onClose}
-              disabled={submitting}
+              disabled={busy}
               className="rounded border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
             >
               Отмена
@@ -241,10 +245,10 @@ export default function DealModal({
               <button
                 type="button"
                 onClick={() => void onDelete()}
-                disabled={submitting}
+                disabled={busy}
                 className="ml-auto rounded border border-red-300 bg-white px-4 py-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50"
               >
-                Удалить
+                {deletingDeal ? "Deleting..." : "Delete"}
               </button>
             ) : null}
           </div>

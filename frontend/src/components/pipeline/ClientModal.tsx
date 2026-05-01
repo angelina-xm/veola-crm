@@ -86,7 +86,7 @@ export default function ClientModal({
               disabled={submitting}
               className="rounded bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50"
             >
-              {submitting ? "Creating..." : "Create"}
+              {submitting ? "Loading..." : "Create"}
             </button>
             <button
               type="button"

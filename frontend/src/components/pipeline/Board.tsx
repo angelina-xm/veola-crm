@@ -187,8 +187,6 @@ export default function Board({
 }: BoardProps) {
   const [overlayDeal, setOverlayDeal] = useState<Deal | null>(null);
   const [dndLoading, setDndLoading] = useState(false);
-  const [bannerError, setBannerError] = useState<string | null>(null);
-
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [dealInModal, setDealInModal] = useState<Deal | null>(null);
@@ -197,6 +195,14 @@ export default function Board({
   const [clientModalOpen, setClientModalOpen] = useState(false);
   const [clientSubmitting, setClientSubmitting] = useState(false);
   const [clientError, setClientError] = useState<string | null>(null);
+  const [deletingDealId, setDeletingDealId] = useState<string | null>(null);
+  const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
+
+  const boardBusy =
+    modalSubmitting ||
+    clientSubmitting ||
+    deletingDealId !== null ||
+    deletingClientId !== null;
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -236,7 +242,6 @@ export default function Board({
       const { movedDealId, targetStageId } = mutation;
 
       setDndLoading(true);
-      setBannerError(null);
 
       try {
         const raw = await updateDealStage(
@@ -265,9 +270,11 @@ export default function Board({
         });
       } catch (err) {
         setDealsByStage((prev) => rollbackSingleMovedDeal(prev, mutation));
-        setBannerError(
-          err instanceof Error ? err.message : "Ошибка при перемещении сделки"
-        );
+        const msg =
+          err instanceof Error ? err.message : "Ошибка при перемещении сделки";
+        if (typeof window !== "undefined") {
+          window.alert(msg);
+        }
         console.error("Drag & drop error:", err);
       } finally {
         setDndLoading(false);
@@ -344,11 +351,12 @@ export default function Board({
 
   const handleDelete = useCallback(
     async (deal: Deal) => {
-      if (typeof window !== "undefined" && !window.confirm("Удалить эту сделку?"))
+      if (typeof window !== "undefined" && !window.confirm("Are you sure?")) {
         return;
+      }
 
       const snapshot = deal;
-      setBannerError(null);
+      setDeletingDealId(String(deal.id));
       setDealsByStage((prev) => removeDealFromGrouped(prev, String(deal.id)));
 
       const closeIfModal =
@@ -360,11 +368,18 @@ export default function Board({
 
       try {
         await deleteDeal(companyId, deal.id);
+        if (typeof window !== "undefined") {
+          window.alert("Deal deleted");
+        }
       } catch (err) {
         setDealsByStage((prev) => upsertDealInGrouped(prev, snapshot));
-        setBannerError(
-          err instanceof Error ? err.message : "Не удалось удалить сделку"
-        );
+        const msg =
+          err instanceof Error ? err.message : "Не удалось удалить сделку";
+        if (typeof window !== "undefined") {
+          window.alert(msg);
+        }
+      } finally {
+        setDeletingDealId(null);
       }
     },
     [companyId, dealInModal, setDealsByStage]
@@ -406,11 +421,16 @@ export default function Board({
           return upsertDealInGrouped(cleared, normalized);
         });
         setModalOpen(false);
+        if (typeof window !== "undefined") {
+          window.alert("Deal created");
+        }
       } catch (err) {
         setDealsByStage((prev) => removeDealFromGrouped(prev, tempId));
-        setModalError(
-          err instanceof Error ? err.message : "Не удалось создать сделку"
-        );
+        const msg =
+          err instanceof Error ? err.message : "Не удалось создать сделку";
+        if (typeof window !== "undefined") {
+          window.alert(msg);
+        }
       } finally {
         setModalSubmitting(false);
       }
@@ -453,11 +473,16 @@ export default function Board({
         setDealsByStage((prev) => upsertDealInGrouped(prev, normalized));
         setModalOpen(false);
         setDealInModal(null);
+        if (typeof window !== "undefined") {
+          window.alert("Deal updated");
+        }
       } catch (err) {
         setDealsByStage((prev) => upsertDealInGrouped(prev, prevSnapshot));
-        setModalError(
-          err instanceof Error ? err.message : "Не удалось сохранить сделку"
-        );
+        const msg =
+          err instanceof Error ? err.message : "Не удалось сохранить сделку";
+        if (typeof window !== "undefined") {
+          window.alert(msg);
+        }
       } finally {
         setModalSubmitting(false);
       }
@@ -472,20 +497,23 @@ export default function Board({
 
   const handleDeleteClient = useCallback(
     async (client: Client) => {
-      if (
-        typeof window !== "undefined" &&
-        !window.confirm("Удалить этого клиента?")
-      ) {
+      if (typeof window !== "undefined" && !window.confirm("Are you sure?")) {
         return;
       }
+      setDeletingClientId(String(client.id));
       try {
         await deleteClient(companyId, client.id);
         const refreshed = await getClients(companyId);
         setClients(refreshed);
+        if (typeof window !== "undefined") {
+          window.alert("Client deleted");
+        }
       } catch (err) {
         window.alert(
           err instanceof Error ? err.message : "Не удалось удалить клиента"
         );
+      } finally {
+        setDeletingClientId(null);
       }
     },
     [companyId, setClients]
@@ -503,10 +531,15 @@ export default function Board({
         const refreshed = await getClients(companyId);
         setClients(refreshed);
         setClientModalOpen(false);
+        if (typeof window !== "undefined") {
+          window.alert("Client created");
+        }
       } catch (err) {
-        setClientError(
-          err instanceof Error ? err.message : "Не удалось создать клиента"
-        );
+        const msg =
+          err instanceof Error ? err.message : "Не удалось создать клиента";
+        if (typeof window !== "undefined") {
+          window.alert(msg);
+        }
       } finally {
         setClientSubmitting(false);
       }
@@ -521,29 +554,27 @@ export default function Board({
           <button
             type="button"
             onClick={openCreate}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-700"
+            disabled={boardBusy}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-700 disabled:opacity-50"
           >
             Add Deal
           </button>
           <button
             type="button"
             onClick={openClientCreate}
-            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            disabled={boardBusy}
+            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           >
             Add Client
           </button>
         </div>
       </div>
 
-      {bannerError ? (
-        <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          {bannerError}
-        </div>
-      ) : null}
-
-      {clients.length > 0 ? (
-        <div className="mb-4 rounded border border-gray-200 bg-white px-3 py-2 text-sm">
-          <p className="mb-2 font-medium text-gray-800">Клиенты</p>
+      <div className="mb-4 rounded border border-gray-200 bg-white px-3 py-2 text-sm">
+        <p className="mb-2 font-medium text-gray-800">Клиенты</p>
+        {clients.length === 0 ? (
+          <p className="text-gray-500">No clients yet</p>
+        ) : (
           <ul className="space-y-1">
             {clients.map((c) => (
               <li
@@ -557,15 +588,18 @@ export default function Board({
                 <button
                   type="button"
                   onClick={() => void handleDeleteClient(c)}
-                  className="shrink-0 text-red-600 hover:underline"
+                  disabled={deletingClientId !== null}
+                  className="shrink-0 text-red-600 hover:underline disabled:opacity-50"
                 >
-                  Delete
+                  {deletingClientId === String(c.id)
+                    ? "Deleting..."
+                    : "Delete"}
                 </button>
               </li>
             ))}
           </ul>
-        </div>
-      ) : null}
+        )}
+      </div>
 
       <DndContext
         sensors={sensors}
@@ -581,6 +615,8 @@ export default function Board({
               stage={stage}
               deals={dealsByStage[String(stage.id)] || []}
               isLoading={dndLoading}
+              deletingDealId={deletingDealId}
+              dragDisabled={Boolean(deletingDealId || dndLoading)}
               onDealOpen={openEdit}
               onDealDelete={(d) => void handleDelete(d)}
             />
@@ -602,6 +638,10 @@ export default function Board({
           stages={stages}
           clients={clients}
           submitting={modalSubmitting}
+          deletingDeal={
+            dealInModal != null &&
+            deletingDealId === String(dealInModal.id)
+          }
           error={modalError}
           onClose={closeModal}
           onCreate={(v) => void handleModalCreate(v)}

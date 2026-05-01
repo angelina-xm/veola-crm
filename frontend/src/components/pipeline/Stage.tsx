@@ -13,12 +13,16 @@ export default function Stage({
   stage,
   deals,
   isLoading = false,
+  deletingDealId,
+  dragDisabled = false,
   onDealOpen,
   onDealDelete,
 }: {
   stage: PipelineStage;
   deals: Deal[];
   isLoading?: boolean;
+  deletingDealId: string | null;
+  dragDisabled?: boolean;
   onDealOpen: (deal: Deal) => void;
   onDealDelete: (deal: Deal) => void;
 }) {
@@ -51,6 +55,9 @@ export default function Stage({
             deal={deal}
             index={index}
             stageId={String(stage.id)}
+            isDeleting={deletingDealId === String(deal.id)}
+            deleteDisabled={deletingDealId !== null}
+            dragDisabled={dragDisabled}
             onOpen={onDealOpen}
             onDelete={onDealDelete}
           />

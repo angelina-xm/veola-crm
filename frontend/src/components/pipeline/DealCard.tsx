@@ -33,12 +33,18 @@ export default function DealCard({
   deal,
   index,
   stageId,
+  isDeleting = false,
+  deleteDisabled = false,
+  dragDisabled = false,
   onOpen,
   onDelete,
 }: {
   deal: Deal;
   index: number;
   stageId: string;
+  isDeleting?: boolean;
+  deleteDisabled?: boolean;
+  dragDisabled?: boolean;
   onOpen: (deal: Deal) => void;
   onDelete: (deal: Deal) => void;
 }) {
@@ -50,6 +56,7 @@ export default function DealCard({
     transition,
   } = useSortable({
     id: `deal-${String(deal.id)}`,
+    disabled: dragDisabled,
     data: {
       stageId,
       index,
@@ -71,8 +78,9 @@ export default function DealCard({
     >
       <button
         type="button"
-        className="shrink-0 cursor-grab touch-none border-r border-gray-100 px-2 py-3 text-gray-400 hover:bg-gray-50 active:cursor-grabbing"
+        className="shrink-0 cursor-grab touch-none border-r border-gray-100 px-2 py-3 text-gray-400 hover:bg-gray-50 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
         {...listeners}
+        disabled={dragDisabled}
         aria-label="Перетащить"
       >
         ⋮⋮
@@ -87,13 +95,14 @@ export default function DealCard({
         </button>
         <button
           type="button"
-          className="mt-2 text-xs text-red-600 hover:underline"
+          className="mt-2 text-xs text-red-600 hover:underline disabled:opacity-50"
+          disabled={deleteDisabled}
           onClick={(e) => {
             e.stopPropagation();
             onDelete(deal);
           }}
         >
-          Удалить
+          {isDeleting ? "Deleting..." : "Delete"}
         </button>
       </div>
     </div>
