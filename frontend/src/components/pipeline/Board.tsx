@@ -21,6 +21,7 @@ import { DealCardContent } from "./DealCard";
 import {
   createDeal,
   createClient,
+  deleteClient,
   getClients,
   deleteDeal,
   patchDeal,
@@ -469,6 +470,27 @@ export default function Board({
     await handleDelete(dealInModal);
   }, [dealInModal, handleDelete]);
 
+  const handleDeleteClient = useCallback(
+    async (client: Client) => {
+      if (
+        typeof window !== "undefined" &&
+        !window.confirm("Удалить этого клиента?")
+      ) {
+        return;
+      }
+      try {
+        await deleteClient(companyId, client.id);
+        const refreshed = await getClients(companyId);
+        setClients(refreshed);
+      } catch (err) {
+        window.alert(
+          err instanceof Error ? err.message : "Не удалось удалить клиента"
+        );
+      }
+    },
+    [companyId, setClients]
+  );
+
   const handleCreateClient = useCallback(
     async (values: { name: string; email: string }) => {
       setClientSubmitting(true);
@@ -516,6 +538,32 @@ export default function Board({
       {bannerError ? (
         <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
           {bannerError}
+        </div>
+      ) : null}
+
+      {clients.length > 0 ? (
+        <div className="mb-4 rounded border border-gray-200 bg-white px-3 py-2 text-sm">
+          <p className="mb-2 font-medium text-gray-800">Клиенты</p>
+          <ul className="space-y-1">
+            {clients.map((c) => (
+              <li
+                key={String(c.id)}
+                className="flex items-center justify-between gap-2 border-b border-gray-100 py-1 last:border-0"
+              >
+                <span className="text-gray-700">
+                  {c.name}
+                  {c.email ? ` (${String(c.email)})` : ""}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void handleDeleteClient(c)}
+                  className="shrink-0 text-red-600 hover:underline"
+                >
+                  Delete
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
       ) : null}
 

@@ -1,5 +1,8 @@
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from deals.models import Deal
 
 from .models import Client
 from .serializers import ClientSerializer
@@ -33,3 +36,12 @@ class ClientViewSet(viewsets.ModelViewSet):
     #  CREATE (привязка к компании)
     def perform_create(self, serializer):
         serializer.save(company=self.request.company)
+
+    def destroy(self, request, *args, **kwargs):
+        client = self.get_object()
+        if Deal.objects.filter(client=client).exists():
+            return Response(
+                {"detail": "Cannot delete client with deals"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return super().destroy(request, *args, **kwargs)

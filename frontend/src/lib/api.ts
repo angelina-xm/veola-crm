@@ -195,6 +195,20 @@ export async function createClient(
   };
 }
 
+export async function deleteClient(
+  companyId: number,
+  id: string | number
+): Promise<void> {
+  const res = await fetchWithAuth(
+    `/clients/${id}/`,
+    { method: "DELETE" },
+    companyId
+  );
+  if (!res.ok && res.status !== 204) {
+    throw new Error(await parseErrorBody(res));
+  }
+}
+
 export type CreateDealPayload = {
   title: string;
   amount: number;
