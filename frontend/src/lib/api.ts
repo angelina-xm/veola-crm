@@ -167,6 +167,34 @@ export async function getClients(companyId: number): Promise<Client[]> {
   }));
 }
 
+export type CreateClientPayload = {
+  name: string;
+  email?: string;
+};
+
+export async function createClient(
+  companyId: number,
+  payload: CreateClientPayload
+): Promise<Client> {
+  const res = await fetchWithAuth(
+    "/clients/",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    companyId
+  );
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const raw = (await res.json()) as Client;
+  return {
+    ...raw,
+    id: String(raw.id),
+  };
+}
+
 export type CreateDealPayload = {
   title: string;
   amount: number;

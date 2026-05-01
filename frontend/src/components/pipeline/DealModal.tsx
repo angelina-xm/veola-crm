@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Client, Deal, PipelineStage } from "@/src/types";
 
 export type DealModalMode = "create" | "edit";
@@ -25,6 +25,7 @@ export interface DealModalProps {
     stageId: string;
   }) => void | Promise<void>;
   onDelete?: () => void | Promise<void>;
+  onCreateClient?: () => void;
 }
 
 export default function DealModal({
@@ -38,6 +39,7 @@ export default function DealModal({
   onCreate,
   onEdit,
   onDelete,
+  onCreateClient,
 }: DealModalProps) {
   const firstStageId = stages[0] ? String(stages[0].id) : "";
 
@@ -55,6 +57,14 @@ export default function DealModal({
   const [clientId, setClientId] = useState(() =>
     clients[0] ? String(clients[0].id) : ""
   );
+
+  useEffect(() => {
+    if (mode !== "create") return;
+    if (clientId) return;
+    if (clients[0]) {
+      setClientId(String(clients[0].id));
+    }
+  }, [mode, clientId, clients]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -193,9 +203,17 @@ export default function DealModal({
                 )}
               </select>
               {clients.length === 0 ? (
-                <p className="mt-1 text-xs text-amber-700">
-                  Добавьте клиента через API или админку, затем обновите страницу.
-                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <p className="text-xs text-amber-700">Нет клиентов в компании.</p>
+                  <button
+                    type="button"
+                    onClick={onCreateClient}
+                    disabled={submitting}
+                    className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700"
+                  >
+                    Create client
+                  </button>
+                </div>
               ) : null}
             </div>
           ) : null}

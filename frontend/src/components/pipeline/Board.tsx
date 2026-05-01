@@ -16,9 +16,12 @@ import {
 import { useCallback, useState } from "react";
 import Stage from "./Stage";
 import DealModal from "./DealModal";
+import ClientModal from "./ClientModal";
 import { DealCardContent } from "./DealCard";
 import {
   createDeal,
+  createClient,
+  getClients,
   deleteDeal,
   patchDeal,
   updateDealStage,
@@ -36,6 +39,7 @@ interface BoardProps {
   setDealsByStage: React.Dispatch<React.SetStateAction<DealsByStage>>;
   companyId: number;
   clients: Client[];
+  setClients: React.Dispatch<React.SetStateAction<Client[]>>;
 }
 
 type DragMutation = {
@@ -178,6 +182,7 @@ export default function Board({
   setDealsByStage,
   companyId,
   clients,
+  setClients,
 }: BoardProps) {
   const [overlayDeal, setOverlayDeal] = useState<Deal | null>(null);
   const [dndLoading, setDndLoading] = useState(false);
@@ -188,6 +193,9 @@ export default function Board({
   const [dealInModal, setDealInModal] = useState<Deal | null>(null);
   const [modalSubmitting, setModalSubmitting] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
+  const [clientModalOpen, setClientModalOpen] = useState(false);
+  const [clientSubmitting, setClientSubmitting] = useState(false);
+  const [clientError, setClientError] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -307,6 +315,17 @@ export default function Board({
     setModalError(null);
     setModalOpen(true);
   }, []);
+
+  const openClientCreate = useCallback(() => {
+    setClientError(null);
+    setClientModalOpen(true);
+  }, []);
+
+  const closeClientModal = useCallback(() => {
+    if (clientSubmitting) return;
+    setClientModalOpen(false);
+    setClientError(null);
+  }, [clientSubmitting]);
 
   const openEdit = useCallback((deal: Deal) => {
     setModalMode("edit");
@@ -450,16 +469,48 @@ export default function Board({
     await handleDelete(dealInModal);
   }, [dealInModal, handleDelete]);
 
+  const handleCreateClient = useCallback(
+    async (values: { name: string; email: string }) => {
+      setClientSubmitting(true);
+      setClientError(null);
+      try {
+        await createClient(companyId, {
+          name: values.name,
+          email: values.email || undefined,
+        });
+        const refreshed = await getClients(companyId);
+        setClients(refreshed);
+        setClientModalOpen(false);
+      } catch (err) {
+        setClientError(
+          err instanceof Error ? err.message : "Не удалось создать клиента"
+        );
+      } finally {
+        setClientSubmitting(false);
+      }
+    },
+    [companyId, setClients]
+  );
+
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={openCreate}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-700"
-        >
-          Add Deal
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={openCreate}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-700"
+          >
+            Add Deal
+          </button>
+          <button
+            type="button"
+            onClick={openClientCreate}
+            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Add Client
+          </button>
+        </div>
       </div>
 
       {bannerError ? (
@@ -510,8 +561,17 @@ export default function Board({
           onDelete={
             modalMode === "edit" ? () => void handleModalDelete() : undefined
           }
+          onCreateClient={openClientCreate}
         />
       ) : null}
+
+      <ClientModal
+        open={clientModalOpen}
+        submitting={clientSubmitting}
+        error={clientError}
+        onClose={closeClientModal}
+        onSubmit={(values) => void handleCreateClient(values)}
+      />
     </>
   );
 }

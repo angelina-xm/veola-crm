@@ -204,6 +204,7 @@ export default function PipelinePage() {
             setDealsByStage={setDealsByStage}
             companyId={companyId}
             clients={clients}
+            setClients={setClients}
           />
         ) : null}
       </div>
