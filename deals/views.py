@@ -1,8 +1,15 @@
+from datetime import timedelta
+
+from django.db.models import Max, Q
+from django.db.models.functions import Coalesce
+from django.utils import timezone
 from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from .models import Deal, PipelineStage
-from .serializers import DealSerializer, PipelineStageSerializer
+from .serializers import DealSerializer, PipelineStageSerializer, StaleDealSerializer
 from clients.permissions import HasCompany, IsOwner, IsManagerOrOwner
 
 
@@ -14,7 +21,7 @@ class DealViewSet(viewsets.ModelViewSet):
         return Deal.objects.filter(company=self.request.company)
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
+        if self.action in ['list', 'retrieve', 'stale']:
             return [IsAuthenticated(), HasCompany()]
 
         elif self.action == 'create':
@@ -30,6 +37,23 @@ class DealViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.company)
+
+    @action(detail=False, methods=["get"], url_path="stale")
+    def stale(self, request):
+        """Сделки без активности: нет activities или последняя старше 48 ч."""
+        stale_time = timezone.now() - timedelta(hours=48)
+        qs = (
+            Deal.objects.filter(company=request.company)
+            .select_related("client", "stage")
+            .annotate(last_activity=Max("activities__created_at"))
+            .filter(
+                Q(last_activity__lt=stale_time) | Q(last_activity__isnull=True)
+            )
+            .annotate(sort_key=Coalesce("last_activity", "created_at"))
+            .order_by("sort_key")
+        )
+        ser = StaleDealSerializer(qs, many=True)
+        return Response(ser.data)
 
 
 class PipelineStageViewSet(viewsets.ModelViewSet):

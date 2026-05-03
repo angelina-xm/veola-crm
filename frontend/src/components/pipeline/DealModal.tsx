@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Client, Deal, PipelineStage } from "@/src/types";
+import { Client, Deal, PipelineStage, StaleDeal } from "@/src/types";
+import DealActivitiesTimeline from "./DealActivitiesTimeline";
 
 export type DealModalMode = "create" | "edit";
 
 export interface DealModalProps {
   mode: DealModalMode;
   deal: Deal | null;
+  companyId: number;
   stages: PipelineStage[];
   clients: Client[];
   submitting: boolean;
@@ -27,11 +29,14 @@ export interface DealModalProps {
   }) => void | Promise<void>;
   onDelete?: () => void | Promise<void>;
   onCreateClient?: () => void;
+  /** Если сделка в списке GET /deals/stale/ — показать предупреждение */
+  staleRow?: StaleDeal | null;
 }
 
 export default function DealModal({
   mode,
   deal,
+  companyId,
   stages,
   clients,
   submitting,
@@ -42,6 +47,7 @@ export default function DealModal({
   onEdit,
   onDelete,
   onCreateClient,
+  staleRow = null,
 }: DealModalProps) {
   const busy = submitting || deletingDeal;
   const firstStageId = stages[0] ? String(stages[0].id) : "";
@@ -95,6 +101,20 @@ export default function DealModal({
   const titleText =
     mode === "create" ? "Новая сделка" : "Редактировать сделку";
 
+  const staleInactiveDays =
+    mode === "edit" && deal && staleRow
+      ? (() => {
+          const ref = staleRow.last_activity ?? deal.created_at;
+          if (!ref) return 2;
+          return Math.max(
+            0,
+            Math.floor(
+              (Date.now() - new Date(ref).getTime()) / (24 * 60 * 60 * 1000)
+            )
+          );
+        })()
+      : 0;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
@@ -106,7 +126,9 @@ export default function DealModal({
       }}
     >
       <div
-        className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+        className={`w-full rounded-lg bg-white p-6 shadow-xl ${
+          mode === "edit" ? "max-w-3xl" : "max-w-md"
+        }`}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-start justify-between gap-4">
@@ -253,6 +275,37 @@ export default function DealModal({
             ) : null}
           </div>
         </form>
+
+        {mode === "edit" && deal && staleRow ? (
+          <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
+            <div className="flex flex-wrap items-center gap-2">
+              <span>
+                🚨 No activity for {staleInactiveDays} day
+                {staleInactiveDays === 1 ? "" : "s"}
+              </span>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  document
+                    .getElementById("deal-activities-section")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+                className="rounded border border-red-300 bg-white px-2 py-1 text-xs font-medium hover:bg-red-100 disabled:opacity-50"
+              >
+                + Add Activity
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {mode === "edit" && deal ? (
+          <DealActivitiesTimeline
+            companyId={companyId}
+            dealId={deal.id}
+            disabled={busy}
+          />
+        ) : null}
       </div>
     </div>
   );

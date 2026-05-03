@@ -3,7 +3,15 @@
  * Refresh и очистка сессии — в @/src/lib/auth
  */
 
-import { Client, Deal, DealsByStage, PipelineStage } from "@/src/types";
+import {
+  Activity,
+  ActivityType,
+  Client,
+  Deal,
+  DealsByStage,
+  PipelineStage,
+  StaleDeal,
+} from "@/src/types";
 import {
   authPaths,
   getApiBaseUrl,
@@ -144,6 +152,30 @@ export async function getDeals(companyId: number) {
   return res.json();
 }
 
+export async function getStaleDeals(companyId: number): Promise<StaleDeal[]> {
+  const res = await fetchWithAuth("/deals/stale/", {}, companyId);
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const data: unknown = await res.json();
+  const list = normalizeApiList(
+    data as ListResponse<{
+      id: string | number;
+      title: string;
+      amount: string | number;
+      client: number;
+      client_name?: string;
+      stage: number | null;
+      created_at: string;
+      last_activity: string | null;
+    }>
+  );
+  return list.map((row) => ({
+    ...row,
+    id: String(row.id),
+  }));
+}
+
 export async function getPipelineStages(companyId: number) {
   const res = await fetchWithAuth("/pipeline-stages/", {}, companyId);
 
@@ -207,6 +239,138 @@ export async function deleteClient(
   if (!res.ok && res.status !== 204) {
     throw new Error(await parseErrorBody(res));
   }
+}
+
+function normalizeActivityRow(raw: {
+  id: string | number;
+  deal: string | number;
+  author: string | number;
+  author_email?: string | null;
+  type: ActivityType;
+  content?: string | null;
+  due_date?: string | null;
+  is_completed?: boolean;
+  created_at: string;
+}): Activity {
+  return {
+    id: String(raw.id),
+    deal: raw.deal,
+    author: raw.author,
+    author_email: raw.author_email,
+    type: raw.type,
+    content: raw.content,
+    due_date: raw.due_date,
+    is_completed: Boolean(raw.is_completed),
+    created_at: raw.created_at,
+  };
+}
+
+export async function getActivities(
+  companyId: number,
+  dealId: string | number
+): Promise<Activity[]> {
+  const q = new URLSearchParams({ deal_id: String(dealId) });
+  const res = await fetchWithAuth(`/activities/?${q.toString()}`, {}, companyId);
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const data: unknown = await res.json();
+  const list = normalizeApiList(
+    data as ListResponse<{
+      id: string | number;
+      deal: string | number;
+      author: string | number;
+      author_email?: string | null;
+      type: ActivityType;
+      content?: string | null;
+      due_date?: string | null;
+      is_completed?: boolean;
+      created_at: string;
+    }>
+  );
+  return list.map((row) => normalizeActivityRow(row));
+}
+
+export type CreateActivityPayload = {
+  deal: number;
+  type: ActivityType;
+  content?: string;
+  due_date?: string | null;
+};
+
+export async function createActivity(
+  companyId: number,
+  payload: CreateActivityPayload
+): Promise<Activity> {
+  const body: Record<string, unknown> = {
+    deal: payload.deal,
+    type: payload.type,
+  };
+  if (payload.content !== undefined && payload.content !== "") {
+    body.content = payload.content;
+  }
+  if (payload.due_date) {
+    body.due_date = payload.due_date;
+  }
+  const res = await fetchWithAuth(
+    "/activities/",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    companyId
+  );
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const raw = (await res.json()) as {
+    id: string | number;
+    deal: string | number;
+    author: string | number;
+    author_email?: string | null;
+    type: ActivityType;
+    content?: string | null;
+    due_date?: string | null;
+    is_completed?: boolean;
+    created_at: string;
+  };
+  return normalizeActivityRow(raw);
+}
+
+export type PatchActivityPayload = {
+  is_completed?: boolean;
+};
+
+export async function patchActivity(
+  companyId: number,
+  activityId: string | number,
+  body: PatchActivityPayload
+): Promise<Activity> {
+  const res = await fetchWithAuth(
+    `/activities/${activityId}/`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    companyId
+  );
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const raw = (await res.json()) as {
+    id: string | number;
+    deal: string | number;
+    author: string | number;
+    author_email?: string | null;
+    type: ActivityType;
+    content?: string | null;
+    due_date?: string | null;
+    is_completed?: boolean;
+    created_at: string;
+  };
+  return normalizeActivityRow(raw);
 }
 
 export type CreateDealPayload = {

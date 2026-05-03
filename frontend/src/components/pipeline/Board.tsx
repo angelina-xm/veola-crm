@@ -13,7 +13,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Stage from "./Stage";
 import DealModal from "./DealModal";
 import ClientModal from "./ClientModal";
@@ -24,6 +24,7 @@ import {
   deleteClient,
   getClients,
   deleteDeal,
+  getStaleDeals,
   patchDeal,
   updateDealStage,
 } from "@/src/lib/api";
@@ -32,7 +33,7 @@ import {
   removeDealFromGrouped,
   upsertDealInGrouped,
 } from "@/src/lib/dealGrouping";
-import { Client, DealsByStage, Deal, PipelineStage } from "@/src/types";
+import { Client, DealsByStage, Deal, PipelineStage, StaleDeal } from "@/src/types";
 
 interface BoardProps {
   stages: PipelineStage[];
@@ -57,6 +58,32 @@ function parseDealId(dndId: string) {
 
 function parseStageId(dndId: string) {
   return dndId.startsWith("stage-") ? dndId.slice("stage-".length) : dndId;
+}
+
+function findDealInBoard(
+  grouped: DealsByStage,
+  dealId: string
+): Deal | undefined {
+  for (const list of Object.values(grouped)) {
+    if (!Array.isArray(list)) continue;
+    const found = list.find((d) => String(d.id) === dealId);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+function formatActivityAgo(
+  lastActivity: string | null,
+  createdAt: string | undefined
+): string {
+  const ref = lastActivity ?? createdAt;
+  if (!ref) return "—";
+  const diffMs = Date.now() - new Date(ref).getTime();
+  const days = Math.floor(diffMs / (86400 * 1000));
+  const hours = Math.floor(diffMs / (3600 * 1000));
+  if (days >= 1) return `${days} day${days === 1 ? "" : "s"} ago`;
+  if (hours >= 1) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  return "< 1 hour ago";
 }
 
 /** Сначала пробуем pointerWithin (лучше для колонок/пустых зон), затем closestCorners. */
@@ -197,12 +224,33 @@ export default function Board({
   const [clientError, setClientError] = useState<string | null>(null);
   const [deletingDealId, setDeletingDealId] = useState<string | null>(null);
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
+  const [staleDeals, setStaleDeals] = useState<StaleDeal[]>([]);
 
   const boardBusy =
     modalSubmitting ||
     clientSubmitting ||
     deletingDealId !== null ||
     deletingClientId !== null;
+
+  const staleById = useMemo(() => {
+    const m = new Map<string, StaleDeal>();
+    for (const s of staleDeals) {
+      m.set(String(s.id), s);
+    }
+    return m;
+  }, [staleDeals]);
+
+  useEffect(() => {
+    const run = async () => {
+      try {
+        const list = await getStaleDeals(companyId);
+        setStaleDeals(list);
+      } catch {
+        setStaleDeals([]);
+      }
+    };
+    void run();
+  }, [companyId, modalOpen]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -601,6 +649,47 @@ export default function Board({
         )}
       </div>
 
+      {staleDeals.length > 0 ? (
+        <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+          <p className="font-semibold">
+            ⚠️ Follow up needed ({staleDeals.length})
+          </p>
+          <ul className="mt-2 max-h-40 space-y-2 overflow-y-auto">
+            {staleDeals.map((s) => (
+              <li
+                key={s.id}
+                className="rounded border border-amber-200 bg-white px-2 py-1.5"
+              >
+                <button
+                  type="button"
+                  disabled={boardBusy}
+                  onClick={() => {
+                    const d = findDealInBoard(dealsByStage, s.id);
+                    if (d) openEdit(d);
+                  }}
+                  className="w-full text-left hover:underline disabled:opacity-50"
+                >
+                  <span className="font-medium text-gray-900">{s.title}</span>
+                  {s.client_name ? (
+                    <span className="block text-xs text-gray-600">
+                      Client: {s.client_name}
+                    </span>
+                  ) : null}
+                  <span className="mt-0.5 block text-xs text-gray-500">
+                    Last activity:{" "}
+                    {s.last_activity
+                      ? new Date(s.last_activity).toLocaleString()
+                      : "Never"}
+                    {" · "}
+                    {formatActivityAgo(s.last_activity, s.created_at)}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       <DndContext
         sensors={sensors}
         collisionDetection={boardCollisionDetection}
@@ -635,6 +724,7 @@ export default function Board({
         <DealModal
           mode={modalMode}
           deal={dealInModal}
+          companyId={companyId}
           stages={stages}
           clients={clients}
           submitting={modalSubmitting}
@@ -650,6 +740,11 @@ export default function Board({
             modalMode === "edit" ? () => void handleModalDelete() : undefined
           }
           onCreateClient={openClientCreate}
+          staleRow={
+            dealInModal && modalMode === "edit"
+              ? staleById.get(String(dealInModal.id)) ?? null
+              : null
+          }
         />
       ) : null}
 
