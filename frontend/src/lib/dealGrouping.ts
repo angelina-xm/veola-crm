@@ -18,15 +18,19 @@ export function normalizeDealPayload(deal: {
         ? Number.parseFloat(rawAmount)
         : Number(rawAmount);
 
-  return {
+  const out: Deal = {
     id: String(deal.id),
     title: deal.title,
     stage: stageVal,
     stageId: stageVal,
     amount: Number.isFinite(amount) ? amount : undefined,
     client: deal.client != null ? deal.client : undefined,
-    created_at: deal.created_at,
   };
+  const created = deal.created_at;
+  if (created != null && String(created).trim() !== "") {
+    out.created_at = String(created);
+  }
+  return out;
 }
 
 /** Убирает сделку из всех колонок и вставляет в колонку `stage`. */

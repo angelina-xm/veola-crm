@@ -314,6 +314,8 @@ export default function Board({
                     ...updatedDeal,
                     stage: resolvedStageId,
                     stageId: resolvedStageId,
+                    created_at:
+                      updatedDeal.created_at ?? deal.created_at,
                   }
                 : deal
             );
@@ -522,7 +524,14 @@ export default function Board({
         });
         const normalized = readDealPatch(raw);
 
-        setDealsByStage((prev) => upsertDealInGrouped(prev, normalized));
+        setDealsByStage((prev) =>
+          upsertDealInGrouped(prev, {
+            ...dealInModal,
+            ...normalized,
+            created_at:
+              normalized.created_at ?? dealInModal.created_at,
+          })
+        );
         setModalOpen(false);
         setDealInModal(null);
         if (typeof window !== "undefined") {
