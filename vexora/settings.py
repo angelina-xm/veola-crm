@@ -65,17 +65,26 @@ else:
         ALLOWED_HOSTS = [*ALLOWED_HOSTS, _render_host]
 
 CORS_ALLOW_HEADERS = list(default_headers) + [
-    "x-company-id",
+    "X-Company-ID",
 ]
 
-# CORS: локально — все origin; production — только CORS_ALLOWED_ORIGINS из env
-_cors_origins = [o.strip() for o in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if o.strip()]
+# CORS: локально — все origin; production — Vercel + доп. origin из env (без дублей)
+_env_cors_origins = [
+    o.strip() for o in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if o.strip()
+]
+_DEFAULT_PRODUCTION_CORS_ORIGINS = ("https://veola-crm.vercel.app",)
 if DEBUG:
-    CORS_ALLOWED_ORIGINS = _cors_origins
+    CORS_ALLOWED_ORIGINS = _env_cors_origins
     CORS_ALLOW_ALL_ORIGINS = True
 else:
-    CORS_ALLOWED_ORIGINS = _cors_origins
+    CORS_ALLOWED_ORIGINS = list(
+        dict.fromkeys([*_DEFAULT_PRODUCTION_CORS_ORIGINS, *_env_cors_origins])
+    )
     CORS_ALLOW_ALL_ORIGINS = False
+
+# Временная отладка CORS (небезопасно на production — открывает API любому сайту):
+# поставьте CORS_ALLOW_ALL_ORIGINS = True и при необходимости очистите CORS_ALLOWED_ORIGINS.
+# CORS_ALLOW_ALL_ORIGINS = True
 
 _csrf_origins = [o.strip() for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()]
 CSRF_TRUSTED_ORIGINS = _csrf_origins
