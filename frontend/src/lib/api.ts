@@ -274,6 +274,35 @@ function normalizeActivityRow(raw: {
   };
 }
 
+/** Все незавершённые задачи компании (для карточек pipeline, без нового API). */
+export async function getCompanyOpenTasks(
+  companyId: number
+): Promise<Activity[]> {
+  const q = new URLSearchParams({
+    type: "task",
+    is_completed: "false",
+  });
+  const res = await fetchWithAuth(`/activities/?${q.toString()}`, {}, companyId);
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const data: unknown = await res.json();
+  const list = normalizeApiList(
+    data as ListResponse<{
+      id: string | number;
+      deal: string | number;
+      author: string | number;
+      author_email?: string | null;
+      type: ActivityType;
+      content?: string | null;
+      due_date?: string | null;
+      is_completed?: boolean;
+      created_at: string;
+    }>
+  );
+  return list.map((row) => normalizeActivityRow(row));
+}
+
 export async function getActivities(
   companyId: number,
   dealId: string | number

@@ -7,12 +7,13 @@ import {
 } from "@dnd-kit/sortable";
 
 import DealCard from "./DealCard";
-import { Client, Deal, PipelineStage } from "@/src/types";
+import { Activity, Client, Deal, PipelineStage } from "@/src/types";
 
 export default function Stage({
   stage,
   deals,
   clients = [],
+  openTasksByDealId = {},
   isLoading = false,
   deletingDealId,
   dragDisabled = false,
@@ -22,6 +23,7 @@ export default function Stage({
   stage: PipelineStage;
   deals: Deal[];
   clients?: Client[];
+  openTasksByDealId?: Record<string, Activity[]>;
   isLoading?: boolean;
   deletingDealId: string | null;
   dragDisabled?: boolean;
@@ -58,6 +60,7 @@ export default function Stage({
             index={index}
             stageId={String(stage.id)}
             clients={clients}
+            openTasksForDeal={openTasksByDealId[String(deal.id)] ?? []}
             isDeleting={deletingDealId === String(deal.id)}
             deleteDisabled={deletingDealId !== null}
             dragDisabled={dragDisabled}

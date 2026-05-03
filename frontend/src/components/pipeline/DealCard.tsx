@@ -5,28 +5,31 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   clientNameById,
   formatCreatedRelative,
+  formatDealAmountUsd,
   formatDealIdLabel,
 } from "@/src/lib/dealDisplay";
-import { Client, Deal } from "@/src/types";
-
-function formatAmount(amount?: number) {
-  if (typeof amount !== "number") return null;
-  return new Intl.NumberFormat("ru-RU", {
-    style: "currency",
-    currency: "RUB",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
+import { getDealTaskSignal, type DealTaskSignal } from "@/src/lib/dealTaskSignal";
+import { Activity, Client, Deal } from "@/src/types";
 
 export function DealCardContent({
   deal,
   clients = [],
+  openTasksForDeal = [],
+  taskSignal: taskSignalProp,
 }: {
   deal: Deal;
   clients?: Client[];
+  openTasksForDeal?: Activity[];
+  taskSignal?: DealTaskSignal;
 }) {
-  const formattedAmount = formatAmount(deal.amount);
+  const formattedAmount = formatDealAmountUsd(deal.amount);
   const clientLabel = clientNameById(clients, deal.client);
+  const clientLine =
+    clientLabel ??
+    (deal.client != null && deal.client !== ""
+      ? String(deal.client)
+      : "—");
+  const taskSignal = taskSignalProp ?? getDealTaskSignal(openTasksForDeal);
 
   return (
     <>
@@ -36,14 +39,17 @@ export function DealCardContent({
           ({formatDealIdLabel(deal.id)})
         </span>
       </p>
+      <p className="mt-1 text-xs text-gray-600">
+        Client: {clientLine}
+      </p>
       {formattedAmount ? (
-        <p className="mt-1 text-xs text-gray-600">{formattedAmount}</p>
-      ) : null}
-      {deal.client ? (
-        <p className="mt-1 text-xs text-gray-500">
-          Client: {clientLabel ?? String(deal.client)}
+        <p className="mt-0.5 text-sm font-medium text-gray-900">
+          {formattedAmount}
         </p>
       ) : null}
+      <p className={`mt-1 text-xs font-medium ${taskSignal.textClass}`}>
+        {taskSignal.text}
+      </p>
       {deal.created_at ? (
         <p className="mt-1 text-xs text-gray-500">
           Created: {formatCreatedRelative(deal.created_at)}
@@ -63,17 +69,20 @@ export default function DealCard({
   clients = [],
   onOpen,
   onDelete,
+  openTasksForDeal = [],
 }: {
   deal: Deal;
   index: number;
   stageId: string;
   clients?: Client[];
+  openTasksForDeal?: Activity[];
   isDeleting?: boolean;
   deleteDisabled?: boolean;
   dragDisabled?: boolean;
   onOpen: (deal: Deal) => void;
   onDelete: (deal: Deal) => void;
 }) {
+  const taskSignal = getDealTaskSignal(openTasksForDeal);
   const {
     attributes,
     listeners,
@@ -99,7 +108,7 @@ export default function DealCard({
     <div
       ref={setNodeRef}
       style={style}
-      className="mb-2 flex gap-1 rounded bg-white shadow"
+      className={`mb-2 flex gap-1 overflow-hidden rounded bg-white shadow ${taskSignal.borderClass}`}
       {...attributes}
     >
       <button
@@ -117,7 +126,12 @@ export default function DealCard({
           className="w-full text-left"
           onClick={() => onOpen(deal)}
         >
-          <DealCardContent deal={deal} clients={clients} />
+          <DealCardContent
+            deal={deal}
+            clients={clients}
+            openTasksForDeal={openTasksForDeal}
+            taskSignal={taskSignal}
+          />
         </button>
         <button
           type="button"

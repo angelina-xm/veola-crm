@@ -25,6 +25,21 @@ export function formatDealIdLabel(id: string | number): string {
   return `#${id}`;
 }
 
+/** Сумма сделки для карточки (USD, целые). */
+export function formatDealAmountUsd(
+  amount?: number | string | null
+): string | null {
+  if (amount === undefined || amount === null || amount === "") return null;
+  const n =
+    typeof amount === "number" ? amount : Number.parseFloat(String(amount));
+  if (!Number.isFinite(n)) return null;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(n);
+}
+
 export function clientNameById(
   clients: Client[],
   clientId?: string | number

@@ -24,20 +24,30 @@ import {
   deleteClient,
   getClients,
   deleteDeal,
+  getCompanyOpenTasks,
   getStaleDeals,
   patchDeal,
   updateDealStage,
 } from "@/src/lib/api";
 import {
   formatCreatedRelative,
+  formatDealAmountUsd,
   formatDealIdLabel,
 } from "@/src/lib/dealDisplay";
+import { groupOpenTasksByDealId } from "@/src/lib/dealTaskSignal";
 import {
   normalizeDealPayload,
   removeDealFromGrouped,
   upsertDealInGrouped,
 } from "@/src/lib/dealGrouping";
-import { Client, DealsByStage, Deal, PipelineStage, StaleDeal } from "@/src/types";
+import {
+  Activity,
+  Client,
+  DealsByStage,
+  Deal,
+  PipelineStage,
+  StaleDeal,
+} from "@/src/types";
 
 interface BoardProps {
   stages: PipelineStage[];
@@ -229,6 +239,16 @@ export default function Board({
   const [deletingDealId, setDeletingDealId] = useState<string | null>(null);
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
   const [staleDeals, setStaleDeals] = useState<StaleDeal[]>([]);
+  const [openCompanyTasks, setOpenCompanyTasks] = useState<Activity[]>([]);
+
+  const openTasksByDealId = useMemo(() => {
+    const m = groupOpenTasksByDealId(openCompanyTasks);
+    const rec: Record<string, Activity[]> = {};
+    m.forEach((list, dealId) => {
+      rec[dealId] = list;
+    });
+    return rec;
+  }, [openCompanyTasks]);
 
   const boardBusy =
     modalSubmitting ||
@@ -251,6 +271,18 @@ export default function Board({
         setStaleDeals(list);
       } catch {
         setStaleDeals([]);
+      }
+    };
+    void run();
+  }, [companyId, modalOpen]);
+
+  useEffect(() => {
+    const run = async () => {
+      try {
+        const tasks = await getCompanyOpenTasks(companyId);
+        setOpenCompanyTasks(tasks);
+      } catch {
+        setOpenCompanyTasks([]);
       }
     };
     void run();
@@ -665,10 +697,15 @@ export default function Board({
       {staleDeals.length > 0 ? (
         <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950">
           <p className="font-semibold">
-            ⚠️ Follow up needed ({staleDeals.length})
+            ⚠️ {staleDeals.length}{" "}
+            {staleDeals.length === 1
+              ? "deal requires follow-up"
+              : "deals require follow-up"}
           </p>
           <ul className="mt-2 max-h-40 space-y-2 overflow-y-auto">
-            {staleDeals.map((s) => (
+            {staleDeals.map((s) => {
+              const staleAmount = formatDealAmountUsd(s.amount);
+              return (
               <li
                 key={s.id}
                 className="rounded border border-amber-200 bg-white px-2 py-1.5"
@@ -688,9 +725,12 @@ export default function Board({
                       ({formatDealIdLabel(s.id)})
                     </span>
                   </span>
-                  {s.client_name ? (
-                    <span className="block text-xs text-gray-600">
-                      Client: {s.client_name}
+                  <span className="block text-xs text-gray-600">
+                    Client: {s.client_name ?? String(s.client)}
+                  </span>
+                  {staleAmount ? (
+                    <span className="mt-0.5 block text-sm font-medium text-gray-900">
+                      {staleAmount}
                     </span>
                   ) : null}
                   <span className="mt-0.5 block text-xs text-gray-500">
@@ -706,7 +746,8 @@ export default function Board({
                   </span>
                 </button>
               </li>
-            ))}
+              );
+            })}
           </ul>
         </div>
       ) : null}
@@ -725,6 +766,7 @@ export default function Board({
               stage={stage}
               deals={dealsByStage[String(stage.id)] || []}
               clients={clients}
+              openTasksByDealId={openTasksByDealId}
               isLoading={dndLoading}
               deletingDealId={deletingDealId}
               dragDisabled={Boolean(deletingDealId || dndLoading)}
@@ -736,7 +778,13 @@ export default function Board({
         <DragOverlay>
           {overlayDeal ? (
             <div className="w-60 cursor-grabbing rounded bg-white p-3 opacity-95 shadow-xl ring-2 ring-blue-300">
-              <DealCardContent deal={overlayDeal} clients={clients} />
+              <DealCardContent
+                deal={overlayDeal}
+                clients={clients}
+                openTasksForDeal={
+                  openTasksByDealId[String(overlayDeal.id)] ?? []
+                }
+              />
             </div>
           ) : null}
         </DragOverlay>
