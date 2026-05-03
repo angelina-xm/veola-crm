@@ -29,6 +29,10 @@ import {
   updateDealStage,
 } from "@/src/lib/api";
 import {
+  formatCreatedRelative,
+  formatDealIdLabel,
+} from "@/src/lib/dealDisplay";
+import {
   normalizeDealPayload,
   removeDealFromGrouped,
   upsertDealInGrouped,
@@ -669,12 +673,20 @@ export default function Board({
                   }}
                   className="w-full text-left hover:underline disabled:opacity-50"
                 >
-                  <span className="font-medium text-gray-900">{s.title}</span>
+                  <span className="font-medium text-gray-900">
+                    {s.title}{" "}
+                    <span className="font-normal text-gray-500">
+                      ({formatDealIdLabel(s.id)})
+                    </span>
+                  </span>
                   {s.client_name ? (
                     <span className="block text-xs text-gray-600">
                       Client: {s.client_name}
                     </span>
                   ) : null}
+                  <span className="mt-0.5 block text-xs text-gray-500">
+                    Created: {formatCreatedRelative(s.created_at)}
+                  </span>
                   <span className="mt-0.5 block text-xs text-gray-500">
                     Last activity:{" "}
                     {s.last_activity
@@ -703,6 +715,7 @@ export default function Board({
               key={String(stage.id)}
               stage={stage}
               deals={dealsByStage[String(stage.id)] || []}
+              clients={clients}
               isLoading={dndLoading}
               deletingDealId={deletingDealId}
               dragDisabled={Boolean(deletingDealId || dndLoading)}
@@ -714,7 +727,7 @@ export default function Board({
         <DragOverlay>
           {overlayDeal ? (
             <div className="w-60 cursor-grabbing rounded bg-white p-3 opacity-95 shadow-xl ring-2 ring-blue-300">
-              <DealCardContent deal={overlayDeal} />
+              <DealCardContent deal={overlayDeal} clients={clients} />
             </div>
           ) : null}
         </DragOverlay>

@@ -7,11 +7,12 @@ import {
 } from "@dnd-kit/sortable";
 
 import DealCard from "./DealCard";
-import { Deal, PipelineStage } from "@/src/types";
+import { Client, Deal, PipelineStage } from "@/src/types";
 
 export default function Stage({
   stage,
   deals,
+  clients = [],
   isLoading = false,
   deletingDealId,
   dragDisabled = false,
@@ -20,6 +21,7 @@ export default function Stage({
 }: {
   stage: PipelineStage;
   deals: Deal[];
+  clients?: Client[];
   isLoading?: boolean;
   deletingDealId: string | null;
   dragDisabled?: boolean;
@@ -55,6 +57,7 @@ export default function Stage({
             deal={deal}
             index={index}
             stageId={String(stage.id)}
+            clients={clients}
             isDeleting={deletingDealId === String(deal.id)}
             deleteDisabled={deletingDealId !== null}
             dragDisabled={dragDisabled}

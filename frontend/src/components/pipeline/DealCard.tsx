@@ -2,7 +2,12 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Deal } from "@/src/types";
+import {
+  clientNameById,
+  formatCreatedRelative,
+  formatDealIdLabel,
+} from "@/src/lib/dealDisplay";
+import { Client, Deal } from "@/src/types";
 
 function formatAmount(amount?: number) {
   if (typeof amount !== "number") return null;
@@ -13,17 +18,36 @@ function formatAmount(amount?: number) {
   }).format(amount);
 }
 
-export function DealCardContent({ deal }: { deal: Deal }) {
+export function DealCardContent({
+  deal,
+  clients = [],
+}: {
+  deal: Deal;
+  clients?: Client[];
+}) {
   const formattedAmount = formatAmount(deal.amount);
+  const clientLabel = clientNameById(clients, deal.client);
 
   return (
     <>
-      <p className="text-sm font-semibold text-gray-900">{deal.title}</p>
+      <p className="text-sm font-semibold text-gray-900">
+        {deal.title}{" "}
+        <span className="font-normal text-gray-500">
+          ({formatDealIdLabel(deal.id)})
+        </span>
+      </p>
       {formattedAmount ? (
         <p className="mt-1 text-xs text-gray-600">{formattedAmount}</p>
       ) : null}
       {deal.client ? (
-        <p className="mt-1 text-xs text-gray-500">Клиент: {String(deal.client)}</p>
+        <p className="mt-1 text-xs text-gray-500">
+          Client: {clientLabel ?? String(deal.client)}
+        </p>
+      ) : null}
+      {deal.created_at ? (
+        <p className="mt-1 text-xs text-gray-500">
+          Created: {formatCreatedRelative(deal.created_at)}
+        </p>
       ) : null}
     </>
   );
@@ -36,12 +60,14 @@ export default function DealCard({
   isDeleting = false,
   deleteDisabled = false,
   dragDisabled = false,
+  clients = [],
   onOpen,
   onDelete,
 }: {
   deal: Deal;
   index: number;
   stageId: string;
+  clients?: Client[];
   isDeleting?: boolean;
   deleteDisabled?: boolean;
   dragDisabled?: boolean;
@@ -91,7 +117,7 @@ export default function DealCard({
           className="w-full text-left"
           onClick={() => onOpen(deal)}
         >
-          <DealCardContent deal={deal} />
+          <DealCardContent deal={deal} clients={clients} />
         </button>
         <button
           type="button"

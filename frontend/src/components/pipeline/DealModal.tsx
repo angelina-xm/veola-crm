@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  clientNameById,
+  formatCreatedRelative,
+  formatDealIdLabel,
+} from "@/src/lib/dealDisplay";
 import { Client, Deal, PipelineStage, StaleDeal } from "@/src/types";
 import DealActivitiesTimeline from "./DealActivitiesTimeline";
 
@@ -132,9 +137,32 @@ export default function DealModal({
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-start justify-between gap-4">
-          <h2 id="deal-modal-title" className="text-lg font-semibold text-gray-900">
-            {titleText}
-          </h2>
+          <div className="min-w-0 flex-1">
+            <h2 id="deal-modal-title" className="text-lg font-semibold text-gray-900">
+              {titleText}
+            </h2>
+            {mode === "edit" && deal ? (
+              <div className="mt-1 space-y-0.5 text-sm">
+                <p className="text-gray-900">
+                  <span className="font-semibold">{deal.title}</span>{" "}
+                  <span className="font-normal text-gray-500">
+                    ({formatDealIdLabel(deal.id)})
+                  </span>
+                </p>
+                {deal.client != null ? (
+                  <p className="text-xs text-gray-600">
+                    Client:{" "}
+                    {clientNameById(clients, deal.client) ?? String(deal.client)}
+                  </p>
+                ) : null}
+                {deal.created_at ? (
+                  <p className="text-xs text-gray-500">
+                    Created: {formatCreatedRelative(deal.created_at)}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
           <button
             type="button"
             onClick={onClose}
