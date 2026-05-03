@@ -7,6 +7,7 @@ from .serializers import ActivitySerializer
 
 
 class ActivityViewSet(viewsets.ModelViewSet):
+    queryset = Activity.objects.all()  # ← ДОБАВЬ ЭТО
     serializer_class = ActivitySerializer
     permission_classes = [IsAuthenticated]
 
@@ -17,7 +18,7 @@ class ActivityViewSet(viewsets.ModelViewSet):
             .order_by("-created_at")
         )
         deal_id = self.request.query_params.get("deal_id")
-        if deal_id is not None and deal_id != "":
+        if deal_id:
             qs = qs.filter(deal_id=deal_id)
 
         type_param = self.request.query_params.get("type")
@@ -25,7 +26,7 @@ class ActivityViewSet(viewsets.ModelViewSet):
             qs = qs.filter(type=type_param)
 
         is_completed_param = self.request.query_params.get("is_completed")
-        if is_completed_param is not None and is_completed_param != "":
+        if is_completed_param:
             low = is_completed_param.lower()
             if low in ("true", "1", "yes"):
                 qs = qs.filter(is_completed=True)

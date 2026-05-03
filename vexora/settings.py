@@ -33,8 +33,8 @@ def _env_bool(name: str, *, default: bool) -> bool:
 
 
 # --- Core (production-ready via env) ---
-# DEBUG: из env; если переменная не задана → True (удобная локальная разработка)
-DEBUG = _env_bool("DEBUG", default=False)
+# DEBUG: из env; по умолчанию False (локально задайте DEBUG=1 или DEBUG=true)
+DEBUG = _env_bool("DEBUG", default=True)
 
 # SECRET_KEY: в dev можно без env; в production — только из env
 if DEBUG:
@@ -46,28 +46,36 @@ else:
             "Set environment variable SECRET_KEY when DEBUG=False."
         )
 
-# ALLOWED_HOSTS: в dev фиксированный список; в production — из env (+ Render hostname)
+# ALLOWED_HOSTS: локально (DEBUG=True) — дефолт 127.0.0.1/localhost; production — только из env (+ Render)
+_hosts_env = os.getenv("ALLOWED_HOSTS")
 if DEBUG:
-    ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+    ALLOWED_HOSTS = (
+        [h.strip() for h in _hosts_env.split(",") if h.strip()]
+        if _hosts_env
+        else ["127.0.0.1", "localhost"]
+    )
 else:
-    _allowed = [h.strip() for h in os.environ.get("ALLOWED_HOSTS", "").split(",") if h.strip()]
+    ALLOWED_HOSTS = (
+        [h.strip() for h in _hosts_env.split(",") if h.strip()]
+        if _hosts_env
+        else []
+    )
     _render_host = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "").strip()
-    if _render_host and _render_host not in _allowed:
-        _allowed.append(_render_host)
-    ALLOWED_HOSTS = _allowed
+    if _render_host and _render_host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS = [*ALLOWED_HOSTS, _render_host]
 
 CORS_ALLOW_HEADERS = list(default_headers) + [
     "x-company-id",
 ]
 
-# CORS: в продакшене только явные origin-ы (Vercel и т.д.)
+# CORS: локально — все origin; production — только CORS_ALLOWED_ORIGINS из env
 _cors_origins = [o.strip() for o in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if o.strip()]
-if _cors_origins:
+if DEBUG:
     CORS_ALLOWED_ORIGINS = _cors_origins
     CORS_ALLOW_ALL_ORIGINS = True
 else:
-    CORS_ALLOWED_ORIGINS = []
-    CORS_ALLOW_ALL_ORIGINS = DEBUG
+    CORS_ALLOWED_ORIGINS = _cors_origins
+    CORS_ALLOW_ALL_ORIGINS = False
 
 _csrf_origins = [o.strip() for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()]
 CSRF_TRUSTED_ORIGINS = _csrf_origins
