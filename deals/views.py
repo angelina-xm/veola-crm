@@ -8,6 +8,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from .automation import create_automation_tasks
 from .models import Deal, PipelineStage
 from .serializers import DealSerializer, PipelineStageSerializer, StaleDealSerializer
 from clients.permissions import HasCompany, IsOwner, IsManagerOrOwner
@@ -37,6 +38,12 @@ class DealViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.company)
+
+    def perform_update(self, serializer):
+        old_stage_id = serializer.instance.stage_id
+        deal = serializer.save()
+        if deal.stage_id != old_stage_id:
+            create_automation_tasks(deal, self.request.user)
 
     @action(detail=False, methods=["get"], url_path="stale")
     def stale(self, request):
