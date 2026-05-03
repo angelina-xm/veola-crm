@@ -10,7 +10,7 @@ class UsernameTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
     Тело запроса: { "username", "password" }.
     Значение username подставляется в USERNAME_FIELD модели (у нас — email).
-    Ответ: { "access", "refresh" } (как у стандартного SimpleJWT).
+    Ответ: { "access", "refresh", "company_id" } — company_id первая компания пользователя (для X-Company-ID).
     """
 
     username = serializers.CharField(write_only=True)
@@ -21,7 +21,16 @@ class UsernameTokenObtainPairSerializer(TokenObtainPairSerializer):
 
     def validate(self, attrs):
         attrs[User.USERNAME_FIELD] = attrs.pop("username")
-        return super().validate(attrs)
+        data = super().validate(attrs)
+        cid = (
+            Membership.objects.filter(user=self.user)
+            .order_by("id")
+            .values_list("company_id", flat=True)
+            .first()
+        )
+        if cid is not None:
+            data["company_id"] = cid
+        return data
 
 
 class RegisterSerializer(serializers.ModelSerializer):

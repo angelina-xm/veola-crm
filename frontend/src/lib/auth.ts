@@ -12,6 +12,7 @@ const DEFAULT_API_BASE_URL = "https://veola-crm.onrender.com/api";
 
 const LS_ACCESS = "access";
 const LS_REFRESH = "refresh";
+const LS_COMPANY_ID = "companyId";
 
 const TOKEN_OBTAIN_PATH = "/token/";
 const TOKEN_REFRESH_PATH = "/token/refresh/";
@@ -64,6 +65,26 @@ export function clearAuthTokens() {
   if (!isBrowser()) return;
   localStorage.removeItem(LS_ACCESS);
   localStorage.removeItem(LS_REFRESH);
+  localStorage.removeItem(LS_COMPANY_ID);
+}
+
+/** ID компании для X-Company-ID (после логина пишется из ответа API). */
+export function getStoredCompanyId(): number | null {
+  if (!isBrowser()) return null;
+  const raw = localStorage.getItem(LS_COMPANY_ID);
+  if (!raw || !raw.trim()) return null;
+  const n = Number.parseInt(raw.trim(), 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Fallback для dev / Vercel preview, если в LS ещё нет companyId. */
+export function readEnvCompanyId(): number {
+  const raw = process.env.NEXT_PUBLIC_COMPANY_ID;
+  if (typeof raw === "string" && raw.trim()) {
+    const n = Number.parseInt(raw.trim(), 10);
+    if (Number.isFinite(n)) return n;
+  }
+  return 1;
 }
 
 export function hasAuthSession() {
@@ -205,11 +226,12 @@ export async function login(username: string, password: string) {
     throw new Error(msg);
   }
 
-  let data: { access?: string; refresh?: string };
+  let data: { access?: string; refresh?: string; company_id?: number };
   try {
     data = (await response.json()) as {
       access?: string;
       refresh?: string;
+      company_id?: number;
     };
   } catch {
     throw new Error("Некорректный ответ сервера при входе.");
@@ -225,6 +247,9 @@ export async function login(username: string, password: string) {
   if (!isBrowser()) return;
   localStorage.setItem(LS_ACCESS, access);
   localStorage.setItem(LS_REFRESH, refresh);
+  if (typeof data.company_id === "number" && Number.isFinite(data.company_id)) {
+    localStorage.setItem(LS_COMPANY_ID, String(data.company_id));
+  }
 }
 
 export type RegisterPayload = {

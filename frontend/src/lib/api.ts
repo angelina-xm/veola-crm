@@ -17,6 +17,7 @@ import {
   getApiBaseUrl,
   getApiUrlTroubleshootHint,
   getFreshAccessToken,
+  getStoredCompanyId,
   prepareRequestAccess,
   AuthError,
   logout,
@@ -52,7 +53,7 @@ export function normalizeApiList<T>(payload: ListResponse<T>): T[] {
 
 /**
  * Authorization: Bearer <значение из localStorage "access">
- * X-Company-ID — если передан companyId
+ * X-Company-ID — из аргумента companyId или из localStorage (companyId) после логина
  * При 401: refresh → снова читаем "access" из localStorage → повтор запроса
  */
 function networkAuthError(): AuthError {
@@ -79,8 +80,12 @@ export async function fetchWithAuth(
     throw new AuthError("No access token", "missing_access_token");
   }
   headers.set("Authorization", `Bearer ${access}`);
-  if (companyId !== undefined) {
-    headers.set("X-Company-ID", companyId.toString());
+  const resolvedCompanyId =
+    companyId !== undefined && Number.isFinite(companyId)
+      ? companyId
+      : getStoredCompanyId();
+  if (resolvedCompanyId != null) {
+    headers.set("X-Company-ID", String(resolvedCompanyId));
   }
 
   let response: Response;
@@ -121,8 +126,12 @@ export async function fetchWithAuth(
 
   const retryHeaders = new Headers(init.headers ?? {});
   retryHeaders.set("Authorization", `Bearer ${accessAfterRefresh}`);
-  if (companyId !== undefined) {
-    retryHeaders.set("X-Company-ID", companyId.toString());
+  const resolvedRetry =
+    companyId !== undefined && Number.isFinite(companyId)
+      ? companyId
+      : getStoredCompanyId();
+  if (resolvedRetry != null) {
+    retryHeaders.set("X-Company-ID", String(resolvedRetry));
   }
 
   try {

@@ -13,6 +13,7 @@ import {
 import { normalizeDealPayload } from "@/src/lib/dealGrouping";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
 import { useAuth } from "@/src/components/auth/AuthProvider";
+import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
 import { Client, DealsByStage, PipelineStage } from "@/src/types";
 
 const FALLBACK_STAGES: PipelineStage[] = [
@@ -52,8 +53,11 @@ export default function PipelinePage() {
   const [clientsError, setClientsError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [companyId, setCompanyId] = useState<number | null>(null);
 
-  const companyId = Number.parseInt(process.env.NEXT_PUBLIC_COMPANY_ID || "1", 10);
+  useEffect(() => {
+    setCompanyId(getStoredCompanyId() ?? readEnvCompanyId());
+  }, []);
 
   const totalDeals = useMemo(
     () =>
@@ -65,7 +69,7 @@ export default function PipelinePage() {
   );
 
   useEffect(() => {
-    if (!isReady || !isAuthenticated) {
+    if (!isReady || !isAuthenticated || companyId === null) {
       return;
     }
 
@@ -144,7 +148,6 @@ export default function PipelinePage() {
   return (
     <ProtectedRoute>
       <div className="p-6">
-        <h1 style={{ color: "red", fontSize: "40px" }}>DEPLOY TEST</h1>
         <div className="mb-6">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -197,7 +200,7 @@ export default function PipelinePage() {
           </div>
         ) : null}
 
-        {!loading ? (
+        {!loading && companyId !== null ? (
           <Board
             stages={stages}
             dealsByStage={dealsByStage}
