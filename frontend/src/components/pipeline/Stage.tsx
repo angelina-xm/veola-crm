@@ -23,6 +23,8 @@ export default function Stage({
   filterDimActive,
   onQuickCompleteFirstTask,
   quickCompletingDealId,
+  onQuickAddTask,
+  quickAddingTaskDealId,
 }: {
   stage: PipelineStage;
   deals: Deal[];
@@ -32,6 +34,8 @@ export default function Stage({
   filterDimActive?: boolean;
   onQuickCompleteFirstTask?: (dealId: string) => void | Promise<void>;
   quickCompletingDealId?: string | null;
+  onQuickAddTask?: (dealId: string) => void | Promise<void>;
+  quickAddingTaskDealId?: string | null;
   isLoading?: boolean;
   deletingDealId: string | null;
   dragDisabled?: boolean;
@@ -90,6 +94,14 @@ export default function Stage({
               quickCompletingDealId !== undefined &&
               quickCompletingDealId !== null &&
               quickCompletingDealId === id
+            }
+            onQuickAddTask={
+              onQuickAddTask ? () => void onQuickAddTask(id) : undefined
+            }
+            quickAddingTask={
+              quickAddingTaskDealId !== undefined &&
+              quickAddingTaskDealId !== null &&
+              quickAddingTaskDealId === id
             }
           />
           );

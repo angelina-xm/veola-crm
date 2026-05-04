@@ -74,6 +74,8 @@ export default function DealCard({
   dimmed = false,
   onQuickCompleteFirstTask,
   quickCompleting = false,
+  onQuickAddTask,
+  quickAddingTask = false,
 }: {
   deal: Deal;
   index: number;
@@ -84,6 +86,8 @@ export default function DealCard({
   dimmed?: boolean;
   onQuickCompleteFirstTask?: () => void | Promise<void>;
   quickCompleting?: boolean;
+  onQuickAddTask?: () => void | Promise<void>;
+  quickAddingTask?: boolean;
   isDeleting?: boolean;
   deleteDisabled?: boolean;
   dragDisabled?: boolean;
@@ -150,19 +154,34 @@ export default function DealCard({
             taskSignal={taskSignal}
           />
         </button>
-        {hasOpenTask && onQuickCompleteFirstTask ? (
-          <button
-            type="button"
-            className="mt-2 cursor-pointer rounded border border-emerald-600 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-900 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={quickCompleting || deleteDisabled}
-            onClick={(e) => {
-              e.stopPropagation();
-              void onQuickCompleteFirstTask();
-            }}
-          >
-            {quickCompleting ? "…" : "✔ Complete"}
-          </button>
-        ) : null}
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {onQuickAddTask ? (
+            <button
+              type="button"
+              className="cursor-pointer rounded border border-sky-500 bg-sky-50 px-2 py-1 text-xs font-medium text-sky-900 shadow-sm hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={quickAddingTask || deleteDisabled}
+              onClick={(e) => {
+                e.stopPropagation();
+                void onQuickAddTask();
+              }}
+            >
+              {quickAddingTask ? "…" : "➕ Add task"}
+            </button>
+          ) : null}
+          {hasOpenTask && onQuickCompleteFirstTask ? (
+            <button
+              type="button"
+              className="cursor-pointer rounded border border-emerald-600 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-900 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={quickCompleting || deleteDisabled}
+              onClick={(e) => {
+                e.stopPropagation();
+                void onQuickCompleteFirstTask();
+              }}
+            >
+              {quickCompleting ? "…" : "✔ Complete"}
+            </button>
+          ) : null}
+        </div>
         <button
           type="button"
           className="mt-2 text-xs text-red-600 hover:underline disabled:opacity-50"

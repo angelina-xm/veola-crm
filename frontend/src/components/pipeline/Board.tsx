@@ -38,6 +38,7 @@ import {
   formatDealIdLabel,
 } from "@/src/lib/dealDisplay";
 import { groupOpenTasksByDealId } from "@/src/lib/dealTaskSignal";
+import { createQuickTask } from "@/src/lib/quickTask";
 import { computeHighlightedDealIds } from "@/src/lib/notificationDealHighlight";
 import { useNotifications } from "@/src/hooks/useNotifications";
 import { getStoredCompanyId } from "@/src/lib/auth";
@@ -275,6 +276,28 @@ export default function Board({
   const [quickCompletingDealId, setQuickCompletingDealId] = useState<
     string | null
   >(null);
+  const [quickAddingTaskDealId, setQuickAddingTaskDealId] = useState<
+    string | null
+  >(null);
+
+  const handleQuickAddTask = useCallback(
+    async (dealId: string) => {
+      setQuickAddingTaskDealId(dealId);
+      try {
+        await createQuickTask(companyId, dealId);
+        await refreshOpenTasksAndNotifications();
+      } catch (err) {
+        if (typeof window !== "undefined") {
+          window.alert(
+            err instanceof Error ? err.message : "Не удалось создать задачу"
+          );
+        }
+      } finally {
+        setQuickAddingTaskDealId(null);
+      }
+    },
+    [companyId, refreshOpenTasksAndNotifications]
+  );
 
   const handleQuickCompleteFirstTask = useCallback(
     async (dealId: string) => {
@@ -907,6 +930,8 @@ export default function Board({
               onDealDelete={(d) => void handleDelete(d)}
               onQuickCompleteFirstTask={handleQuickCompleteFirstTask}
               quickCompletingDealId={quickCompletingDealId}
+              onQuickAddTask={handleQuickAddTask}
+              quickAddingTaskDealId={quickAddingTaskDealId}
             />
           ))}
         </div>
