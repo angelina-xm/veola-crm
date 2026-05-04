@@ -161,6 +161,50 @@ export async function getDeals(companyId: number) {
   return res.json();
 }
 
+export type NotificationItemType =
+  | "overdue_task"
+  | "due_today"
+  | "stale_deals";
+
+export type NotificationItem = {
+  type: NotificationItemType;
+  message: string;
+  count: number;
+};
+
+export async function getNotifications(
+  companyId: number
+): Promise<NotificationItem[]> {
+  const res = await fetchWithAuth("/notifications/", {}, companyId);
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const data: unknown = await res.json();
+  if (!Array.isArray(data)) return [];
+  const out: NotificationItem[] = [];
+  for (const row of data) {
+    if (!row || typeof row !== "object") continue;
+    const o = row as Record<string, unknown>;
+    const type = o.type;
+    const message = o.message;
+    const countRaw = o.count;
+    const count =
+      typeof countRaw === "number"
+        ? countRaw
+        : Number.parseInt(String(countRaw), 10);
+    if (
+      type === "overdue_task" ||
+      type === "due_today" ||
+      type === "stale_deals"
+    ) {
+      if (typeof message === "string" && Number.isFinite(count)) {
+        out.push({ type, message, count });
+      }
+    }
+  }
+  return out;
+}
+
 export async function getStaleDeals(companyId: number): Promise<StaleDeal[]> {
   const res = await fetchWithAuth("/deals/stale/", {}, companyId);
   if (!res.ok) {

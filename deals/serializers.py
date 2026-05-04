@@ -35,3 +35,9 @@ class PipelineStageSerializer(serializers.ModelSerializer):
         model = PipelineStage
         fields = "__all__"
         read_only_fields = ["company"]
+
+
+class NotificationItemSerializer(serializers.Serializer):
+    type = serializers.CharField()
+    message = serializers.CharField()
+    count = serializers.IntegerField()
