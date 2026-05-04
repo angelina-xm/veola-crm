@@ -711,8 +711,9 @@ export default function Board({
       }
       setDeletingClientId(String(client.id));
       try {
-        await deleteClient(companyId, client.id);
-        const refreshed = await getClients(companyId);
+        const tenantId = getStoredCompanyId() ?? companyId;
+        await deleteClient(tenantId, client.id);
+        const refreshed = await getClients(tenantId);
         setClients(refreshed);
         if (typeof window !== "undefined") {
           window.alert("Client deleted");
@@ -733,11 +734,17 @@ export default function Board({
       setClientSubmitting(true);
       setClientError(null);
       try {
-        await createClient(companyId, {
+        const tenantId = getStoredCompanyId() ?? companyId;
+        console.log("CREATE CLIENT", {
+          companyId: getStoredCompanyId(),
+          companyIdProp: companyId,
+          tenantIdUsed: tenantId,
+        });
+        await createClient(tenantId, {
           name: values.name,
           email: values.email || undefined,
         });
-        const refreshed = await getClients(companyId);
+        const refreshed = await getClients(tenantId);
         setClients(refreshed);
         setClientModalOpen(false);
         if (typeof window !== "undefined") {

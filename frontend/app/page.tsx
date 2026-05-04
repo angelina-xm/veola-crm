@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import Board from "@/src/components/pipeline/Board";
 import {
   AuthError,
@@ -55,9 +55,19 @@ export default function PipelinePage() {
   const [error, setError] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<number | null>(null);
 
-  useEffect(() => {
-    setCompanyId(getStoredCompanyId() ?? readEnvCompanyId());
+  /** Сразу подставляем tenant из LS + env, чтобы не грузить данные с companyId === null и не расходиться с X-Company-ID. */
+  useLayoutEffect(() => {
+    if (typeof window === "undefined") return;
+    const next = getStoredCompanyId() ?? readEnvCompanyId();
+    setCompanyId(next);
   }, []);
+
+  useLayoutEffect(() => {
+    if (!isReady || !isAuthenticated) return;
+    const fromLs = getStoredCompanyId();
+    const next = fromLs ?? readEnvCompanyId();
+    setCompanyId((prev) => (prev !== next ? next : prev));
+  }, [isReady, isAuthenticated]);
 
   const totalDeals = useMemo(
     () =>
@@ -79,14 +89,26 @@ export default function PipelinePage() {
         setError(null);
         setClientsError(null);
 
+        const fromLs = getStoredCompanyId();
+        const tenantId = fromLs ?? companyId ?? readEnvCompanyId();
+        if (fromLs != null && companyId !== fromLs) {
+          setCompanyId(fromLs);
+        }
+
+        console.log("LOAD CLIENTS", {
+          companyId: getStoredCompanyId(),
+          companyIdState: companyId,
+          tenantIdUsed: tenantId,
+        });
+
         const [stagesData, dealsData] = await Promise.all([
-          getPipelineStages(companyId),
-          getDeals(companyId),
+          getPipelineStages(tenantId),
+          getDeals(tenantId),
         ]);
 
         let clientsData: Client[] = [];
         try {
-          clientsData = await getClients(companyId);
+          clientsData = await getClients(tenantId);
         } catch (clientsErr) {
           setClientsError(
             clientsErr instanceof Error
