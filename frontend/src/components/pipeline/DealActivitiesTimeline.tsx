@@ -122,6 +122,16 @@ function ActivityRow({
               Due: {formatWhen(a.due_date)}
             </p>
           ) : null}
+          {a.type === "task" && !completed && !isTemp ? (
+            <button
+              type="button"
+              disabled={disabled || busy}
+              onClick={() => onToggleTask(a, true)}
+              className="mt-2 cursor-pointer rounded border border-emerald-600 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-900 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              ✔ Complete
+            </button>
+          ) : null}
         </div>
       </div>
     </li>
@@ -132,10 +142,13 @@ export default function DealActivitiesTimeline({
   companyId,
   dealId,
   disabled,
+  onTasksChanged,
 }: {
   companyId: number;
   dealId: string | number;
   disabled: boolean;
+  /** После PATCH/создания activity — обновить счётчики на доске (задачи, уведомления). */
+  onTasksChanged?: () => void | Promise<void>;
 }) {
   const [items, setItems] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -186,6 +199,7 @@ export default function DealActivitiesTimeline({
         setItems((list) =>
           list.map((x) => (String(x.id) === id ? updated : x))
         );
+        await onTasksChanged?.();
       } catch (err) {
         setItems(prev);
         window.alert(
@@ -195,7 +209,7 @@ export default function DealActivitiesTimeline({
         setPatchingId(null);
       }
     },
-    [companyId, disabled, items]
+    [companyId, disabled, items, onTasksChanged]
   );
 
   const handleAdd = async (e: React.FormEvent) => {
@@ -242,6 +256,7 @@ export default function DealActivitiesTimeline({
       setContent("");
       setDueLocal("");
       setType("note");
+      await onTasksChanged?.();
     } catch (err) {
       setItems((prev) => prev.filter((a) => String(a.id) !== tempId));
       window.alert(

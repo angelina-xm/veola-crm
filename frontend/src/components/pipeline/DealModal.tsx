@@ -36,6 +36,8 @@ export interface DealModalProps {
   onCreateClient?: () => void;
   /** Если сделка в списке GET /deals/stale/ — показать предупреждение */
   staleRow?: StaleDeal | null;
+  /** После изменения задач в timeline — обновить карточки/уведомления на доске */
+  onActivitiesMutated?: () => void | Promise<void>;
 }
 
 export default function DealModal({
@@ -53,6 +55,7 @@ export default function DealModal({
   onDelete,
   onCreateClient,
   staleRow = null,
+  onActivitiesMutated,
 }: DealModalProps) {
   const busy = submitting || deletingDeal;
   const firstStageId = stages[0] ? String(stages[0].id) : "";
@@ -340,6 +343,7 @@ export default function DealModal({
             companyId={companyId}
             dealId={deal.id}
             disabled={busy}
+            onTasksChanged={onActivitiesMutated}
           />
         ) : null}
       </div>

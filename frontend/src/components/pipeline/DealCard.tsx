@@ -72,6 +72,8 @@ export default function DealCard({
   openTasksForDeal = [],
   spotlight = false,
   dimmed = false,
+  onQuickCompleteFirstTask,
+  quickCompleting = false,
 }: {
   deal: Deal;
   index: number;
@@ -80,6 +82,8 @@ export default function DealCard({
   openTasksForDeal?: Activity[];
   spotlight?: boolean;
   dimmed?: boolean;
+  onQuickCompleteFirstTask?: () => void | Promise<void>;
+  quickCompleting?: boolean;
   isDeleting?: boolean;
   deleteDisabled?: boolean;
   dragDisabled?: boolean;
@@ -87,6 +91,9 @@ export default function DealCard({
   onDelete: (deal: Deal) => void;
 }) {
   const taskSignal = getDealTaskSignal(openTasksForDeal);
+  const hasOpenTask = openTasksForDeal.some(
+    (t) => t.type === "task" && !t.is_completed
+  );
   const {
     attributes,
     listeners,
@@ -143,6 +150,19 @@ export default function DealCard({
             taskSignal={taskSignal}
           />
         </button>
+        {hasOpenTask && onQuickCompleteFirstTask ? (
+          <button
+            type="button"
+            className="mt-2 cursor-pointer rounded border border-emerald-600 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-900 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={quickCompleting || deleteDisabled}
+            onClick={(e) => {
+              e.stopPropagation();
+              void onQuickCompleteFirstTask();
+            }}
+          >
+            {quickCompleting ? "…" : "✔ Complete"}
+          </button>
+        ) : null}
         <button
           type="button"
           className="mt-2 text-xs text-red-600 hover:underline disabled:opacity-50"

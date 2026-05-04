@@ -449,6 +449,9 @@ export async function patchActivity(
   return normalizeActivityRow(raw);
 }
 
+/** Алиас для PATCH activity (например закрытие задачи). */
+export const updateActivity = patchActivity;
+
 export type CreateDealPayload = {
   title: string;
   amount: number;

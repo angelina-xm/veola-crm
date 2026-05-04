@@ -21,6 +21,8 @@ export default function Stage({
   onDealDelete,
   highlightDealIds,
   filterDimActive,
+  onQuickCompleteFirstTask,
+  quickCompletingDealId,
 }: {
   stage: PipelineStage;
   deals: Deal[];
@@ -28,6 +30,8 @@ export default function Stage({
   openTasksByDealId?: Record<string, Activity[]>;
   highlightDealIds?: Set<string>;
   filterDimActive?: boolean;
+  onQuickCompleteFirstTask?: (dealId: string) => void | Promise<void>;
+  quickCompletingDealId?: string | null;
   isLoading?: boolean;
   deletingDealId: string | null;
   dragDisabled?: boolean;
@@ -77,6 +81,16 @@ export default function Stage({
             dragDisabled={dragDisabled}
             onOpen={onDealOpen}
             onDelete={onDealDelete}
+            onQuickCompleteFirstTask={
+              onQuickCompleteFirstTask
+                ? () => void onQuickCompleteFirstTask(id)
+                : undefined
+            }
+            quickCompleting={
+              quickCompletingDealId !== undefined &&
+              quickCompletingDealId !== null &&
+              quickCompletingDealId === id
+            }
           />
           );
         })}

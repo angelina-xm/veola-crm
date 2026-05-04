@@ -27,6 +27,7 @@ import {
   deleteDeal,
   getCompanyOpenTasks,
   getStaleDeals,
+  patchActivity,
   patchDeal,
   updateDealStage,
   type NotificationItem,
@@ -255,8 +256,49 @@ export default function Board({
     return rec;
   }, [openCompanyTasks]);
 
-  const { items: notificationItems, totalBadge: notificationTotal } =
-    useNotifications(companyId, true);
+  const {
+    items: notificationItems,
+    totalBadge: notificationTotal,
+    refresh: refreshNotifications,
+  } = useNotifications(companyId, true);
+
+  const refreshOpenTasksAndNotifications = useCallback(async () => {
+    try {
+      const tasks = await getCompanyOpenTasks(companyId);
+      setOpenCompanyTasks(tasks);
+    } catch {
+      setOpenCompanyTasks([]);
+    }
+    await refreshNotifications();
+  }, [companyId, refreshNotifications]);
+
+  const [quickCompletingDealId, setQuickCompletingDealId] = useState<
+    string | null
+  >(null);
+
+  const handleQuickCompleteFirstTask = useCallback(
+    async (dealId: string) => {
+      const list = openTasksByDealId[dealId] ?? [];
+      const first = list.find(
+        (t) => t.type === "task" && !t.is_completed
+      );
+      if (!first) return;
+      setQuickCompletingDealId(dealId);
+      try {
+        await patchActivity(companyId, first.id, { is_completed: true });
+        await refreshOpenTasksAndNotifications();
+      } catch (err) {
+        if (typeof window !== "undefined") {
+          window.alert(
+            err instanceof Error ? err.message : "Не удалось закрыть задачу"
+          );
+        }
+      } finally {
+        setQuickCompletingDealId(null);
+      }
+    },
+    [companyId, openTasksByDealId, refreshOpenTasksAndNotifications]
+  );
 
   const [notificationFocus, setNotificationFocus] = useState<
     NotificationItem["type"] | null
@@ -856,6 +898,8 @@ export default function Board({
               dragDisabled={Boolean(deletingDealId || dndLoading)}
               onDealOpen={openEdit}
               onDealDelete={(d) => void handleDelete(d)}
+              onQuickCompleteFirstTask={handleQuickCompleteFirstTask}
+              quickCompletingDealId={quickCompletingDealId}
             />
           ))}
         </div>
@@ -906,6 +950,7 @@ export default function Board({
               ? staleById.get(String(dealInModal.id)) ?? null
               : null
           }
+          onActivitiesMutated={refreshOpenTasksAndNotifications}
         />
       ) : null}
 
