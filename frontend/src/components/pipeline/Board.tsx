@@ -38,7 +38,7 @@ import {
   formatDealIdLabel,
 } from "@/src/lib/dealDisplay";
 import { groupOpenTasksByDealId } from "@/src/lib/dealTaskSignal";
-import { createQuickTask } from "@/src/lib/quickTask";
+import { createTaskFromPreset, type TaskPreset } from "@/src/lib/quickTask";
 import { computeHighlightedDealIds } from "@/src/lib/notificationDealHighlight";
 import { useNotifications } from "@/src/hooks/useNotifications";
 import { getStoredCompanyId } from "@/src/lib/auth";
@@ -281,10 +281,14 @@ export default function Board({
   >(null);
 
   const handleQuickAddTask = useCallback(
-    async (dealId: string) => {
+    async (
+      dealId: string,
+      preset: TaskPreset,
+      customContent?: string
+    ) => {
       setQuickAddingTaskDealId(dealId);
       try {
-        await createQuickTask(companyId, dealId);
+        await createTaskFromPreset(companyId, dealId, preset, customContent);
         await refreshOpenTasksAndNotifications();
       } catch (err) {
         if (typeof window !== "undefined") {

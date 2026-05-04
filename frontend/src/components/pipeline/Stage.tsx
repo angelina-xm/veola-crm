@@ -7,6 +7,7 @@ import {
 } from "@dnd-kit/sortable";
 
 import DealCard from "./DealCard";
+import type { TaskPreset } from "@/src/lib/quickTask";
 import { Activity, Client, Deal, PipelineStage } from "@/src/types";
 
 export default function Stage({
@@ -34,7 +35,11 @@ export default function Stage({
   filterDimActive?: boolean;
   onQuickCompleteFirstTask?: (dealId: string) => void | Promise<void>;
   quickCompletingDealId?: string | null;
-  onQuickAddTask?: (dealId: string) => void | Promise<void>;
+  onQuickAddTask?: (
+    dealId: string,
+    preset: TaskPreset,
+    customContent?: string
+  ) => void | Promise<void>;
   quickAddingTaskDealId?: string | null;
   isLoading?: boolean;
   deletingDealId: string | null;
@@ -96,7 +101,9 @@ export default function Stage({
               quickCompletingDealId === id
             }
             onQuickAddTask={
-              onQuickAddTask ? () => void onQuickAddTask(id) : undefined
+              onQuickAddTask
+                ? (preset, custom) => void onQuickAddTask(id, preset, custom)
+                : undefined
             }
             quickAddingTask={
               quickAddingTaskDealId !== undefined &&

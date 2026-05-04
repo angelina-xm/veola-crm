@@ -9,7 +9,9 @@ import {
   formatDealIdLabel,
 } from "@/src/lib/dealDisplay";
 import { getDealTaskSignal, type DealTaskSignal } from "@/src/lib/dealTaskSignal";
+import type { TaskPreset } from "@/src/lib/quickTask";
 import { Activity, Client, Deal } from "@/src/types";
+import DealQuickTaskMenu from "./DealQuickTaskMenu";
 
 export function DealCardContent({
   deal,
@@ -86,7 +88,10 @@ export default function DealCard({
   dimmed?: boolean;
   onQuickCompleteFirstTask?: () => void | Promise<void>;
   quickCompleting?: boolean;
-  onQuickAddTask?: () => void | Promise<void>;
+  onQuickAddTask?: (
+    preset: TaskPreset,
+    customContent?: string
+  ) => void | Promise<void>;
   quickAddingTask?: boolean;
   isDeleting?: boolean;
   deleteDisabled?: boolean;
@@ -156,17 +161,13 @@ export default function DealCard({
         </button>
         <div className="mt-2 flex flex-wrap gap-1.5">
           {onQuickAddTask ? (
-            <button
-              type="button"
-              className="cursor-pointer rounded border border-sky-500 bg-sky-50 px-2 py-1 text-xs font-medium text-sky-900 shadow-sm hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={quickAddingTask || deleteDisabled}
-              onClick={(e) => {
-                e.stopPropagation();
-                void onQuickAddTask();
+            <DealQuickTaskMenu
+              busy={quickAddingTask}
+              disabled={deleteDisabled}
+              onSelect={(preset, customContent) => {
+                void onQuickAddTask(preset, customContent);
               }}
-            >
-              {quickAddingTask ? "…" : "➕ Add task"}
-            </button>
+            />
           ) : null}
           {hasOpenTask && onQuickCompleteFirstTask ? (
             <button
