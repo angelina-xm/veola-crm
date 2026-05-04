@@ -17,7 +17,7 @@ import {
   getApiBaseUrl,
   getApiUrlTroubleshootHint,
   getFreshAccessToken,
-  getStoredCompanyId,
+  resolveCompanyIdForRequest,
   prepareRequestAccess,
   AuthError,
   logout,
@@ -53,7 +53,7 @@ export function normalizeApiList<T>(payload: ListResponse<T>): T[] {
 
 /**
  * Authorization: Bearer <значение из localStorage "access">
- * X-Company-ID — из аргумента companyId или из localStorage (companyId) после логина
+ * X-Company-ID — приоритет localStorage (resolveCompanyIdForRequest), без рассинхрона с UI
  * При 401: refresh → снова читаем "access" из localStorage → повтор запроса
  */
 function networkAuthError(): AuthError {
@@ -80,10 +80,7 @@ export async function fetchWithAuth(
     throw new AuthError("No access token", "missing_access_token");
   }
   headers.set("Authorization", `Bearer ${access}`);
-  const resolvedCompanyId =
-    companyId !== undefined && Number.isFinite(companyId)
-      ? companyId
-      : getStoredCompanyId();
+  const resolvedCompanyId = resolveCompanyIdForRequest(companyId);
   if (resolvedCompanyId != null) {
     headers.set("X-Company-ID", String(resolvedCompanyId));
   }
@@ -126,10 +123,7 @@ export async function fetchWithAuth(
 
   const retryHeaders = new Headers(init.headers ?? {});
   retryHeaders.set("Authorization", `Bearer ${accessAfterRefresh}`);
-  const resolvedRetry =
-    companyId !== undefined && Number.isFinite(companyId)
-      ? companyId
-      : getStoredCompanyId();
+  const resolvedRetry = resolveCompanyIdForRequest(companyId);
   if (resolvedRetry != null) {
     retryHeaders.set("X-Company-ID", String(resolvedRetry));
   }

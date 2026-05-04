@@ -4,6 +4,8 @@ export interface Client {
   name: string;
   email?: string | null;
   phone?: string | null;
+  /** FK компании с API — для фильтрации на фронте при multi-tenant */
+  company?: string | number;
 }
 
 // Deal

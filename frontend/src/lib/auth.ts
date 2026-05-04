@@ -77,6 +77,17 @@ export function getStoredCompanyId(): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * Для всех запросов к API: сначала company из localStorage (источник истины после логина),
+ * иначе явный companyId со страницы (dev / первый визит без LS).
+ */
+export function resolveCompanyIdForRequest(explicit?: number): number | null {
+  const fromLs = getStoredCompanyId();
+  if (fromLs != null) return fromLs;
+  if (explicit !== undefined && Number.isFinite(explicit)) return explicit;
+  return null;
+}
+
 /** Fallback для dev / Vercel preview, если в LS ещё нет companyId. */
 export function readEnvCompanyId(): number {
   const raw = process.env.NEXT_PUBLIC_COMPANY_ID;

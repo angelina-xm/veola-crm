@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   clientNameById,
   formatCreatedRelative,
@@ -57,6 +57,13 @@ export default function DealModal({
   const busy = submitting || deletingDeal;
   const firstStageId = stages[0] ? String(stages[0].id) : "";
 
+  const clientsInCompany = useMemo(() => {
+    return clients.filter((c) => {
+      if (c.company === undefined || c.company === null) return true;
+      return String(c.company) === String(companyId);
+    });
+  }, [clients, companyId]);
+
   const [title, setTitle] = useState(() =>
     mode === "edit" && deal ? deal.title : ""
   );
@@ -68,17 +75,16 @@ export default function DealModal({
       ? String(deal.stageId ?? deal.stage ?? firstStageId)
       : firstStageId
   );
-  const [clientId, setClientId] = useState(() =>
-    clients[0] ? String(clients[0].id) : ""
-  );
+  const [clientId, setClientId] = useState("");
 
   useEffect(() => {
     if (mode !== "create") return;
-    if (clientId) return;
-    if (clients[0]) {
-      setClientId(String(clients[0].id));
-    }
-  }, [mode, clientId, clients]);
+    setClientId((prev) => {
+      const allowed = new Set(clientsInCompany.map((c) => String(c.id)));
+      if (prev && allowed.has(prev)) return prev;
+      return clientsInCompany[0] ? String(clientsInCompany[0].id) : "";
+    });
+  }, [mode, clientsInCompany]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,6 +94,8 @@ export default function DealModal({
 
     if (mode === "create") {
       if (!stageId || !clientId) return;
+      const allowedIds = new Set(clientsInCompany.map((c) => String(c.id)));
+      if (!allowedIds.has(clientId)) return;
       await onCreate({
         title: title.trim(),
         amount: amountNum,
@@ -243,20 +251,20 @@ export default function DealModal({
                 value={clientId}
                 onChange={(e) => setClientId(e.target.value)}
                 className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
-                disabled={busy || clients.length === 0}
+                disabled={busy || clientsInCompany.length === 0}
                 required
               >
-                {clients.length === 0 ? (
+                {clientsInCompany.length === 0 ? (
                   <option value="">Нет клиентов в компании</option>
                 ) : (
-                  clients.map((c) => (
+                  clientsInCompany.map((c) => (
                     <option key={String(c.id)} value={String(c.id)}>
                       {c.name}
                     </option>
                   ))
                 )}
               </select>
-              {clients.length === 0 ? (
+              {clientsInCompany.length === 0 ? (
                 <div className="mt-2 flex items-center gap-2">
                   <p className="text-xs text-amber-700">Нет клиентов в компании.</p>
                   <button
@@ -277,7 +285,7 @@ export default function DealModal({
               type="submit"
               disabled={
                 busy ||
-                (mode === "create" && clients.length === 0)
+                (mode === "create" && clientsInCompany.length === 0)
               }
               className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
             >

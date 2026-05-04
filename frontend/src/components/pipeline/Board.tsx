@@ -39,6 +39,7 @@ import {
 import { groupOpenTasksByDealId } from "@/src/lib/dealTaskSignal";
 import { computeHighlightedDealIds } from "@/src/lib/notificationDealHighlight";
 import { useNotifications } from "@/src/hooks/useNotifications";
+import { getStoredCompanyId } from "@/src/lib/auth";
 import {
   normalizeDealPayload,
   removeDealFromGrouped,
@@ -520,6 +521,38 @@ export default function Board({
       clientId: string;
     }) => {
       setModalError(null);
+
+      const clientPk = Number.parseInt(values.clientId, 10);
+      if (!Number.isFinite(clientPk)) {
+        setModalError("Некорректный клиент.");
+        return;
+      }
+
+      const clientRow = clients.find((c) => String(c.id) === values.clientId);
+      if (!clientRow) {
+        setModalError(
+          "Клиент не найден в списке текущей компании. Обновите страницу или выберите другого клиента."
+        );
+        return;
+      }
+
+      const tenantId = getStoredCompanyId() ?? companyId;
+      if (
+        clientRow.company != null &&
+        String(clientRow.company) !== String(tenantId)
+      ) {
+        setModalError("Этот клиент не относится к текущей компании.");
+        return;
+      }
+
+      if (typeof console !== "undefined") {
+        console.log("[createDeal] POST /deals/", {
+          clientId: clientPk,
+          companyId: getStoredCompanyId(),
+          companyIdProp: companyId,
+        });
+      }
+
       setModalSubmitting(true);
 
       const tempId = `temp-${Date.now()}`;
@@ -539,7 +572,7 @@ export default function Board({
           title: values.title,
           amount: values.amount,
           stage: Number.parseInt(values.stageId, 10),
-          client: Number.parseInt(values.clientId, 10),
+          client: clientPk,
         });
         const normalized = readDealPatch(raw);
 
@@ -562,7 +595,7 @@ export default function Board({
         setModalSubmitting(false);
       }
     },
-    [companyId, setDealsByStage]
+    [clients, companyId, setDealsByStage]
   );
 
   const handleModalEdit = useCallback(
