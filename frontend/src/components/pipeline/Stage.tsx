@@ -19,11 +19,15 @@ export default function Stage({
   dragDisabled = false,
   onDealOpen,
   onDealDelete,
+  highlightDealIds,
+  filterDimActive,
 }: {
   stage: PipelineStage;
   deals: Deal[];
   clients?: Client[];
   openTasksByDealId?: Record<string, Activity[]>;
+  highlightDealIds?: Set<string>;
+  filterDimActive?: boolean;
   isLoading?: boolean;
   deletingDealId: string | null;
   dragDisabled?: boolean;
@@ -53,7 +57,12 @@ export default function Stage({
         items={safeDeals.map((d) => `deal-${String(d.id)}`)}
         strategy={verticalListSortingStrategy}
       >
-        {safeDeals.map((deal, index) => (
+        {safeDeals.map((deal, index) => {
+          const id = String(deal.id);
+          const hs = highlightDealIds ?? new Set<string>();
+          const spot = Boolean(filterDimActive && hs.has(id));
+          const dim = Boolean(filterDimActive && !hs.has(id));
+          return (
           <DealCard
             key={deal.id}
             deal={deal}
@@ -61,13 +70,16 @@ export default function Stage({
             stageId={String(stage.id)}
             clients={clients}
             openTasksForDeal={openTasksByDealId[String(deal.id)] ?? []}
+            spotlight={spot}
+            dimmed={dim}
             isDeleting={deletingDealId === String(deal.id)}
             deleteDisabled={deletingDealId !== null}
             dragDisabled={dragDisabled}
             onOpen={onDealOpen}
             onDelete={onDealDelete}
           />
-        ))}
+          );
+        })}
       </SortableContext>
     </div>
   );

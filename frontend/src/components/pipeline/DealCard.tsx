@@ -70,12 +70,16 @@ export default function DealCard({
   onOpen,
   onDelete,
   openTasksForDeal = [],
+  spotlight = false,
+  dimmed = false,
 }: {
   deal: Deal;
   index: number;
   stageId: string;
   clients?: Client[];
   openTasksForDeal?: Activity[];
+  spotlight?: boolean;
+  dimmed?: boolean;
   isDeleting?: boolean;
   deleteDisabled?: boolean;
   dragDisabled?: boolean;
@@ -104,11 +108,17 @@ export default function DealCard({
     transition,
   };
 
+  const focusRing =
+    spotlight && !dimmed
+      ? "ring-2 ring-blue-500 ring-offset-1 bg-blue-50/60"
+      : "";
+  const dimClass = dimmed ? "opacity-40" : "";
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`mb-2 flex gap-1 overflow-hidden rounded bg-white shadow ${taskSignal.borderClass}`}
+      className={`mb-2 flex gap-1 overflow-hidden rounded bg-white shadow ${taskSignal.borderClass} ${focusRing} ${dimClass}`}
       {...attributes}
     >
       <button

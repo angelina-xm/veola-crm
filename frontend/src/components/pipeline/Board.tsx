@@ -17,6 +17,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Stage from "./Stage";
 import DealModal from "./DealModal";
 import ClientModal from "./ClientModal";
+import NotificationBar from "@/src/components/notifications/NotificationBar";
 import { DealCardContent } from "./DealCard";
 import {
   createDeal,
@@ -28,6 +29,7 @@ import {
   getStaleDeals,
   patchDeal,
   updateDealStage,
+  type NotificationItem,
 } from "@/src/lib/api";
 import {
   formatCreatedRelative,
@@ -35,6 +37,8 @@ import {
   formatDealIdLabel,
 } from "@/src/lib/dealDisplay";
 import { groupOpenTasksByDealId } from "@/src/lib/dealTaskSignal";
+import { computeHighlightedDealIds } from "@/src/lib/notificationDealHighlight";
+import { useNotifications } from "@/src/hooks/useNotifications";
 import {
   normalizeDealPayload,
   removeDealFromGrouped,
@@ -249,6 +253,43 @@ export default function Board({
     });
     return rec;
   }, [openCompanyTasks]);
+
+  const { items: notificationItems, totalBadge: notificationTotal } =
+    useNotifications(companyId, true);
+
+  const [notificationFocus, setNotificationFocus] = useState<
+    NotificationItem["type"] | null
+  >(null);
+
+  const staleDealIdList = useMemo(
+    () => staleDeals.map((s) => String(s.id)),
+    [staleDeals]
+  );
+
+  const highlightedDealIds = useMemo(() => {
+    if (!notificationFocus) return null;
+    return computeHighlightedDealIds(
+      notificationFocus,
+      openTasksByDealId,
+      staleDealIdList
+    );
+  }, [notificationFocus, openTasksByDealId, staleDealIdList]);
+
+  const filterDimActive = Boolean(
+    notificationFocus &&
+      highlightedDealIds &&
+      highlightedDealIds.size > 0
+  );
+
+  const highlightSet = highlightedDealIds ?? new Set<string>();
+
+  const handleNotificationSelect = useCallback((item: NotificationItem) => {
+    setNotificationFocus((prev) => (prev === item.type ? null : item.type));
+  }, []);
+
+  const handleNotificationClear = useCallback(() => {
+    setNotificationFocus(null);
+  }, []);
 
   const boardBusy =
     modalSubmitting ||
@@ -663,6 +704,14 @@ export default function Board({
         </div>
       </div>
 
+      <NotificationBar
+        items={notificationItems}
+        totalBadge={notificationTotal}
+        activeType={notificationFocus}
+        onSelect={handleNotificationSelect}
+        onClear={handleNotificationClear}
+      />
+
       <div className="mb-4 rounded border border-gray-200 bg-white px-3 py-2 text-sm">
         <p className="mb-2 font-medium text-gray-800">Клиенты</p>
         {clients.length === 0 ? (
@@ -767,6 +816,8 @@ export default function Board({
               deals={dealsByStage[String(stage.id)] || []}
               clients={clients}
               openTasksByDealId={openTasksByDealId}
+              highlightDealIds={highlightSet}
+              filterDimActive={filterDimActive}
               isLoading={dndLoading}
               deletingDealId={deletingDealId}
               dragDisabled={Boolean(deletingDealId || dndLoading)}
@@ -777,7 +828,14 @@ export default function Board({
         </div>
         <DragOverlay>
           {overlayDeal ? (
-            <div className="w-60 cursor-grabbing rounded bg-white p-3 opacity-95 shadow-xl ring-2 ring-blue-300">
+            <div
+              className={`w-60 cursor-grabbing rounded bg-white p-3 opacity-95 shadow-xl ring-2 ${
+                filterDimActive &&
+                highlightSet.has(String(overlayDeal.id))
+                  ? "ring-blue-600 ring-4"
+                  : "ring-blue-300"
+              }`}
+            >
               <DealCardContent
                 deal={overlayDeal}
                 clients={clients}

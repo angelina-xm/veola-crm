@@ -12,9 +12,7 @@ import {
 } from "@/src/lib/api";
 import { normalizeDealPayload } from "@/src/lib/dealGrouping";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
-import NotificationBar from "@/src/components/notifications/NotificationBar";
 import { useAuth } from "@/src/components/auth/AuthProvider";
-import { useNotifications } from "@/src/hooks/useNotifications";
 import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
 import { Client, DealsByStage, PipelineStage } from "@/src/types";
 
@@ -60,11 +58,6 @@ export default function PipelinePage() {
   useEffect(() => {
     setCompanyId(getStoredCompanyId() ?? readEnvCompanyId());
   }, []);
-
-  const notificationsEnabled =
-    isReady && isAuthenticated && companyId !== null;
-  const { items: notificationItems, totalBadge: notificationTotal } =
-    useNotifications(companyId, notificationsEnabled);
 
   const totalDeals = useMemo(
     () =>
@@ -172,11 +165,6 @@ export default function PipelinePage() {
             </button>
           </div>
         </div>
-
-        <NotificationBar
-          items={notificationItems}
-          totalBadge={notificationTotal}
-        />
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
