@@ -2,6 +2,7 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useEffect, useState } from "react";
 import {
   clientNameById,
   formatCreatedRelative,
@@ -12,6 +13,8 @@ import { getDealTaskSignal, type DealTaskSignal } from "@/src/lib/dealTaskSignal
 import type { TaskPreset } from "@/src/lib/quickTask";
 import { Activity, Client, Deal } from "@/src/types";
 import DealQuickTaskMenu from "./DealQuickTaskMenu";
+
+export type StageFallbackPreset = "new" | "negotiation" | "won";
 
 export function DealCardContent({
   deal,
@@ -78,6 +81,10 @@ export default function DealCard({
   quickCompleting = false,
   onQuickAddTask,
   quickAddingTask = false,
+  onInlineSave,
+  inlineSaving = false,
+  onMoveToFallbackStage,
+  movingStage = false,
 }: {
   deal: Deal;
   index: number;
@@ -93,6 +100,10 @@ export default function DealCard({
     customContent?: string
   ) => void | Promise<void>;
   quickAddingTask?: boolean;
+  onInlineSave?: (patch: { title?: string; amount?: number }) => void | Promise<void>;
+  inlineSaving?: boolean;
+  onMoveToFallbackStage?: (preset: StageFallbackPreset) => void | Promise<void>;
+  movingStage?: boolean;
   isDeleting?: boolean;
   deleteDisabled?: boolean;
   dragDisabled?: boolean;
@@ -103,6 +114,22 @@ export default function DealCard({
   const hasOpenTask = openTasksForDeal.some(
     (t) => t.type === "task" && !t.is_completed
   );
+  const [titleEdit, setTitleEdit] = useState(false);
+  const [amountEdit, setAmountEdit] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(deal.title);
+  const [amountDraft, setAmountDraft] = useState(
+    deal.amount != null ? String(deal.amount) : ""
+  );
+  useEffect(() => {
+    if (!titleEdit) {
+      setTitleDraft(deal.title);
+    }
+  }, [deal.title, titleEdit]);
+  useEffect(() => {
+    if (!amountEdit) {
+      setAmountDraft(deal.amount != null ? String(deal.amount) : "");
+    }
+  }, [deal.amount, amountEdit]);
   const {
     attributes,
     listeners,
@@ -147,18 +174,117 @@ export default function DealCard({
         ⋮⋮
       </button>
       <div className="min-w-0 flex-1 py-2 pr-2">
-        <button
-          type="button"
-          className="w-full text-left"
-          onClick={() => onOpen(deal)}
-        >
-          <DealCardContent
-            deal={deal}
-            clients={clients}
-            openTasksForDeal={openTasksForDeal}
-            taskSignal={taskSignal}
-          />
-        </button>
+        <div className="w-full text-left">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              {titleEdit ? (
+                <input
+                  autoFocus
+                  value={titleDraft}
+                  onChange={(e) => setTitleDraft(e.target.value)}
+                  className="w-full rounded border border-blue-300 px-1.5 py-1 text-sm font-semibold text-gray-900"
+                  disabled={inlineSaving || deleteDisabled}
+                  onBlur={() => {
+                    setTitleEdit(false);
+                    const next = titleDraft.trim();
+                    if (!next || next === deal.title || !onInlineSave) {
+                      setTitleDraft(deal.title);
+                      return;
+                    }
+                    void onInlineSave({ title: next });
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      e.currentTarget.blur();
+                    }
+                    if (e.key === "Escape") {
+                      setTitleDraft(deal.title);
+                      setTitleEdit(false);
+                    }
+                  }}
+                />
+              ) : (
+                <button
+                  type="button"
+                  className="cursor-pointer rounded px-1 text-left text-sm font-semibold text-gray-900 hover:bg-gray-100"
+                  onClick={() => setTitleEdit(true)}
+                  disabled={inlineSaving || deleteDisabled}
+                  title="Click to edit title"
+                >
+                  {deal.title}{" "}
+                  <span className="font-normal text-gray-500">
+                    ({formatDealIdLabel(deal.id)})
+                  </span>
+                </button>
+              )}
+            </div>
+            <button
+              type="button"
+              className="text-xs text-gray-500 hover:underline"
+              onClick={() => onOpen(deal)}
+            >
+              Details
+            </button>
+          </div>
+          <p className="mt-1 text-xs text-gray-600">
+            Client: {clientNameById(clients, deal.client) ?? (deal.client ? String(deal.client) : "—")}
+          </p>
+          {amountEdit ? (
+            <input
+              autoFocus
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step="0.01"
+              value={amountDraft}
+              onChange={(e) => setAmountDraft(e.target.value)}
+              className="mt-1 w-full rounded border border-blue-300 px-1.5 py-1 text-sm font-medium text-gray-900"
+              disabled={inlineSaving || deleteDisabled}
+              onBlur={() => {
+                setAmountEdit(false);
+                if (!onInlineSave) {
+                  setAmountDraft(deal.amount != null ? String(deal.amount) : "");
+                  return;
+                }
+                const parsed = Number.parseFloat(amountDraft.replace(",", "."));
+                if (!Number.isFinite(parsed) || parsed === Number(deal.amount ?? 0)) {
+                  setAmountDraft(deal.amount != null ? String(deal.amount) : "");
+                  return;
+                }
+                void onInlineSave({ amount: parsed });
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.currentTarget.blur();
+                }
+                if (e.key === "Escape") {
+                  setAmountDraft(deal.amount != null ? String(deal.amount) : "");
+                  setAmountEdit(false);
+                }
+              }}
+            />
+          ) : (
+            <button
+              type="button"
+              className="mt-1 cursor-pointer rounded px-1 text-left text-sm font-medium text-gray-900 hover:bg-gray-100"
+              onClick={() => setAmountEdit(true)}
+              disabled={inlineSaving || deleteDisabled}
+              title="Click to edit amount"
+            >
+              {formatDealAmountUsd(deal.amount) ?? "Set amount"}
+            </button>
+          )}
+          <p className={`mt-1 text-xs font-medium ${taskSignal.textClass}`}>
+            {taskSignal.text}
+          </p>
+          {deal.created_at ? (
+            <p className="mt-1 text-xs text-gray-500">
+              Created: {formatCreatedRelative(deal.created_at)}
+            </p>
+          ) : null}
+        </div>
         <div className="mt-2 flex flex-wrap gap-1.5">
           {onQuickAddTask ? (
             <DealQuickTaskMenu
@@ -182,7 +308,30 @@ export default function DealCard({
               {quickCompleting ? "…" : "✔ Complete"}
             </button>
           ) : null}
+          {onMoveToFallbackStage ? (
+            <select
+              className="cursor-pointer rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={movingStage || deleteDisabled}
+              defaultValue=""
+              onChange={(e) => {
+                const value = e.target.value as StageFallbackPreset | "";
+                if (!value) return;
+                void onMoveToFallbackStage(value);
+                e.currentTarget.value = "";
+              }}
+            >
+              <option value="" disabled>
+                Move to →
+              </option>
+              <option value="new">New</option>
+              <option value="negotiation">Negotiation</option>
+              <option value="won">Won</option>
+            </select>
+          ) : null}
         </div>
+        {inlineSaving || movingStage ? (
+          <p className="mt-1 text-xs text-gray-500">Saving...</p>
+        ) : null}
         <button
           type="button"
           className="mt-2 text-xs text-red-600 hover:underline disabled:opacity-50"

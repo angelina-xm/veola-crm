@@ -18,7 +18,7 @@ import Stage from "./Stage";
 import DealModal from "./DealModal";
 import ClientModal from "./ClientModal";
 import NotificationBar from "@/src/components/notifications/NotificationBar";
-import { DealCardContent } from "./DealCard";
+import { DealCardContent, type StageFallbackPreset } from "./DealCard";
 import {
   createDeal,
   createClient,
@@ -279,6 +279,99 @@ export default function Board({
   const [quickAddingTaskDealId, setQuickAddingTaskDealId] = useState<
     string | null
   >(null);
+  const [inlineSavingDealId, setInlineSavingDealId] = useState<string | null>(
+    null
+  );
+  const [movingStageDealId, setMovingStageDealId] = useState<string | null>(
+    null
+  );
+
+  const patchDealInline = useCallback(
+    async (dealId: string, patch: { title?: string; amount?: number }) => {
+      const current = findDealInBoard(dealsByStage, dealId);
+      if (!current) return;
+      const optimistic: Deal = {
+        ...current,
+        title: patch.title ?? current.title,
+        amount: patch.amount ?? current.amount,
+      };
+      setInlineSavingDealId(dealId);
+      setDealsByStage((prev) => upsertDealInGrouped(prev, optimistic));
+      try {
+        const raw = await patchDeal(companyId, dealId, patch);
+        const normalized = readDealPatch(raw);
+        setDealsByStage((prev) =>
+          upsertDealInGrouped(prev, {
+            ...optimistic,
+            ...normalized,
+          })
+        );
+      } catch (err) {
+        setDealsByStage((prev) => upsertDealInGrouped(prev, current));
+        if (typeof window !== "undefined") {
+          window.alert(
+            err instanceof Error ? err.message : "Не удалось сохранить изменения"
+          );
+        }
+      } finally {
+        setInlineSavingDealId(null);
+      }
+    },
+    [companyId, dealsByStage, setDealsByStage]
+  );
+
+  const moveDealToFallbackStage = useCallback(
+    async (dealId: string, preset: StageFallbackPreset) => {
+      const targetName =
+        preset === "new"
+          ? "new"
+          : preset === "negotiation"
+            ? "negotiation"
+            : "won";
+      const targetStage = stages.find(
+        (s) => String(s.name).trim().toLowerCase() === targetName
+      );
+      if (!targetStage) {
+        if (typeof window !== "undefined") {
+          window.alert(
+            `Стадия "${targetName}" не найдена в текущей компании.`
+          );
+        }
+        return;
+      }
+      const current = findDealInBoard(dealsByStage, dealId);
+      if (!current) return;
+      const optimistic: Deal = {
+        ...current,
+        stage: String(targetStage.id),
+        stageId: String(targetStage.id),
+      };
+      setMovingStageDealId(dealId);
+      setDealsByStage((prev) => upsertDealInGrouped(prev, optimistic));
+      try {
+        const raw = await patchDeal(companyId, dealId, {
+          stage: Number.parseInt(String(targetStage.id), 10),
+        });
+        const normalized = readDealPatch(raw);
+        setDealsByStage((prev) =>
+          upsertDealInGrouped(prev, {
+            ...optimistic,
+            ...normalized,
+          })
+        );
+      } catch (err) {
+        setDealsByStage((prev) => upsertDealInGrouped(prev, current));
+        if (typeof window !== "undefined") {
+          window.alert(
+            err instanceof Error ? err.message : "Не удалось сменить стадию"
+          );
+        }
+      } finally {
+        setMovingStageDealId(null);
+      }
+    },
+    [companyId, dealsByStage, setDealsByStage, stages]
+  );
 
   const handleQuickAddTask = useCallback(
     async (
@@ -942,6 +1035,10 @@ export default function Board({
               quickCompletingDealId={quickCompletingDealId}
               onQuickAddTask={handleQuickAddTask}
               quickAddingTaskDealId={quickAddingTaskDealId}
+              onInlineSaveDeal={patchDealInline}
+              inlineSavingDealId={inlineSavingDealId}
+              onMoveToFallbackStage={moveDealToFallbackStage}
+              movingStageDealId={movingStageDealId}
             />
           ))}
         </div>

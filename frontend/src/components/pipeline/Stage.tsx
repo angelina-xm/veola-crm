@@ -8,6 +8,7 @@ import {
 
 import DealCard from "./DealCard";
 import type { TaskPreset } from "@/src/lib/quickTask";
+import type { StageFallbackPreset } from "./DealCard";
 import { Activity, Client, Deal, PipelineStage } from "@/src/types";
 
 export default function Stage({
@@ -26,6 +27,10 @@ export default function Stage({
   quickCompletingDealId,
   onQuickAddTask,
   quickAddingTaskDealId,
+  onInlineSaveDeal,
+  inlineSavingDealId,
+  onMoveToFallbackStage,
+  movingStageDealId,
 }: {
   stage: PipelineStage;
   deals: Deal[];
@@ -41,6 +46,16 @@ export default function Stage({
     customContent?: string
   ) => void | Promise<void>;
   quickAddingTaskDealId?: string | null;
+  onInlineSaveDeal?: (
+    dealId: string,
+    patch: { title?: string; amount?: number }
+  ) => void | Promise<void>;
+  inlineSavingDealId?: string | null;
+  onMoveToFallbackStage?: (
+    dealId: string,
+    preset: StageFallbackPreset
+  ) => void | Promise<void>;
+  movingStageDealId?: string | null;
   isLoading?: boolean;
   deletingDealId: string | null;
   dragDisabled?: boolean;
@@ -109,6 +124,26 @@ export default function Stage({
               quickAddingTaskDealId !== undefined &&
               quickAddingTaskDealId !== null &&
               quickAddingTaskDealId === id
+            }
+            onInlineSave={
+              onInlineSaveDeal
+                ? (patch) => void onInlineSaveDeal(id, patch)
+                : undefined
+            }
+            inlineSaving={
+              inlineSavingDealId !== undefined &&
+              inlineSavingDealId !== null &&
+              inlineSavingDealId === id
+            }
+            onMoveToFallbackStage={
+              onMoveToFallbackStage
+                ? (preset) => void onMoveToFallbackStage(id, preset)
+                : undefined
+            }
+            movingStage={
+              movingStageDealId !== undefined &&
+              movingStageDealId !== null &&
+              movingStageDealId === id
             }
           />
           );
