@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import Link from "next/link";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
 import { useAuth } from "@/src/components/auth/AuthProvider";
 import AppNav from "@/src/components/navigation/AppNav";
@@ -144,10 +145,13 @@ export default function ClientsPage() {
                   key={String(client.id)}
                   className="flex items-center justify-between gap-3 px-4 py-3"
                 >
-                  <span className="text-sm text-gray-800">
+                  <Link
+                    href={`/clients/${String(client.id)}`}
+                    className="text-sm text-gray-800 hover:underline"
+                  >
                     {client.name}
                     {client.email ? ` (${String(client.email)})` : ""}
-                  </span>
+                  </Link>
                   <button
                     type="button"
                     onClick={() => void handleDeleteClient(client)}
