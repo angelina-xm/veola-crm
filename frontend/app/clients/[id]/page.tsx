@@ -74,6 +74,62 @@ function getClientInsights(activities: Activity[]) {
   };
 }
 
+function daysBetween(a: Date, b: Date): number {
+  const ms = Math.abs(a.getTime() - b.getTime());
+  return ms / (24 * 60 * 60 * 1000);
+}
+
+function getClientRecommendations(
+  client: Client | null,
+  activities: Activity[],
+  deals: Deal[]
+): string[] {
+  if (!client) return [];
+
+  const insights = getClientInsights(activities);
+  const recs: string[] = [];
+
+  if (insights.pricingCount >= 3) {
+    recs.push("Offer discount");
+  }
+  if (insights.objectionCount >= 3) {
+    recs.push("Address client concerns");
+  }
+
+  const lastActivity = activities[0];
+  if (lastActivity) {
+    const lastTs = new Date(lastActivity.created_at).getTime();
+    if (Number.isFinite(lastTs)) {
+      const inactiveDays = daysBetween(new Date(lastTs), new Date());
+      if (inactiveDays > 30) {
+        recs.push("Re-engage client");
+      }
+    }
+  }
+
+  // "Regular deals" heuristic: >=3 deals with ~30 day cadence (15..45 days).
+  const dealDates = deals
+    .map((d) => new Date(d.created_at ?? "").getTime())
+    .filter((t) => Number.isFinite(t))
+    .sort((a, b) => a - b);
+  if (dealDates.length >= 3) {
+    const gaps: number[] = [];
+    for (let i = 1; i < dealDates.length; i += 1) {
+      gaps.push((dealDates[i] - dealDates[i - 1]) / (24 * 60 * 60 * 1000));
+    }
+    const regularGaps = gaps.filter((g) => g >= 15 && g <= 45);
+    const isRegular = regularGaps.length >= Math.max(2, Math.floor(gaps.length * 0.6));
+    if (isRegular) {
+      const lastDealTs = dealDates[dealDates.length - 1];
+      if (daysBetween(new Date(lastDealTs), new Date()) > 40) {
+        recs.push("Suggest reorder");
+      }
+    }
+  }
+
+  return recs.slice(0, 4);
+}
+
 export default function ClientProfilePage() {
   const { isReady, isAuthenticated } = useAuth();
   const router = useRouter();
@@ -255,6 +311,10 @@ export default function ClientProfilePage() {
     [activities]
   );
   const insights = useMemo(() => getClientInsights(activities), [activities]);
+  const recommendations = useMemo(
+    () => getClientRecommendations(client, activities, deals),
+    [activities, client, deals]
+  );
 
   const startEditActivity = useCallback((a: Activity) => {
     setEditingActivityId(String(a.id));
@@ -351,6 +411,19 @@ export default function ClientProfilePage() {
                 🔥 Status: {insights.status}
               </p>
             </section>
+
+            {recommendations.length > 0 ? (
+              <section className="rounded-lg border border-indigo-200 bg-indigo-50 p-4">
+                <h3 className="mb-2 text-base font-semibold text-indigo-900">
+                  💡 Recommendations
+                </h3>
+                <ul className="space-y-1 text-sm text-indigo-900">
+                  {recommendations.map((rec) => (
+                    <li key={rec}>• {rec}</li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
 
             <section className="rounded-lg border border-gray-200 bg-white p-4">
               <h3 className="mb-3 text-base font-semibold text-gray-900">Deals</h3>
