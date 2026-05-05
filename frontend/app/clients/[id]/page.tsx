@@ -10,11 +10,12 @@ import {
   getActivities,
   getClients,
   getDeals,
+  getPipelineStages,
   normalizeApiList,
 } from "@/src/lib/api";
 import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
 import { normalizeDealPayload } from "@/src/lib/dealGrouping";
-import type { Activity, Client, Deal } from "@/src/types";
+import type { Activity, Client, Deal, PipelineStage } from "@/src/types";
 
 type ApiDealRow = {
   id: string | number;
@@ -36,7 +37,10 @@ export default function ClientProfilePage() {
   const [client, setClient] = useState<Client | null>(null);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [stages, setStages] = useState<PipelineStage[]>([]);
   const [addingNote, setAddingNote] = useState(false);
+  const [noteContent, setNoteContent] = useState("");
+  const [noteDealId, setNoteDealId] = useState("");
 
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
@@ -54,18 +58,24 @@ export default function ClientProfilePage() {
     setError(null);
     try {
       const tenantId = getStoredCompanyId() ?? companyId;
-      const [clientsRaw, dealsRaw] = await Promise.all([
+      const [clientsRaw, dealsRaw, stagesRaw] = await Promise.all([
         getClients(tenantId),
         getDeals(tenantId),
+        getPipelineStages(tenantId),
       ]);
       const found = clientsRaw.find((c) => String(c.id) === clientId) ?? null;
       if (!found) {
         setClient(null);
         setDeals([]);
         setActivities([]);
+        setStages([]);
         setError("Клиент не найден.");
         return;
       }
+      const normalizedStages = normalizeApiList(
+        stagesRaw as PipelineStage[] | { results: PipelineStage[] }
+      ).map((s) => ({ ...s, id: String(s.id) }));
+
       const normalizedDeals = normalizeApiList(
         dealsRaw as ApiDealRow[] | { results: ApiDealRow[] }
       )
@@ -85,11 +95,20 @@ export default function ClientProfilePage() {
       setClient(found);
       setDeals(normalizedDeals);
       setActivities(mergedActivities);
+      setStages(normalizedStages);
+      setNoteDealId((prev) =>
+        prev && normalizedDeals.some((d) => String(d.id) === prev)
+          ? prev
+          : normalizedDeals[0]
+            ? String(normalizedDeals[0].id)
+            : ""
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Не удалось загрузить данные.");
       setClient(null);
       setDeals([]);
       setActivities([]);
+      setStages([]);
     } finally {
       setLoading(false);
     }
@@ -100,33 +119,29 @@ export default function ClientProfilePage() {
     void loadData();
   }, [companyId, isAuthenticated, isReady, loadData]);
 
-  const stageById = useMemo(() => {
+  const stageNameById = useMemo(() => {
     const m = new Map<string, string>();
-    for (const d of deals) {
-      const stage = d.stageId ?? d.stage;
-      if (stage != null) m.set(String(d.id), String(stage));
+    for (const s of stages) {
+      m.set(String(s.id), String(s.name));
     }
     return m;
-  }, [deals]);
+  }, [stages]);
+
+  const stageBadgeClass = (name: string) => {
+    const key = name.trim().toLowerCase();
+    if (key === "won") return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    if (key === "negotiation")
+      return "bg-amber-50 text-amber-700 border-amber-200";
+    return "bg-slate-50 text-slate-700 border-slate-200";
+  };
 
   const handleAddNote = useCallback(async () => {
-    if (!companyId) return;
-    if (deals.length === 0) {
-      window.alert("Сначала создайте сделку для клиента.");
-      return;
-    }
-    const text = window.prompt("Note", "");
-    if (text === null) return;
-    const content = text.trim();
+    if (!companyId || !noteDealId) return;
+    const content = noteContent.trim();
     if (!content) return;
-    const options = deals.map((d) => `${String(d.id)}: ${d.title}`).join("\n");
-    const selected = window.prompt(
-      `Deal ID for note:\n${options}`,
-      String(deals[0]?.id ?? "")
-    );
-    if (selected === null) return;
-    const dealNum = Number.parseInt(selected.trim(), 10);
+    const dealNum = Number.parseInt(noteDealId, 10);
     if (!Number.isFinite(dealNum)) return;
+
     setAddingNote(true);
     try {
       const tenantId = getStoredCompanyId() ?? companyId;
@@ -135,40 +150,23 @@ export default function ClientProfilePage() {
         type: "note",
         content,
       });
+      setNoteContent("");
       await loadData();
     } catch (err) {
       window.alert(err instanceof Error ? err.message : "Не удалось добавить заметку");
     } finally {
       setAddingNote(false);
     }
-  }, [companyId, deals, loadData]);
+  }, [companyId, noteContent, noteDealId, loadData]);
 
   return (
     <ProtectedRoute>
       <div className="p-6">
         <AppNav />
-        <div className="mb-6 flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Client profile</h1>
-            <p className="mt-1 text-sm text-gray-600">Карточка клиента и история</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => void handleAddNote()}
-              disabled={addingNote || loading || !client}
-              className="rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-            >
-              {addingNote ? "..." : "📝 Add note"}
-            </button>
-            <button
-              type="button"
-              onClick={() => router.push("/")}
-              className="rounded bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
-            >
-              Create deal
-            </button>
-          </div>
+
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Client profile</h1>
+          <p className="mt-1 text-sm text-gray-600">Карточка клиента и история общения</p>
         </div>
 
         {loading ? (
@@ -180,37 +178,43 @@ export default function ClientProfilePage() {
         ) : client ? (
           <div className="space-y-4">
             <section className="rounded-lg border border-gray-200 bg-white p-4">
-              <h2 className="text-lg font-semibold text-gray-900">{client.name}</h2>
-              <p className="mt-1 text-sm text-gray-700">{client.email || "—"}</p>
-              <p className="text-sm text-gray-700">{client.phone || "—"}</p>
+              <h2 className="text-3xl font-bold text-gray-900">{client.name}</h2>
+              <p className="mt-1 text-sm text-gray-600">Email: {client.email || "—"}</p>
+              <p className="text-sm text-gray-600">Phone: {client.phone || "—"}</p>
             </section>
 
             <section className="rounded-lg border border-gray-200 bg-white p-4">
-              <h3 className="mb-3 text-sm font-semibold text-gray-900">Deals</h3>
+              <h3 className="mb-3 text-base font-semibold text-gray-900">Deals</h3>
               {deals.length === 0 ? (
                 <p className="text-sm text-gray-500">No deals yet.</p>
               ) : (
                 <ul className="space-y-2">
-                  {deals.map((deal) => (
-                    <li
-                      key={String(deal.id)}
-                      className="rounded border border-gray-100 px-3 py-2 text-sm"
-                    >
-                      <p className="font-medium text-gray-900">{deal.title}</p>
-                      <p className="text-gray-700">
-                        Amount: {deal.amount != null ? `$${deal.amount}` : "—"}
-                      </p>
-                      <p className="text-gray-600">
-                        Stage: {stageById.get(String(deal.id)) ?? "—"}
-                      </p>
-                    </li>
-                  ))}
+                  {deals.map((deal) => {
+                    const stageName =
+                      stageNameById.get(String(deal.stageId ?? deal.stage ?? "")) ?? "—";
+                    return (
+                      <li
+                        key={String(deal.id)}
+                        className="rounded border border-gray-100 px-3 py-2 text-sm"
+                      >
+                        <p className="font-medium text-gray-900">{deal.title}</p>
+                        <p className="text-gray-700">
+                          Amount: {deal.amount != null ? `$${deal.amount}` : "—"}
+                        </p>
+                        <span
+                          className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-xs ${stageBadgeClass(stageName)}`}
+                        >
+                          {stageName}
+                        </span>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </section>
 
             <section className="rounded-lg border border-gray-200 bg-white p-4">
-              <h3 className="mb-3 text-sm font-semibold text-gray-900">Activity</h3>
+              <h3 className="mb-3 text-base font-semibold text-gray-900">Activity</h3>
               {activities.length === 0 ? (
                 <p className="text-sm text-gray-500">No activity yet.</p>
               ) : (
@@ -220,17 +224,72 @@ export default function ClientProfilePage() {
                       key={String(a.id)}
                       className="rounded border border-gray-100 px-3 py-2 text-sm"
                     >
-                      <p className="font-medium text-gray-900">
-                        {a.type.toUpperCase()}
-                      </p>
-                      <p className="text-gray-700">{a.content || "—"}</p>
                       <p className="text-xs text-gray-500">
-                        {new Date(a.created_at).toLocaleString()}
+                        [{new Date(a.created_at).toLocaleString()}]
+                      </p>
+                      <p className="text-sm text-gray-800">
+                        {a.content || "—"}{" "}
+                        <span className="text-xs uppercase text-gray-500">({a.type})</span>
                       </p>
                     </li>
                   ))}
                 </ul>
               )}
+            </section>
+
+            <section className="rounded-lg border border-gray-200 bg-white p-4">
+              <h3 className="mb-3 text-base font-semibold text-gray-900">Actions</h3>
+              <div className="space-y-2">
+                <label className="block text-sm text-gray-700">
+                  Deal for note
+                  <select
+                    value={noteDealId}
+                    onChange={(e) => setNoteDealId(e.target.value)}
+                    disabled={addingNote || deals.length === 0}
+                    className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                  >
+                    {deals.length === 0 ? (
+                      <option value="">No deals</option>
+                    ) : (
+                      deals.map((d) => (
+                        <option key={String(d.id)} value={String(d.id)}>
+                          {d.title}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </label>
+                <label className="block text-sm text-gray-700">
+                  Note
+                  <textarea
+                    value={noteContent}
+                    onChange={(e) => setNoteContent(e.target.value)}
+                    rows={3}
+                    placeholder="Write note..."
+                    disabled={addingNote || deals.length === 0}
+                    className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                  />
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void handleAddNote()}
+                    disabled={
+                      addingNote || deals.length === 0 || noteContent.trim() === ""
+                    }
+                    className="rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    {addingNote ? "..." : "📝 Add note"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => router.push("/")}
+                    className="rounded bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
+                  >
+                    Create deal
+                  </button>
+                </div>
+              </div>
             </section>
           </div>
         ) : null}
