@@ -675,6 +675,7 @@ export default function Board({
         console.log("ATTENTION CHECK", {
           dealId: deal.id,
           isStale: stale,
+          needsAttention: stale,
         });
         if (stale) {
           out.add(dealId);
