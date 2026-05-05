@@ -14,6 +14,7 @@ import { normalizeDealPayload } from "@/src/lib/dealGrouping";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
 import { useAuth } from "@/src/components/auth/AuthProvider";
 import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
+import AppNav from "@/src/components/navigation/AppNav";
 import { Client, DealsByStage, PipelineStage } from "@/src/types";
 
 type ApiDealRow = {
@@ -156,6 +157,7 @@ export default function PipelinePage() {
   return (
     <ProtectedRoute>
       <div className="p-6">
+        <AppNav />
         <div className="mb-6">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -212,7 +214,6 @@ export default function PipelinePage() {
             setDealsByStage={setDealsByStage}
             companyId={companyId}
             clients={clients}
-            setClients={setClients}
           />
         ) : null}
       </div>

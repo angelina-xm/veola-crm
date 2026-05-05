@@ -14,9 +14,9 @@ import {
 } from "@dnd-kit/core";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import Stage from "./Stage";
 import DealModal from "./DealModal";
-import ClientModal from "./ClientModal";
 import NotificationBar from "@/src/components/notifications/NotificationBar";
 import {
   DealCardContent,
@@ -27,9 +27,6 @@ import {
 import {
   createActivity,
   createDeal,
-  createClient,
-  deleteClient,
-  getClients,
   deleteDeal,
   getCompanyOpenTasks,
   getStaleDeals,
@@ -68,7 +65,6 @@ interface BoardProps {
   setDealsByStage: React.Dispatch<React.SetStateAction<DealsByStage>>;
   companyId: number;
   clients: Client[];
-  setClients: React.Dispatch<React.SetStateAction<Client[]>>;
 }
 
 type PriorityLabel = "high" | "medium" | "low";
@@ -275,8 +271,8 @@ export default function Board({
   setDealsByStage,
   companyId,
   clients,
-  setClients,
 }: BoardProps) {
+  const router = useRouter();
   const [overlayDeal, setOverlayDeal] = useState<Deal | null>(null);
   const [dndLoading, setDndLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -284,11 +280,7 @@ export default function Board({
   const [dealInModal, setDealInModal] = useState<Deal | null>(null);
   const [modalSubmitting, setModalSubmitting] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
-  const [clientModalOpen, setClientModalOpen] = useState(false);
-  const [clientSubmitting, setClientSubmitting] = useState(false);
-  const [clientError, setClientError] = useState<string | null>(null);
   const [deletingDealId, setDeletingDealId] = useState<string | null>(null);
-  const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
   const [staleDeals, setStaleDeals] = useState<StaleDeal[]>([]);
   const [openCompanyTasks, setOpenCompanyTasks] = useState<Activity[]>([]);
 
@@ -643,11 +635,7 @@ export default function Board({
     setNotificationFocus(null);
   }, []);
 
-  const boardBusy =
-    modalSubmitting ||
-    clientSubmitting ||
-    deletingDealId !== null ||
-    deletingClientId !== null;
+  const boardBusy = modalSubmitting || deletingDealId !== null;
   const allDeals = useMemo(
     () => Object.values(dealsByStage).flatMap((list) => list ?? []),
     [dealsByStage]
@@ -827,17 +815,6 @@ export default function Board({
     setModalError(null);
     setModalOpen(true);
   }, [stages]);
-
-  const openClientCreate = useCallback(() => {
-    setClientError(null);
-    setClientModalOpen(true);
-  }, []);
-
-  const closeClientModal = useCallback(() => {
-    if (clientSubmitting) return;
-    setClientModalOpen(false);
-    setClientError(null);
-  }, [clientSubmitting]);
 
   const openEdit = useCallback((deal: Deal) => {
     setModalMode("edit");
@@ -1038,65 +1015,6 @@ export default function Board({
     await handleDelete(dealInModal);
   }, [dealInModal, handleDelete]);
 
-  const handleDeleteClient = useCallback(
-    async (client: Client) => {
-      if (typeof window !== "undefined" && !window.confirm("Are you sure?")) {
-        return;
-      }
-      setDeletingClientId(String(client.id));
-      try {
-        const tenantId = getStoredCompanyId() ?? companyId;
-        await deleteClient(tenantId, client.id);
-        const refreshed = await getClients(tenantId);
-        setClients(refreshed);
-        if (typeof window !== "undefined") {
-          window.alert("Client deleted");
-        }
-      } catch (err) {
-        window.alert(
-          err instanceof Error ? err.message : "Не удалось удалить клиента"
-        );
-      } finally {
-        setDeletingClientId(null);
-      }
-    },
-    [companyId, setClients]
-  );
-
-  const handleCreateClient = useCallback(
-    async (values: { name: string; email: string }) => {
-      setClientSubmitting(true);
-      setClientError(null);
-      try {
-        const tenantId = getStoredCompanyId() ?? companyId;
-        console.log("CREATE CLIENT", {
-          companyId: getStoredCompanyId(),
-          companyIdProp: companyId,
-          tenantIdUsed: tenantId,
-        });
-        await createClient(tenantId, {
-          name: values.name,
-          email: values.email || undefined,
-        });
-        const refreshed = await getClients(tenantId);
-        setClients(refreshed);
-        setClientModalOpen(false);
-        if (typeof window !== "undefined") {
-          window.alert("Client created");
-        }
-      } catch (err) {
-        const msg =
-          err instanceof Error ? err.message : "Не удалось создать клиента";
-        if (typeof window !== "undefined") {
-          window.alert(msg);
-        }
-      } finally {
-        setClientSubmitting(false);
-      }
-    },
-    [companyId, setClients]
-  );
-
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -1108,14 +1026,6 @@ export default function Board({
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-700 disabled:opacity-50"
           >
             Add Deal
-          </button>
-          <button
-            type="button"
-            onClick={openClientCreate}
-            disabled={boardBusy}
-            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-          >
-            Add Client
           </button>
           <button
             type="button"
@@ -1152,37 +1062,6 @@ export default function Board({
           ) : null}
         </div>
       ) : null}
-
-      <div className="mb-4 rounded border border-gray-200 bg-white px-3 py-2 text-sm">
-        <p className="mb-2 font-medium text-gray-800">Клиенты</p>
-        {clients.length === 0 ? (
-          <p className="text-gray-500">No clients yet</p>
-        ) : (
-          <ul className="space-y-1">
-            {clients.map((c) => (
-              <li
-                key={String(c.id)}
-                className="flex items-center justify-between gap-2 border-b border-gray-100 py-1 last:border-0"
-              >
-                <span className="text-gray-700">
-                  {c.name}
-                  {c.email ? ` (${String(c.email)})` : ""}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => void handleDeleteClient(c)}
-                  disabled={deletingClientId !== null}
-                  className="shrink-0 text-red-600 hover:underline disabled:opacity-50"
-                >
-                  {deletingClientId === String(c.id)
-                    ? "Deleting..."
-                    : "Delete"}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
 
       {staleDeals.length > 0 ? (
         <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950">
@@ -1362,7 +1241,7 @@ export default function Board({
           onDelete={
             modalMode === "edit" ? () => void handleModalDelete() : undefined
           }
-          onCreateClient={openClientCreate}
+          onCreateClient={() => router.push("/clients")}
           staleRow={
             dealInModal && modalMode === "edit"
               ? staleById.get(String(dealInModal.id)) ?? null
@@ -1371,14 +1250,6 @@ export default function Board({
           onActivitiesMutated={refreshOpenTasksAndNotifications}
         />
       ) : null}
-
-      <ClientModal
-        open={clientModalOpen}
-        submitting={clientSubmitting}
-        error={clientError}
-        onClose={closeClientModal}
-        onSubmit={(values) => void handleCreateClient(values)}
-      />
     </>
   );
 }
