@@ -685,6 +685,26 @@ export default function Board({
     return out;
   }, [dealsByStage, openTasksByDealId]);
   const attentionCount = attentionDealIds.size;
+  const syncedNotificationItems = useMemo(() => {
+    const next = notificationItems
+      .map((item) => {
+        if (item.type !== "stale_deals") return item;
+        return {
+          ...item,
+          count: attentionCount,
+          message:
+            attentionCount === 1
+              ? "1 deal needs attention"
+              : `${attentionCount} deals need attention`,
+        };
+      })
+      .filter((item) => item.count > 0);
+    return next;
+  }, [attentionCount, notificationItems]);
+  const syncedNotificationTotal = useMemo(
+    () => syncedNotificationItems.reduce((acc, item) => acc + item.count, 0),
+    [syncedNotificationItems]
+  );
   const { overdueTasksCount, todayTasksCount } = useMemo(() => {
     let overdue = 0;
     let today = 0;
@@ -1131,8 +1151,8 @@ export default function Board({
       </div>
 
       <NotificationBar
-        items={notificationItems}
-        totalBadge={notificationTotal}
+        items={syncedNotificationItems}
+        totalBadge={syncedNotificationTotal}
         activeType={notificationFocus}
         onSelect={handleNotificationSelect}
         onClear={handleNotificationClear}
