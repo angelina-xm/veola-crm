@@ -37,6 +37,9 @@ export default function Stage({
   onTaskComplete,
   completingTaskId,
   priorityLabel,
+  notesByDealId,
+  onAddNote,
+  addingNoteDealId,
 }: {
   stage: PipelineStage;
   deals: Deal[];
@@ -71,6 +74,9 @@ export default function Stage({
   onTaskComplete?: (taskId: string) => void | Promise<void>;
   completingTaskId?: string | null;
   priorityLabel?: "high" | "medium" | "low" | null;
+  notesByDealId?: Record<string, Activity[]>;
+  onAddNote?: (dealId: string) => void | Promise<void>;
+  addingNoteDealId?: string | null;
   isLoading?: boolean;
   deletingDealId: string | null;
   dragDisabled?: boolean;
@@ -193,6 +199,13 @@ export default function Stage({
             needsAttention={Boolean(attentionDealIds?.has(id))}
             onTaskComplete={onTaskComplete}
             completingTaskId={completingTaskId}
+            notes={notesByDealId?.[id] ?? []}
+            onAddNote={onAddNote ? () => void onAddNote(id) : undefined}
+            addingNote={
+              addingNoteDealId !== undefined &&
+              addingNoteDealId !== null &&
+              addingNoteDealId === id
+            }
           />
           );
         })}

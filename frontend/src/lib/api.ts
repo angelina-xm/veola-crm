@@ -341,6 +341,32 @@ export async function getCompanyOpenTasks(
   return list.map((row) => normalizeActivityRow(row));
 }
 
+/** Все заметки компании (type=note), для карточек/last activity без нового API. */
+export async function getCompanyNotes(companyId: number): Promise<Activity[]> {
+  const q = new URLSearchParams({
+    type: "note",
+  });
+  const res = await fetchWithAuth(`/activities/?${q.toString()}`, {}, companyId);
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const data: unknown = await res.json();
+  const list = normalizeApiList(
+    data as ListResponse<{
+      id: string | number;
+      deal: string | number;
+      author: string | number;
+      author_email?: string | null;
+      type: ActivityType;
+      content?: string | null;
+      due_date?: string | null;
+      is_completed?: boolean;
+      created_at: string;
+    }>
+  );
+  return list.map((row) => normalizeActivityRow(row));
+}
+
 export async function getActivities(
   companyId: number,
   dealId: string | number

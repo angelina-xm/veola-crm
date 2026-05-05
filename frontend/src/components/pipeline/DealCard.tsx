@@ -156,6 +156,9 @@ export default function DealCard({
   needsAttention = false,
   onTaskComplete,
   completingTaskId = null,
+  notes = [],
+  onAddNote,
+  addingNote = false,
 }: {
   deal: Deal;
   index: number;
@@ -181,6 +184,9 @@ export default function DealCard({
   needsAttention?: boolean;
   onTaskComplete?: (taskId: string) => void | Promise<void>;
   completingTaskId?: string | null;
+  notes?: Activity[];
+  onAddNote?: () => void | Promise<void>;
+  addingNote?: boolean;
   isDeleting?: boolean;
   deleteDisabled?: boolean;
   dragDisabled?: boolean;
@@ -221,6 +227,10 @@ export default function DealCard({
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     })
     .slice(0, 3);
+  const sortedNotes = [...notes].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+  const lastActivity = sortedNotes[0] ?? null;
   const {
     attributes,
     listeners,
@@ -510,6 +520,44 @@ export default function DealCard({
             </ul>
           </div>
         ) : null}
+        <div className="mt-2 rounded border border-slate-200 bg-slate-50 px-2 py-1.5">
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <p className="text-[11px] font-medium text-slate-700">Notes</p>
+            {onAddNote ? (
+              <button
+                type="button"
+                className="cursor-pointer rounded border border-slate-300 bg-white px-2 py-0.5 text-[11px] text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={addingNote || deleteDisabled}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void onAddNote();
+                }}
+              >
+                {addingNote ? "..." : "📝 Add note"}
+              </button>
+            ) : null}
+          </div>
+          {sortedNotes.length === 0 ? (
+            <p className="text-xs text-slate-500">No notes yet.</p>
+          ) : (
+            <ul className="space-y-1">
+              {sortedNotes.map((note) => (
+                <li key={String(note.id)} className="text-xs text-slate-700">
+                  {note.content ? String(note.content) : "Note"}{" "}
+                  <span className="text-slate-500">
+                    {new Date(note.created_at).toLocaleString()}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {lastActivity ? (
+            <p className="mt-1 text-[11px] text-slate-600">
+              Last activity: {lastActivity.content || "Note"} {" · "}
+              {new Date(lastActivity.created_at).toLocaleString()}
+            </p>
+          ) : null}
+        </div>
         {inlineSaving || movingStage ? (
           <p className="mt-1 text-xs text-gray-500">Saving...</p>
         ) : null}

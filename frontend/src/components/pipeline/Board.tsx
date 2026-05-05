@@ -28,6 +28,7 @@ import {
   createActivity,
   createDeal,
   deleteDeal,
+  getCompanyNotes,
   getCompanyOpenTasks,
   getStaleDeals,
   patchActivity,
@@ -283,6 +284,9 @@ export default function Board({
   const [deletingDealId, setDeletingDealId] = useState<string | null>(null);
   const [staleDeals, setStaleDeals] = useState<StaleDeal[]>([]);
   const [openCompanyTasks, setOpenCompanyTasks] = useState<Activity[]>([]);
+  const [notesByDealId, setNotesByDealId] = useState<Record<string, Activity[]>>(
+    {}
+  );
 
   const openTasksByDealId = useMemo(() => {
     const m = groupOpenTasksByDealId(openCompanyTasks);
@@ -309,6 +313,26 @@ export default function Board({
     await refreshNotifications();
   }, [companyId, refreshNotifications]);
 
+  const refreshNotes = useCallback(async () => {
+    try {
+      const notes = await getCompanyNotes(companyId);
+      const grouped: Record<string, Activity[]> = {};
+      for (const note of notes) {
+        const dealId = String(note.deal);
+        grouped[dealId] = [...(grouped[dealId] ?? []), note];
+      }
+      for (const dealId of Object.keys(grouped)) {
+        grouped[dealId].sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+      }
+      setNotesByDealId(grouped);
+    } catch {
+      setNotesByDealId({});
+    }
+  }, [companyId]);
+
   const [quickCompletingDealId, setQuickCompletingDealId] = useState<
     string | null
   >(null);
@@ -319,6 +343,7 @@ export default function Board({
   const [suggestedActionDealId, setSuggestedActionDealId] = useState<
     string | null
   >(null);
+  const [addingNoteDealId, setAddingNoteDealId] = useState<string | null>(null);
   const [inlineSavingDealId, setInlineSavingDealId] = useState<string | null>(
     null
   );
@@ -502,6 +527,34 @@ export default function Board({
       }
     },
     [companyId, refreshOpenTasksAndNotifications]
+  );
+  const handleAddNote = useCallback(
+    async (dealId: string) => {
+      if (typeof window === "undefined") return;
+      const content = window.prompt("Note", "");
+      if (content === null) return;
+      const trimmed = content.trim();
+      if (!trimmed) return;
+      const dealNum = Number.parseInt(dealId, 10);
+      if (!Number.isFinite(dealNum)) return;
+      setAddingNoteDealId(dealId);
+      try {
+        const tenantId = getStoredCompanyId() ?? companyId;
+        await createActivity(tenantId, {
+          deal: dealNum,
+          type: "note",
+          content: trimmed,
+        });
+        await refreshNotes();
+      } catch (err) {
+        window.alert(
+          err instanceof Error ? err.message : "Не удалось создать заметку"
+        );
+      } finally {
+        setAddingNoteDealId(null);
+      }
+    },
+    [companyId, refreshNotes]
   );
 
   const handleQuickCompleteFirstTask = useCallback(
@@ -687,6 +740,10 @@ export default function Board({
     };
     void run();
   }, [companyId, modalOpen]);
+
+  useEffect(() => {
+    void refreshNotes();
+  }, [refreshNotes]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -1197,6 +1254,9 @@ export default function Board({
                   ? (priorityStageLabels[String(stage.id)] ?? "low")
                   : null
               }
+              notesByDealId={notesByDealId}
+              onAddNote={handleAddNote}
+              addingNoteDealId={addingNoteDealId}
             />
           ))}
         </div>
