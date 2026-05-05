@@ -29,6 +29,14 @@ type ApiDealRow = {
   created_at?: string;
 };
 
+const CATEGORY_OPTIONS = [
+  "Pricing",
+  "Interest",
+  "Objection",
+  "Follow up",
+  "Other",
+] as const;
+
 export default function ClientProfilePage() {
   const { isReady, isAuthenticated } = useAuth();
   const router = useRouter();
@@ -43,6 +51,8 @@ export default function ClientProfilePage() {
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [addingNote, setAddingNote] = useState(false);
   const [addingCall, setAddingCall] = useState(false);
+  const [noteCategory, setNoteCategory] = useState<string>("Other");
+  const [callCategory, setCallCategory] = useState<string>("Other");
   const [noteContent, setNoteContent] = useState("");
   const [callContent, setCallContent] = useState("");
   const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
@@ -59,6 +69,15 @@ export default function ClientProfilePage() {
     if (!isReady || !isAuthenticated) return;
     setCompanyId(getStoredCompanyId() ?? readEnvCompanyId());
   }, [isReady, isAuthenticated]);
+
+  useLayoutEffect(() => {
+    if (typeof window === "undefined") return;
+    const saved = window.localStorage.getItem("activity:lastCategory");
+    if (saved && CATEGORY_OPTIONS.includes(saved as (typeof CATEGORY_OPTIONS)[number])) {
+      setNoteCategory(saved);
+      setCallCategory(saved);
+    }
+  }, []);
 
   const loadData = useCallback(async () => {
     if (!companyId || !clientId) return;
@@ -142,6 +161,7 @@ export default function ClientProfilePage() {
 
   const handleAddNote = useCallback(async () => {
     if (!companyId) return;
+    if (!noteCategory) return;
     const content = noteContent.trim();
     if (!content) return;
 
@@ -151,19 +171,24 @@ export default function ClientProfilePage() {
       await createActivity(tenantId, {
         client: Number.parseInt(clientId, 10),
         type: "note",
+        category: noteCategory,
         content,
       });
       setNoteContent("");
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("activity:lastCategory", noteCategory);
+      }
       await loadData();
     } catch (err) {
       window.alert(err instanceof Error ? err.message : "Не удалось добавить заметку");
     } finally {
       setAddingNote(false);
     }
-  }, [clientId, companyId, noteContent, loadData]);
+  }, [clientId, companyId, noteCategory, noteContent, loadData]);
 
   const handleLogCall = useCallback(async () => {
     if (!companyId) return;
+    if (!callCategory) return;
     const content = callContent.trim();
     if (!content) return;
 
@@ -173,16 +198,20 @@ export default function ClientProfilePage() {
       await createActivity(tenantId, {
         client: Number.parseInt(clientId, 10),
         type: "call",
+        category: callCategory,
         content,
       });
       setCallContent("");
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("activity:lastCategory", callCategory);
+      }
       await loadData();
     } catch (err) {
       window.alert(err instanceof Error ? err.message : "Не удалось сохранить звонок");
     } finally {
       setAddingCall(false);
     }
-  }, [callContent, clientId, companyId, loadData]);
+  }, [callCategory, callContent, clientId, companyId, loadData]);
 
   const lastContact = useMemo(
     () => activities.find((a) => a.type === "call" || a.type === "note") ?? null,
@@ -365,7 +394,7 @@ export default function ClientProfilePage() {
                                     ? "✔"
                                     : "☐"
                                   : "•"}{" "}
-                            {a.content || "—"}{" "}
+                            {a.category ? `[${a.category}] ` : ""}{a.content || "—"}{" "}
                             <span className="text-xs uppercase text-gray-500">({a.type})</span>
                             {a.type === "task" ? (
                               <span className="ml-2 text-xs normal-case text-gray-600">
@@ -407,6 +436,21 @@ export default function ClientProfilePage() {
               <h3 className="mb-3 text-base font-semibold text-gray-900">Actions</h3>
               <div className="space-y-2">
                 <label className="block text-sm text-gray-700">
+                  Category
+                  <select
+                    value={noteCategory}
+                    onChange={(e) => setNoteCategory(e.target.value)}
+                    disabled={addingNote}
+                    className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                  >
+                    {CATEGORY_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block text-sm text-gray-700">
                   Note
                   <textarea
                     value={noteContent}
@@ -416,6 +460,21 @@ export default function ClientProfilePage() {
                     disabled={addingNote}
                     className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
                   />
+                </label>
+                <label className="block text-sm text-gray-700">
+                  Category
+                  <select
+                    value={callCategory}
+                    onChange={(e) => setCallCategory(e.target.value)}
+                    disabled={addingCall}
+                    className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                  >
+                    {CATEGORY_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <label className="block text-sm text-gray-700">
                   Log call
@@ -432,7 +491,7 @@ export default function ClientProfilePage() {
                   <button
                     type="button"
                     onClick={() => void handleAddNote()}
-                    disabled={addingNote || noteContent.trim() === ""}
+                    disabled={addingNote || noteContent.trim() === "" || !noteCategory}
                     className="rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                   >
                     {addingNote ? "..." : "📝 Add note"}
@@ -440,7 +499,7 @@ export default function ClientProfilePage() {
                   <button
                     type="button"
                     onClick={() => void handleLogCall()}
-                    disabled={addingCall || callContent.trim() === ""}
+                    disabled={addingCall || callContent.trim() === "" || !callCategory}
                     className="rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                   >
                     {addingCall ? "..." : "📞 Log call"}

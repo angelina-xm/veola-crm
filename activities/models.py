@@ -32,6 +32,7 @@ class Activity(models.Model):
         related_name="activities",
     )
     type = models.CharField(max_length=20, choices=Type.choices)
+    category = models.CharField(max_length=100, null=True, blank=True)
     content = models.TextField(blank=True)
     due_date = models.DateTimeField(null=True, blank=True)
     is_completed = models.BooleanField(default=False)

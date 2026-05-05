@@ -20,6 +20,7 @@ class ActivitySerializer(serializers.ModelSerializer):
             "author",
             "author_email",
             "type",
+            "category",
             "content",
             "due_date",
             "is_completed",

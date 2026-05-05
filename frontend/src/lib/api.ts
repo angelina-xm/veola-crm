@@ -295,6 +295,7 @@ function normalizeActivityRow(raw: {
   author: string | number;
   author_email?: string | null;
   type: ActivityType;
+  category?: string | null;
   content?: string | null;
   due_date?: string | null;
   is_completed?: boolean;
@@ -307,6 +308,7 @@ function normalizeActivityRow(raw: {
     author: raw.author,
     author_email: raw.author_email,
     type: raw.type,
+    category: raw.category,
     content: raw.content,
     due_date: raw.due_date,
     is_completed: Boolean(raw.is_completed),
@@ -426,6 +428,7 @@ export type CreateActivityPayload = {
   deal?: number;
   client?: number;
   type: ActivityType;
+  category?: string;
   content?: string;
   due_date?: string | null;
 };
@@ -443,6 +446,9 @@ export async function createActivity(
   }
   if (payload.content !== undefined && payload.content !== "") {
     body.content = payload.content;
+  }
+  if (payload.category !== undefined && payload.category.trim() !== "") {
+    body.category = payload.category.trim();
   }
   if (payload.due_date) {
     body.due_date = payload.due_date;
@@ -466,6 +472,7 @@ export async function createActivity(
     author: string | number;
     author_email?: string | null;
     type: ActivityType;
+    category?: string | null;
     content?: string | null;
     due_date?: string | null;
     is_completed?: boolean;
@@ -502,6 +509,7 @@ export async function patchActivity(
     author: string | number;
     author_email?: string | null;
     type: ActivityType;
+    category?: string | null;
     content?: string | null;
     due_date?: string | null;
     is_completed?: boolean;
