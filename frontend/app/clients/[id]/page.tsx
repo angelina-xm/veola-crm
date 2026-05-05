@@ -8,6 +8,7 @@ import AppNav from "@/src/components/navigation/AppNav";
 import {
   createActivity,
   deleteActivity,
+  getActivities,
   getClients,
   getClientActivities,
   getDeals,
@@ -89,7 +90,15 @@ export default function ClientProfilePage() {
         .map((d) => normalizeDealPayload(d))
         .filter((d) => String(d.client ?? "") === clientId);
 
-      const mergedActivities = (await getClientActivities(tenantId, clientId))
+      const byClient = await getClientActivities(tenantId, clientId);
+      const byDeals = await Promise.all(
+        normalizedDeals.map((d) => getActivities(tenantId, d.id))
+      );
+      const mergedActivities = [...byClient, ...byDeals.flat()]
+        .filter(
+          (a, idx, arr) =>
+            arr.findIndex((x) => String(x.id) === String(a.id)) === idx
+        )
         .sort(
           (a, b) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -347,9 +356,22 @@ export default function ClientProfilePage() {
                       ) : (
                         <>
                           <p className="text-sm text-gray-800">
-                            {a.type === "note" ? "📝" : a.type === "call" ? "📞" : "•"}{" "}
+                            {a.type === "note"
+                              ? "📝"
+                              : a.type === "call"
+                                ? "📞"
+                                : a.type === "task"
+                                  ? a.is_completed
+                                    ? "✔"
+                                    : "☐"
+                                  : "•"}{" "}
                             {a.content || "—"}{" "}
                             <span className="text-xs uppercase text-gray-500">({a.type})</span>
+                            {a.type === "task" ? (
+                              <span className="ml-2 text-xs normal-case text-gray-600">
+                                {a.is_completed ? "✔ completed" : "☐ active"}
+                              </span>
+                            ) : null}
                           </p>
                           {a.type === "note" || a.type === "call" ? (
                             <div className="mt-1 flex items-center gap-2">
