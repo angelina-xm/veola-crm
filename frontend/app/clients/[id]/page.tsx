@@ -37,6 +37,43 @@ const CATEGORY_OPTIONS = [
   "Other",
 ] as const;
 
+function normalizeCategoryKey(raw: string | null | undefined): string {
+  return String(raw ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+}
+
+function getClientInsights(activities: Activity[]) {
+  let pricingCount = 0;
+  let interestCount = 0;
+  let objectionCount = 0;
+  let followUpCount = 0;
+
+  for (const a of activities) {
+    const key = normalizeCategoryKey(a.category);
+    if (key === "pricing") pricingCount += 1;
+    else if (key === "interest") interestCount += 1;
+    else if (key === "objection") objectionCount += 1;
+    else if (key === "follow_up") followUpCount += 1;
+  }
+
+  const status =
+    interestCount >= 3
+      ? "High potential"
+      : objectionCount >= 3
+        ? "At risk"
+        : "Neutral";
+
+  return {
+    pricingCount,
+    interestCount,
+    objectionCount,
+    followUpCount,
+    status,
+  };
+}
+
 export default function ClientProfilePage() {
   const { isReady, isAuthenticated } = useAuth();
   const router = useRouter();
@@ -217,6 +254,7 @@ export default function ClientProfilePage() {
     () => activities.find((a) => a.type === "call" || a.type === "note") ?? null,
     [activities]
   );
+  const insights = useMemo(() => getClientInsights(activities), [activities]);
 
   const startEditActivity = useCallback((a: Activity) => {
     setEditingActivityId(String(a.id));
@@ -297,6 +335,21 @@ export default function ClientProfilePage() {
               <h2 className="text-3xl font-bold text-gray-900">{client.name}</h2>
               <p className="mt-1 text-sm text-gray-600">Email: {client.email || "—"}</p>
               <p className="text-sm text-gray-600">Phone: {client.phone || "—"}</p>
+            </section>
+
+            <section className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <h3 className="mb-2 text-base font-semibold text-gray-900">
+                📊 Client Insights
+              </h3>
+              <div className="grid grid-cols-2 gap-2 text-sm text-gray-700 md:grid-cols-4">
+                <p>Pricing: {insights.pricingCount}</p>
+                <p>Interest: {insights.interestCount}</p>
+                <p>Objections: {insights.objectionCount}</p>
+                <p>Follow ups: {insights.followUpCount}</p>
+              </div>
+              <p className="mt-2 text-sm font-semibold text-gray-900">
+                🔥 Status: {insights.status}
+              </p>
             </section>
 
             <section className="rounded-lg border border-gray-200 bg-white p-4">
