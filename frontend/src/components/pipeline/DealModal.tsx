@@ -349,11 +349,18 @@ export default function DealModal({
         </form>
 
         {mode === "edit" && deal && staleRow ? (
-          <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
+          <div
+            className={`mb-4 rounded px-3 py-2 text-sm ${
+              staleInactiveDays > 0
+                ? "border border-red-200 bg-red-50 text-red-900"
+                : "border border-gray-200 bg-gray-50 text-gray-700"
+            }`}
+          >
             <div className="flex flex-wrap items-center gap-2">
               <span>
-                🚨 No activity for {staleInactiveDays} day
-                {staleInactiveDays === 1 ? "" : "s"}
+                {staleInactiveDays > 0
+                  ? `🚨 No activity for ${staleInactiveDays} day${staleInactiveDays === 1 ? "" : "s"}`
+                  : "No activity yet"}
               </span>
               <button
                 type="button"
@@ -363,7 +370,11 @@ export default function DealModal({
                     .getElementById("deal-activities-section")
                     ?.scrollIntoView({ behavior: "smooth", block: "start" });
                 }}
-                className="rounded border border-red-300 bg-white px-2 py-1 text-xs font-medium hover:bg-red-100 disabled:opacity-50"
+                className={`rounded bg-white px-2 py-1 text-xs font-medium disabled:opacity-50 ${
+                  staleInactiveDays > 0
+                    ? "border border-red-300 hover:bg-red-100"
+                    : "border border-gray-300 hover:bg-gray-100"
+                }`}
               >
                 + Add Activity
               </button>

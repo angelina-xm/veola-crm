@@ -746,7 +746,14 @@ export default function Board({
     const run = async () => {
       try {
         const list = await getStaleDeals(companyId);
-        setStaleDeals(list);
+        setStaleDeals(
+          list.filter((deal) =>
+            isDealStale({
+              createdAt: deal.created_at,
+              lastActivityAt: deal.last_activity,
+            })
+          )
+        );
       } catch {
         setStaleDeals([]);
       }
