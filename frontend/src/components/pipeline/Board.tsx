@@ -485,6 +485,25 @@ export default function Board({
   );
 
   const highlightSet = highlightedDealIds ?? new Set<string>();
+  const attentionDealIds = useMemo(() => {
+    const out = new Set<string>();
+    for (const s of staleDeals) {
+      out.add(String(s.id));
+    }
+    const nowTs = Date.now();
+    for (const [dealId, tasks] of Object.entries(openTasksByDealId)) {
+      const hasOverdue = (tasks ?? []).some((t) => {
+        if (t.type !== "task" || t.is_completed || !t.due_date) return false;
+        const dueTs = new Date(t.due_date).getTime();
+        return Number.isFinite(dueTs) && dueTs < nowTs;
+      });
+      if (hasOverdue) {
+        out.add(String(dealId));
+      }
+    }
+    return out;
+  }, [openTasksByDealId, staleDeals]);
+  const attentionCount = attentionDealIds.size;
 
   const handleNotificationSelect = useCallback((item: NotificationItem) => {
     setNotificationFocus((prev) => (prev === item.type ? null : item.type));
@@ -1048,6 +1067,16 @@ export default function Board({
           </ul>
         </div>
       ) : null}
+      {attentionCount > 0 ? (
+        <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <p className="font-semibold">
+            ⚠️ {attentionCount}{" "}
+            {attentionCount === 1
+              ? "deal needs attention"
+              : "deals need attention"}
+          </p>
+        </div>
+      ) : null}
 
       <DndContext
         sensors={sensors}
@@ -1081,6 +1110,7 @@ export default function Board({
               movingStageDealId={movingStageDealId}
               onSuggestedAction={handleSuggestedAction}
               suggestedActionLoadingDealId={suggestedActionDealId}
+              attentionDealIds={attentionDealIds}
             />
           ))}
         </div>

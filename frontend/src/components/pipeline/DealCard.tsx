@@ -121,6 +121,7 @@ export default function DealCard({
   stageName,
   onSuggestedAction,
   suggestedActionLoading = false,
+  needsAttention = false,
 }: {
   deal: Deal;
   index: number;
@@ -143,6 +144,7 @@ export default function DealCard({
   stageName?: string;
   onSuggestedAction?: (label: SuggestedAction) => void | Promise<void>;
   suggestedActionLoading?: boolean;
+  needsAttention?: boolean;
   isDeleting?: boolean;
   deleteDisabled?: boolean;
   dragDisabled?: boolean;
@@ -195,13 +197,16 @@ export default function DealCard({
     spotlight && !dimmed
       ? "ring-2 ring-blue-500 ring-offset-1 bg-blue-50/60"
       : "";
+  const attentionClass = needsAttention
+    ? "border border-amber-300 bg-amber-50/70 shadow-[0_0_0_1px_rgba(251,191,36,0.35)]"
+    : "";
   const dimClass = dimmed ? "opacity-40" : "";
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`mb-2 flex gap-1 overflow-hidden rounded bg-white shadow ${taskSignal.borderClass} ${focusRing} ${dimClass}`}
+      className={`mb-2 flex gap-1 overflow-hidden rounded bg-white shadow transition-colors duration-300 hover:shadow-md ${taskSignal.borderClass} ${focusRing} ${attentionClass} ${dimClass}`}
       {...attributes}
     >
       <button
@@ -322,6 +327,12 @@ export default function DealCard({
           {deal.created_at ? (
             <p className="mt-1 text-xs text-gray-500">
               Created: {formatCreatedRelative(deal.created_at)}
+            </p>
+          ) : null}
+          {needsAttention ? (
+            <p className="mt-1 inline-flex animate-pulse items-center gap-1 text-xs font-medium text-amber-800">
+              <span aria-hidden>⚠️</span>
+              <span>Needs attention</span>
             </p>
           ) : null}
         </div>
