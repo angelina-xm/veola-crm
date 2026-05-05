@@ -47,7 +47,8 @@ export type ActivityType = "call" | "meeting" | "note" | "task";
 
 export interface Activity {
   id: string | number;
-  deal: string | number;
+  deal?: string | number | null;
+  client?: string | number | null;
   author: string | number;
   author_email?: string | null;
   type: ActivityType;

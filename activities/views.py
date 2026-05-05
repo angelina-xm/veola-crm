@@ -1,5 +1,6 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
+from django.db.models import Q
 
 from clients.permissions import HasCompany, IsOwner
 from .models import Activity
@@ -13,13 +14,19 @@ class ActivityViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = (
-            Activity.objects.filter(deal__company=self.request.company)
-            .select_related("author", "deal")
+            Activity.objects.filter(
+                Q(client__company=self.request.company)
+                | Q(deal__company=self.request.company)
+            )
+            .select_related("author", "deal", "client")
             .order_by("-created_at")
         )
         deal_id = self.request.query_params.get("deal_id")
         if deal_id:
             qs = qs.filter(deal_id=deal_id)
+        client_id = self.request.query_params.get("client_id")
+        if client_id:
+            qs = qs.filter(client_id=client_id)
 
         type_param = self.request.query_params.get("type")
         if type_param:

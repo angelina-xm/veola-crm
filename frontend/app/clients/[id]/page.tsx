@@ -7,8 +7,8 @@ import { useAuth } from "@/src/components/auth/AuthProvider";
 import AppNav from "@/src/components/navigation/AppNav";
 import {
   createActivity,
-  getActivities,
   getClients,
+  getClientActivities,
   getDeals,
   getPipelineStages,
   normalizeApiList,
@@ -39,8 +39,9 @@ export default function ClientProfilePage() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [addingNote, setAddingNote] = useState(false);
+  const [addingCall, setAddingCall] = useState(false);
   const [noteContent, setNoteContent] = useState("");
-  const [noteDealId, setNoteDealId] = useState("");
+  const [callContent, setCallContent] = useState("");
 
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
@@ -82,11 +83,7 @@ export default function ClientProfilePage() {
         .map((d) => normalizeDealPayload(d))
         .filter((d) => String(d.client ?? "") === clientId);
 
-      const activitiesByDeal = await Promise.all(
-        normalizedDeals.map((d) => getActivities(tenantId, d.id))
-      );
-      const mergedActivities = activitiesByDeal
-        .flat()
+      const mergedActivities = (await getClientActivities(tenantId, clientId))
         .sort(
           (a, b) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -96,13 +93,6 @@ export default function ClientProfilePage() {
       setDeals(normalizedDeals);
       setActivities(mergedActivities);
       setStages(normalizedStages);
-      setNoteDealId((prev) =>
-        prev && normalizedDeals.some((d) => String(d.id) === prev)
-          ? prev
-          : normalizedDeals[0]
-            ? String(normalizedDeals[0].id)
-            : ""
-      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Не удалось загрузить данные.");
       setClient(null);
@@ -136,17 +126,15 @@ export default function ClientProfilePage() {
   };
 
   const handleAddNote = useCallback(async () => {
-    if (!companyId || !noteDealId) return;
+    if (!companyId) return;
     const content = noteContent.trim();
     if (!content) return;
-    const dealNum = Number.parseInt(noteDealId, 10);
-    if (!Number.isFinite(dealNum)) return;
 
     setAddingNote(true);
     try {
       const tenantId = getStoredCompanyId() ?? companyId;
       await createActivity(tenantId, {
-        deal: dealNum,
+        client: Number.parseInt(clientId, 10),
         type: "note",
         content,
       });
@@ -157,7 +145,34 @@ export default function ClientProfilePage() {
     } finally {
       setAddingNote(false);
     }
-  }, [companyId, noteContent, noteDealId, loadData]);
+  }, [clientId, companyId, noteContent, loadData]);
+
+  const handleLogCall = useCallback(async () => {
+    if (!companyId) return;
+    const content = callContent.trim();
+    if (!content) return;
+
+    setAddingCall(true);
+    try {
+      const tenantId = getStoredCompanyId() ?? companyId;
+      await createActivity(tenantId, {
+        client: Number.parseInt(clientId, 10),
+        type: "call",
+        content,
+      });
+      setCallContent("");
+      await loadData();
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Не удалось сохранить звонок");
+    } finally {
+      setAddingCall(false);
+    }
+  }, [callContent, clientId, companyId, loadData]);
+
+  const lastContact = useMemo(
+    () => activities.find((a) => a.type === "call" || a.type === "note") ?? null,
+    [activities]
+  );
 
   return (
     <ProtectedRoute>
@@ -215,6 +230,14 @@ export default function ClientProfilePage() {
 
             <section className="rounded-lg border border-gray-200 bg-white p-4">
               <h3 className="mb-3 text-base font-semibold text-gray-900">Activity</h3>
+              {lastContact ? (
+                <p className="mb-3 rounded border border-blue-200 bg-blue-50 px-2 py-1 text-xs text-blue-800">
+                  Last contact:{" "}
+                  {lastContact.type === "call" ? "📞" : "📝"}{" "}
+                  {lastContact.content || "—"} {" · "}
+                  {new Date(lastContact.created_at).toLocaleString()}
+                </p>
+              ) : null}
               {activities.length === 0 ? (
                 <p className="text-sm text-gray-500">No activity yet.</p>
               ) : (
@@ -228,6 +251,7 @@ export default function ClientProfilePage() {
                         [{new Date(a.created_at).toLocaleString()}]
                       </p>
                       <p className="text-sm text-gray-800">
+                        {a.type === "note" ? "📝" : a.type === "call" ? "📞" : "•"}{" "}
                         {a.content || "—"}{" "}
                         <span className="text-xs uppercase text-gray-500">({a.type})</span>
                       </p>
@@ -241,32 +265,24 @@ export default function ClientProfilePage() {
               <h3 className="mb-3 text-base font-semibold text-gray-900">Actions</h3>
               <div className="space-y-2">
                 <label className="block text-sm text-gray-700">
-                  Deal for note
-                  <select
-                    value={noteDealId}
-                    onChange={(e) => setNoteDealId(e.target.value)}
-                    disabled={addingNote || deals.length === 0}
-                    className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
-                  >
-                    {deals.length === 0 ? (
-                      <option value="">No deals</option>
-                    ) : (
-                      deals.map((d) => (
-                        <option key={String(d.id)} value={String(d.id)}>
-                          {d.title}
-                        </option>
-                      ))
-                    )}
-                  </select>
-                </label>
-                <label className="block text-sm text-gray-700">
                   Note
                   <textarea
                     value={noteContent}
                     onChange={(e) => setNoteContent(e.target.value)}
                     rows={3}
                     placeholder="Write note..."
-                    disabled={addingNote || deals.length === 0}
+                    disabled={addingNote}
+                    className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                  />
+                </label>
+                <label className="block text-sm text-gray-700">
+                  Log call
+                  <textarea
+                    value={callContent}
+                    onChange={(e) => setCallContent(e.target.value)}
+                    rows={3}
+                    placeholder="О чем говорили"
+                    disabled={addingCall}
                     className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
                   />
                 </label>
@@ -274,12 +290,18 @@ export default function ClientProfilePage() {
                   <button
                     type="button"
                     onClick={() => void handleAddNote()}
-                    disabled={
-                      addingNote || deals.length === 0 || noteContent.trim() === ""
-                    }
+                    disabled={addingNote || noteContent.trim() === ""}
                     className="rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                   >
                     {addingNote ? "..." : "📝 Add note"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleLogCall()}
+                    disabled={addingCall || callContent.trim() === ""}
+                    className="rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    {addingCall ? "..." : "📞 Log call"}
                   </button>
                   <button
                     type="button"

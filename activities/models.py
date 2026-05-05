@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 
+from clients.models import Client
 from deals.models import Deal
 
 
@@ -15,6 +16,15 @@ class Activity(models.Model):
         Deal,
         on_delete=models.CASCADE,
         related_name="activities",
+        null=True,
+        blank=True,
+    )
+    client = models.ForeignKey(
+        Client,
+        on_delete=models.CASCADE,
+        related_name="activities",
+        null=True,
+        blank=True,
     )
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -31,4 +41,4 @@ class Activity(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.get_type_display()} @ {self.deal_id}"
+        return f"{self.get_type_display()} @ deal={self.deal_id} client={self.client_id}"

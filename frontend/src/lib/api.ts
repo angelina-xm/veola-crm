@@ -290,7 +290,8 @@ export async function deleteClient(
 
 function normalizeActivityRow(raw: {
   id: string | number;
-  deal: string | number;
+  deal?: string | number | null;
+  client?: string | number | null;
   author: string | number;
   author_email?: string | null;
   type: ActivityType;
@@ -302,6 +303,7 @@ function normalizeActivityRow(raw: {
   return {
     id: String(raw.id),
     deal: raw.deal,
+    client: raw.client,
     author: raw.author,
     author_email: raw.author_email,
     type: raw.type,
@@ -393,8 +395,36 @@ export async function getActivities(
   return list.map((row) => normalizeActivityRow(row));
 }
 
+export async function getClientActivities(
+  companyId: number,
+  clientId: string | number
+): Promise<Activity[]> {
+  const q = new URLSearchParams({ client_id: String(clientId) });
+  const res = await fetchWithAuth(`/activities/?${q.toString()}`, {}, companyId);
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const data: unknown = await res.json();
+  const list = normalizeApiList(
+    data as ListResponse<{
+      id: string | number;
+      deal?: string | number | null;
+      client?: string | number | null;
+      author: string | number;
+      author_email?: string | null;
+      type: ActivityType;
+      content?: string | null;
+      due_date?: string | null;
+      is_completed?: boolean;
+      created_at: string;
+    }>
+  );
+  return list.map((row) => normalizeActivityRow(row));
+}
+
 export type CreateActivityPayload = {
-  deal: number;
+  deal?: number;
+  client?: number;
   type: ActivityType;
   content?: string;
   due_date?: string | null;
@@ -404,10 +434,13 @@ export async function createActivity(
   companyId: number,
   payload: CreateActivityPayload
 ): Promise<Activity> {
-  const body: Record<string, unknown> = {
-    deal: payload.deal,
-    type: payload.type,
-  };
+  const body: Record<string, unknown> = { type: payload.type };
+  if (payload.deal !== undefined) {
+    body.deal = payload.deal;
+  }
+  if (payload.client !== undefined) {
+    body.client = payload.client;
+  }
   if (payload.content !== undefined && payload.content !== "") {
     body.content = payload.content;
   }
@@ -428,7 +461,8 @@ export async function createActivity(
   }
   const raw = (await res.json()) as {
     id: string | number;
-    deal: string | number;
+    deal?: string | number | null;
+    client?: string | number | null;
     author: string | number;
     author_email?: string | null;
     type: ActivityType;
