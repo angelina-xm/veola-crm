@@ -150,14 +150,26 @@ function isDealStale({
   lastActivityAt?: string | null;
 }): boolean {
   const now = Date.now();
-  const createdTs = new Date(createdAt ?? "").getTime();
+  const parsedCreated = new Date(createdAt ?? "").getTime();
+  const parsedLast = new Date(lastActivityAt ?? "").getTime();
+  if (process.env.NODE_ENV === "development") {
+    console.log("DEBUG DEAL FULL", {
+      created_at: createdAt ?? null,
+      parsedCreated,
+      lastActivity: lastActivityAt ?? null,
+      parsedLast: Number.isFinite(parsedLast) ? parsedLast : null,
+      now,
+      STALE_MS,
+    });
+  }
+  const createdTs = parsedCreated;
   const createdIsValid = Number.isFinite(createdTs);
 
   if (createdIsValid && now - createdTs < CREATED_GRACE_MS) {
     return false;
   }
 
-  const lastTs = new Date(lastActivityAt ?? "").getTime();
+  const lastTs = parsedLast;
   const referenceTs = Number.isFinite(lastTs)
     ? lastTs
     : createdIsValid
@@ -661,12 +673,17 @@ export default function Board({
         const fallbackTs = deal.created_at ?? null;
         const lastActivityAt =
           lastTaskTs > 0 ? new Date(lastTaskTs).toISOString() : fallbackTs;
-        if (
-          isDealStale({
-            createdAt: deal.created_at,
-            lastActivityAt,
-          })
-        ) {
+        const stale = isDealStale({
+          createdAt: deal.created_at,
+          lastActivityAt,
+        });
+        if (process.env.NODE_ENV === "development") {
+          console.log("ATTENTION CHECK", {
+            dealId: deal.id,
+            isStale: stale,
+          });
+        }
+        if (stale) {
           out.add(dealId);
         }
       }
