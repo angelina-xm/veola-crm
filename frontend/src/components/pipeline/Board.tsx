@@ -281,6 +281,7 @@ export default function Board({
   const [quickCompletingDealId, setQuickCompletingDealId] = useState<
     string | null
   >(null);
+  const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
   const [quickAddingTaskDealId, setQuickAddingTaskDealId] = useState<
     string | null
   >(null);
@@ -459,6 +460,24 @@ export default function Board({
     },
     [companyId, openTasksByDealId, refreshOpenTasksAndNotifications]
   );
+  const handleTaskComplete = useCallback(
+    async (taskId: string) => {
+      setCompletingTaskId(taskId);
+      try {
+        await patchActivity(companyId, taskId, { is_completed: true });
+        await refreshOpenTasksAndNotifications();
+      } catch (err) {
+        if (typeof window !== "undefined") {
+          window.alert(
+            err instanceof Error ? err.message : "Не удалось закрыть задачу"
+          );
+        }
+      } finally {
+        setCompletingTaskId(null);
+      }
+    },
+    [companyId, refreshOpenTasksAndNotifications]
+  );
 
   const [notificationFocus, setNotificationFocus] = useState<
     NotificationItem["type"] | null
@@ -504,6 +523,25 @@ export default function Board({
     return out;
   }, [openTasksByDealId, staleDeals]);
   const attentionCount = attentionDealIds.size;
+  const { overdueTasksCount, todayTasksCount } = useMemo(() => {
+    let overdue = 0;
+    let today = 0;
+    const now = new Date();
+    const startToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate()
+    ).getTime();
+    const startTomorrow = startToday + 24 * 60 * 60 * 1000;
+    for (const task of openCompanyTasks) {
+      if (task.type !== "task" || task.is_completed || !task.due_date) continue;
+      const ts = new Date(task.due_date).getTime();
+      if (!Number.isFinite(ts)) continue;
+      if (ts < startToday) overdue += 1;
+      else if (ts >= startToday && ts < startTomorrow) today += 1;
+    }
+    return { overdueTasksCount: overdue, todayTasksCount: today };
+  }, [openCompanyTasks]);
 
   const handleNotificationSelect = useCallback((item: NotificationItem) => {
     setNotificationFocus((prev) => (prev === item.type ? null : item.type));
@@ -978,6 +1016,20 @@ export default function Board({
         onSelect={handleNotificationSelect}
         onClear={handleNotificationClear}
       />
+      {(overdueTasksCount > 0 || todayTasksCount > 0) ? (
+        <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
+          {overdueTasksCount > 0 ? (
+            <span className="rounded border border-red-200 bg-red-50 px-2 py-1 text-red-700">
+              🔴 {overdueTasksCount} overdue
+            </span>
+          ) : null}
+          {todayTasksCount > 0 ? (
+            <span className="rounded border border-amber-200 bg-amber-50 px-2 py-1 text-amber-800">
+              🟡 {todayTasksCount} today
+            </span>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="mb-4 rounded border border-gray-200 bg-white px-3 py-2 text-sm">
         <p className="mb-2 font-medium text-gray-800">Клиенты</p>
@@ -1111,6 +1163,8 @@ export default function Board({
               onSuggestedAction={handleSuggestedAction}
               suggestedActionLoadingDealId={suggestedActionDealId}
               attentionDealIds={attentionDealIds}
+              onTaskComplete={handleTaskComplete}
+              completingTaskId={completingTaskId}
             />
           ))}
         </div>

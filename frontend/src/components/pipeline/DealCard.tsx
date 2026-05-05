@@ -9,7 +9,11 @@ import {
   formatDealAmountUsd,
   formatDealIdLabel,
 } from "@/src/lib/dealDisplay";
-import { getDealTaskSignal, type DealTaskSignal } from "@/src/lib/dealTaskSignal";
+import {
+  dueDateVsToday,
+  getDealTaskSignal,
+  type DealTaskSignal,
+} from "@/src/lib/dealTaskSignal";
 import type { TaskPreset } from "@/src/lib/quickTask";
 import { Activity, Client, Deal } from "@/src/types";
 import DealQuickTaskMenu from "./DealQuickTaskMenu";
@@ -122,6 +126,8 @@ export default function DealCard({
   onSuggestedAction,
   suggestedActionLoading = false,
   needsAttention = false,
+  onTaskComplete,
+  completingTaskId = null,
 }: {
   deal: Deal;
   index: number;
@@ -145,6 +151,8 @@ export default function DealCard({
   onSuggestedAction?: (label: SuggestedAction) => void | Promise<void>;
   suggestedActionLoading?: boolean;
   needsAttention?: boolean;
+  onTaskComplete?: (taskId: string) => void | Promise<void>;
+  completingTaskId?: string | null;
   isDeleting?: boolean;
   deleteDisabled?: boolean;
   dragDisabled?: boolean;
@@ -162,6 +170,9 @@ export default function DealCard({
   const [amountDraft, setAmountDraft] = useState(
     deal.amount != null ? String(deal.amount) : ""
   );
+  const [completedLocalIds, setCompletedLocalIds] = useState<Set<string>>(
+    () => new Set()
+  );
   useEffect(() => {
     if (!titleEdit) {
       setTitleDraft(deal.title);
@@ -172,6 +183,15 @@ export default function DealCard({
       setAmountDraft(deal.amount != null ? String(deal.amount) : "");
     }
   }, [deal.amount, amountEdit]);
+  const topTasks = [...openTasksForDeal]
+    .filter((t) => t.type === "task")
+    .sort((a, b) => {
+      const aDue = a.due_date ? dueDateVsToday(a.due_date) : Number.POSITIVE_INFINITY;
+      const bDue = b.due_date ? dueDateVsToday(b.due_date) : Number.POSITIVE_INFINITY;
+      if (aDue !== bDue) return aDue - bDue;
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    })
+    .slice(0, 3);
   const {
     attributes,
     listeners,
@@ -401,6 +421,43 @@ export default function DealCard({
                 </button>
               ))}
             </div>
+          </div>
+        ) : null}
+        {topTasks.length > 0 ? (
+          <div className="mt-2 rounded border border-gray-200 bg-gray-50 px-2 py-1.5">
+            <p className="text-[11px] font-medium text-gray-700">📌 Tasks</p>
+            <ul className="mt-1 space-y-1">
+              {topTasks.map((task) => {
+                const id = String(task.id);
+                const completed = completedLocalIds.has(id);
+                const dueCmp =
+                  task.due_date && !completed ? dueDateVsToday(task.due_date) : 1;
+                const isOverdue = dueCmp < 0;
+                return (
+                  <li key={id}>
+                    <button
+                      type="button"
+                      className={`flex w-full cursor-pointer items-center gap-1.5 rounded px-1 py-0.5 text-left text-xs hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 ${
+                        completed ? "text-gray-500 line-through" : isOverdue ? "text-red-700" : "text-gray-700"
+                      }`}
+                      disabled={completed || completingTaskId === id || !onTaskComplete}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!onTaskComplete) return;
+                        setCompletedLocalIds((prev) => new Set(prev).add(id));
+                        void onTaskComplete(id);
+                      }}
+                    >
+                      <span aria-hidden>{completed ? "✔" : "☐"}</span>
+                      <span className="truncate">
+                        {completed ? "Completed" : task.content || "Task"}
+                      </span>
+                      {isOverdue ? <span aria-hidden>⚠️</span> : null}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         ) : null}
         {inlineSaving || movingStage ? (

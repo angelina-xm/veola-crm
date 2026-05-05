@@ -34,6 +34,8 @@ export default function Stage({
   onSuggestedAction,
   suggestedActionLoadingDealId,
   attentionDealIds,
+  onTaskComplete,
+  completingTaskId,
 }: {
   stage: PipelineStage;
   deals: Deal[];
@@ -65,6 +67,8 @@ export default function Stage({
   ) => void | Promise<void>;
   suggestedActionLoadingDealId?: string | null;
   attentionDealIds?: Set<string>;
+  onTaskComplete?: (taskId: string) => void | Promise<void>;
+  completingTaskId?: string | null;
   isLoading?: boolean;
   deletingDealId: string | null;
   dragDisabled?: boolean;
@@ -166,6 +170,8 @@ export default function Stage({
               suggestedActionLoadingDealId === id
             }
             needsAttention={Boolean(attentionDealIds?.has(id))}
+            onTaskComplete={onTaskComplete}
+            completingTaskId={completingTaskId}
           />
           );
         })}
