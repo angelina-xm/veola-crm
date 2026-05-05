@@ -13,6 +13,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
 from corsheaders.defaults import default_headers
 
@@ -179,17 +180,15 @@ WSGI_APPLICATION = 'vexora.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-# База: PostgreSQL при DATABASE_URL (Render), иначе SQLite для локальной разработки
-if os.environ.get("DATABASE_URL"):
-    import dj_database_url
-
-    DATABASES = {
-        "default": dj_database_url.config(
-            conn_max_age=600,
-            conn_health_checks=True,
-        )
-    }
-else:
+# База: PostgreSQL на Render, fallback на SQLite локально
+DATABASES = {
+    "default": dj_database_url.config(
+        default=os.getenv("DATABASE_URL"),
+        conn_max_age=600,
+        ssl_require=True,
+    )
+}
+if not os.getenv("DATABASE_URL"):
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
