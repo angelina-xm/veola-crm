@@ -20,6 +20,7 @@ import ClientModal from "./ClientModal";
 import NotificationBar from "@/src/components/notifications/NotificationBar";
 import {
   DealCardContent,
+  getDealHealth,
   type StageFallbackPreset,
   type SuggestedAction,
 } from "./DealCard";
@@ -69,6 +70,8 @@ interface BoardProps {
   clients: Client[];
   setClients: React.Dispatch<React.SetStateAction<Client[]>>;
 }
+
+type PriorityLabel = "high" | "medium" | "low";
 
 type DragMutation = {
   movedDealId: string;
@@ -306,6 +309,42 @@ export default function Board({
   const [movingStageDealId, setMovingStageDealId] = useState<string | null>(
     null
   );
+  const [sortByPriority, setSortByPriority] = useState(true);
+  const [priorityStageOrder, setPriorityStageOrder] = useState<string[] | null>(
+    null
+  );
+  const [priorityStageLabels, setPriorityStageLabels] = useState<
+    Record<string, PriorityLabel>
+  >({});
+
+  const getDealWeight = (deal: Deal): number => {
+    const health = getDealHealth(deal, openTasksByDealId[String(deal.id)] ?? []);
+    if (health === "urgent") return 3;
+    if (health === "at_risk") return 2;
+    return 1;
+  };
+
+  useEffect(() => {
+    if (!stages.length) {
+      setPriorityStageOrder(null);
+      setPriorityStageLabels({});
+      return;
+    }
+    const rows = stages.map((stage) => {
+      const stageId = String(stage.id);
+      const deals = dealsByStage[stageId] ?? [];
+      const weight = deals.reduce((acc, deal) => acc + getDealWeight(deal), 0);
+      return { stageId, weight };
+    });
+    rows.sort((a, b) => b.weight - a.weight);
+    const labels: Record<string, PriorityLabel> = {};
+    for (const row of rows) {
+      labels[row.stageId] =
+        row.weight >= 9 ? "high" : row.weight >= 4 ? "medium" : "low";
+    }
+    setPriorityStageOrder(rows.map((r) => r.stageId));
+    setPriorityStageLabels(labels);
+  }, [stages]);
 
   const patchDealInline = useCallback(
     async (dealId: string, patch: { title?: string; amount?: number }) => {
@@ -585,6 +624,17 @@ export default function Board({
     clientSubmitting ||
     deletingDealId !== null ||
     deletingClientId !== null;
+  const stagesToRender = useMemo(() => {
+    if (!sortByPriority || !priorityStageOrder) return stages;
+    const byId = new Map(stages.map((s) => [String(s.id), s]));
+    const ordered = priorityStageOrder
+      .map((id) => byId.get(id))
+      .filter((s): s is PipelineStage => Boolean(s));
+    const missing = stages.filter(
+      (s) => !priorityStageOrder.includes(String(s.id))
+    );
+    return [...ordered, ...missing];
+  }, [priorityStageOrder, sortByPriority, stages]);
 
   const staleById = useMemo(() => {
     const m = new Map<string, StaleDeal>();
@@ -1035,6 +1085,17 @@ export default function Board({
           >
             Add Client
           </button>
+          <button
+            type="button"
+            onClick={() => setSortByPriority((v) => !v)}
+            className={`rounded-lg border px-3 py-2 text-sm font-medium ${
+              sortByPriority
+                ? "border-indigo-400 bg-indigo-50 text-indigo-700"
+                : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+            }`}
+          >
+            {sortByPriority ? "Sort by priority: on" : "Sort by priority"}
+          </button>
         </div>
       </div>
 
@@ -1167,7 +1228,7 @@ export default function Board({
         onDragEnd={handleDragEndWithCleanup}
       >
         <div className="flex gap-4 overflow-x-auto pb-4">
-          {stages.map((stage) => (
+          {stagesToRender.map((stage) => (
             <Stage
               key={String(stage.id)}
               stage={stage}
@@ -1194,6 +1255,11 @@ export default function Board({
               attentionDealIds={attentionDealIds}
               onTaskComplete={handleTaskComplete}
               completingTaskId={completingTaskId}
+              priorityLabel={
+                sortByPriority
+                  ? (priorityStageLabels[String(stage.id)] ?? "low")
+                  : null
+              }
             />
           ))}
         </div>

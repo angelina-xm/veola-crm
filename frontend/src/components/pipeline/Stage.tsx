@@ -36,6 +36,7 @@ export default function Stage({
   attentionDealIds,
   onTaskComplete,
   completingTaskId,
+  priorityLabel,
 }: {
   stage: PipelineStage;
   deals: Deal[];
@@ -69,6 +70,7 @@ export default function Stage({
   attentionDealIds?: Set<string>;
   onTaskComplete?: (taskId: string) => void | Promise<void>;
   completingTaskId?: string | null;
+  priorityLabel?: "high" | "medium" | "low" | null;
   isLoading?: boolean;
   deletingDealId: string | null;
   dragDisabled?: boolean;
@@ -92,7 +94,26 @@ export default function Stage({
         isLoading ? "opacity-70" : ""
       }`}
     >
-      <h2 className="mb-2 font-bold">{stage.name}</h2>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h2 className="font-bold">{stage.name}</h2>
+        {priorityLabel ? (
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+              priorityLabel === "high"
+                ? "bg-red-100 text-red-700"
+                : priorityLabel === "medium"
+                  ? "bg-amber-100 text-amber-700"
+                  : "bg-slate-100 text-slate-700"
+            }`}
+          >
+            {priorityLabel === "high"
+              ? "🔥 High priority"
+              : priorityLabel === "medium"
+                ? "⚠️ Medium"
+                : "🧊 Low"}
+          </span>
+        ) : null}
+      </div>
 
       <SortableContext
         items={safeDeals.map((d) => `deal-${String(d.id)}`)}
