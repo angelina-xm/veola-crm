@@ -20,6 +20,34 @@ import DealQuickTaskMenu from "./DealQuickTaskMenu";
 
 export type StageFallbackPreset = "new" | "negotiation" | "won";
 export type SuggestedAction = "Call client" | "Send proposal" | "Follow up";
+export type DealHealth = "urgent" | "at_risk" | "cold";
+
+const HEALTH_STALE_MS =
+  process.env.NEXT_PUBLIC_DEV_FAST === "true"
+    ? 60 * 1000
+    : 48 * 60 * 60 * 1000;
+
+export function getDealHealth(deal: Deal, activities: Activity[] = []): DealHealth {
+  const hasOverdueTasks = activities.some((a) => {
+    if (a.type !== "task" || a.is_completed || !a.due_date) return false;
+    const dueTs = new Date(a.due_date).getTime();
+    return Number.isFinite(dueTs) && dueTs < Date.now();
+  });
+  if (hasOverdueTasks) return "urgent";
+
+  const lastActivityTs = activities.reduce((maxTs, item) => {
+    const ts = new Date(item.created_at).getTime();
+    if (!Number.isFinite(ts)) return maxTs;
+    return Math.max(maxTs, ts);
+  }, Number.isFinite(new Date(deal.created_at ?? "").getTime())
+    ? new Date(deal.created_at as string).getTime()
+    : 0);
+
+  if (lastActivityTs > 0 && Date.now() - lastActivityTs > HEALTH_STALE_MS) {
+    return "at_risk";
+  }
+  return "cold";
+}
 
 export function getSuggestedActions(
   deal: Deal,
@@ -163,6 +191,7 @@ export default function DealCard({
   const hasOpenTask = openTasksForDeal.some(
     (t) => t.type === "task" && !t.is_completed
   );
+  const dealHealth = getDealHealth(deal, openTasksForDeal);
   const suggestedActions = getSuggestedActions(deal, stageName, openTasksForDeal);
   const [titleEdit, setTitleEdit] = useState(false);
   const [amountEdit, setAmountEdit] = useState(false);
@@ -220,13 +249,17 @@ export default function DealCard({
   const attentionClass = needsAttention
     ? "border border-amber-500 bg-amber-50 shadow-[0_0_0_1px_rgba(245,158,11,0.45)] dark:border-amber-400/70 dark:bg-amber-950/20"
     : "";
+  const urgentClass =
+    dealHealth === "urgent"
+      ? "border border-red-400 bg-red-50 shadow-[0_0_0_1px_rgba(248,113,113,0.35)]"
+      : "";
   const dimClass = dimmed ? "opacity-40" : "";
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`mb-3 flex gap-1 overflow-hidden rounded-lg bg-white shadow-md transition-all duration-300 hover:-translate-y-[1px] hover:shadow-lg ${taskSignal.borderClass} ${focusRing} ${attentionClass} ${dimClass}`}
+      className={`mb-3 flex gap-1 overflow-hidden rounded-lg bg-white shadow-md transition-all duration-300 hover:-translate-y-[1px] hover:shadow-lg ${taskSignal.borderClass} ${focusRing} ${attentionClass} ${urgentClass} ${dimClass}`}
       {...attributes}
     >
       <button
@@ -242,6 +275,23 @@ export default function DealCard({
         <div className="w-full text-left">
           <div className="flex items-start justify-between gap-2.5">
             <div className="min-w-0 flex-1">
+              <div className="mb-1 flex items-center gap-1.5">
+                <span
+                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                    dealHealth === "urgent"
+                      ? "bg-red-100 text-red-800"
+                      : dealHealth === "at_risk"
+                        ? "bg-amber-100 text-amber-800"
+                        : "bg-slate-100 text-slate-700"
+                  }`}
+                >
+                  {dealHealth === "urgent"
+                    ? "🔥 Urgent"
+                    : dealHealth === "at_risk"
+                      ? "⚠️ At risk"
+                      : "🧊 Cold"}
+                </span>
+              </div>
               {titleEdit ? (
                 <input
                   autoFocus
