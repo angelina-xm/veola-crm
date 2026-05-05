@@ -8,7 +8,7 @@ import {
 
 import DealCard from "./DealCard";
 import type { TaskPreset } from "@/src/lib/quickTask";
-import type { StageFallbackPreset } from "./DealCard";
+import type { StageFallbackPreset, SuggestedAction } from "./DealCard";
 import { Activity, Client, Deal, PipelineStage } from "@/src/types";
 
 export default function Stage({
@@ -31,6 +31,8 @@ export default function Stage({
   inlineSavingDealId,
   onMoveToFallbackStage,
   movingStageDealId,
+  onSuggestedAction,
+  suggestedActionLoadingDealId,
 }: {
   stage: PipelineStage;
   deals: Deal[];
@@ -56,6 +58,11 @@ export default function Stage({
     preset: StageFallbackPreset
   ) => void | Promise<void>;
   movingStageDealId?: string | null;
+  onSuggestedAction?: (
+    dealId: string,
+    action: SuggestedAction
+  ) => void | Promise<void>;
+  suggestedActionLoadingDealId?: string | null;
   isLoading?: boolean;
   deletingDealId: string | null;
   dragDisabled?: boolean;
@@ -105,6 +112,7 @@ export default function Stage({
             dragDisabled={dragDisabled}
             onOpen={onDealOpen}
             onDelete={onDealDelete}
+            stageName={stage.name}
             onQuickCompleteFirstTask={
               onQuickCompleteFirstTask
                 ? () => void onQuickCompleteFirstTask(id)
@@ -144,6 +152,16 @@ export default function Stage({
               movingStageDealId !== undefined &&
               movingStageDealId !== null &&
               movingStageDealId === id
+            }
+            onSuggestedAction={
+              onSuggestedAction
+                ? (action) => void onSuggestedAction(id, action)
+                : undefined
+            }
+            suggestedActionLoading={
+              suggestedActionLoadingDealId !== undefined &&
+              suggestedActionLoadingDealId !== null &&
+              suggestedActionLoadingDealId === id
             }
           />
           );

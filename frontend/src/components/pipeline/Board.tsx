@@ -18,8 +18,13 @@ import Stage from "./Stage";
 import DealModal from "./DealModal";
 import ClientModal from "./ClientModal";
 import NotificationBar from "@/src/components/notifications/NotificationBar";
-import { DealCardContent, type StageFallbackPreset } from "./DealCard";
 import {
+  DealCardContent,
+  type StageFallbackPreset,
+  type SuggestedAction,
+} from "./DealCard";
+import {
+  createActivity,
   createDeal,
   createClient,
   deleteClient,
@@ -279,6 +284,9 @@ export default function Board({
   const [quickAddingTaskDealId, setQuickAddingTaskDealId] = useState<
     string | null
   >(null);
+  const [suggestedActionDealId, setSuggestedActionDealId] = useState<
+    string | null
+  >(null);
   const [inlineSavingDealId, setInlineSavingDealId] = useState<string | null>(
     null
   );
@@ -391,6 +399,38 @@ export default function Board({
         }
       } finally {
         setQuickAddingTaskDealId(null);
+      }
+    },
+    [companyId, refreshOpenTasksAndNotifications]
+  );
+
+  const handleSuggestedAction = useCallback(
+    async (dealId: string, action: SuggestedAction) => {
+      setSuggestedActionDealId(dealId);
+      try {
+        const dealNum = Number.parseInt(dealId, 10);
+        if (!Number.isFinite(dealNum)) {
+          throw new Error("Некорректный id сделки");
+        }
+        const tenantId = getStoredCompanyId() ?? companyId;
+        const due = new Date();
+        due.setDate(due.getDate() + 1);
+        due.setHours(12, 0, 0, 0);
+        await createActivity(tenantId, {
+          deal: dealNum,
+          type: "task",
+          content: action,
+          due_date: due.toISOString(),
+        });
+        await refreshOpenTasksAndNotifications();
+      } catch (err) {
+        if (typeof window !== "undefined") {
+          window.alert(
+            err instanceof Error ? err.message : "Не удалось создать задачу"
+          );
+        }
+      } finally {
+        setSuggestedActionDealId(null);
       }
     },
     [companyId, refreshOpenTasksAndNotifications]
@@ -1039,6 +1079,8 @@ export default function Board({
               inlineSavingDealId={inlineSavingDealId}
               onMoveToFallbackStage={moveDealToFallbackStage}
               movingStageDealId={movingStageDealId}
+              onSuggestedAction={handleSuggestedAction}
+              suggestedActionLoadingDealId={suggestedActionDealId}
             />
           ))}
         </div>

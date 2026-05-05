@@ -15,6 +15,39 @@ import { Activity, Client, Deal } from "@/src/types";
 import DealQuickTaskMenu from "./DealQuickTaskMenu";
 
 export type StageFallbackPreset = "new" | "negotiation" | "won";
+export type SuggestedAction = "Call client" | "Send proposal" | "Follow up";
+
+export function getSuggestedActions(
+  deal: Deal,
+  stageName: string | null | undefined,
+  activities: Activity[]
+): SuggestedAction[] {
+  const out: SuggestedAction[] = [];
+  const stage = String(stageName ?? "").trim().toLowerCase();
+  if (stage === "new") out.push("Call client");
+  if (stage === "negotiation") out.push("Send proposal");
+
+  const lastActivityTs = activities.reduce((maxTs, item) => {
+    const ts = new Date(item.created_at).getTime();
+    if (!Number.isFinite(ts)) return maxTs;
+    return Math.max(maxTs, ts);
+  }, Number.isFinite(new Date(deal.created_at ?? "").getTime())
+    ? new Date(deal.created_at as string).getTime()
+    : 0);
+  const staleForMs = Date.now() - lastActivityTs;
+  if (staleForMs > 2 * 24 * 60 * 60 * 1000) {
+    out.push("Follow up");
+  }
+
+  const existingOpenTaskContent = new Set(
+    activities
+      .filter((a) => a.type === "task" && !a.is_completed)
+      .map((a) => String(a.content ?? "").trim().toLowerCase())
+  );
+  return out.filter(
+    (label) => !existingOpenTaskContent.has(label.trim().toLowerCase())
+  );
+}
 
 export function DealCardContent({
   deal,
@@ -85,6 +118,9 @@ export default function DealCard({
   inlineSaving = false,
   onMoveToFallbackStage,
   movingStage = false,
+  stageName,
+  onSuggestedAction,
+  suggestedActionLoading = false,
 }: {
   deal: Deal;
   index: number;
@@ -104,6 +140,9 @@ export default function DealCard({
   inlineSaving?: boolean;
   onMoveToFallbackStage?: (preset: StageFallbackPreset) => void | Promise<void>;
   movingStage?: boolean;
+  stageName?: string;
+  onSuggestedAction?: (label: SuggestedAction) => void | Promise<void>;
+  suggestedActionLoading?: boolean;
   isDeleting?: boolean;
   deleteDisabled?: boolean;
   dragDisabled?: boolean;
@@ -114,6 +153,7 @@ export default function DealCard({
   const hasOpenTask = openTasksForDeal.some(
     (t) => t.type === "task" && !t.is_completed
   );
+  const suggestedActions = getSuggestedActions(deal, stageName, openTasksForDeal);
   const [titleEdit, setTitleEdit] = useState(false);
   const [amountEdit, setAmountEdit] = useState(false);
   const [titleDraft, setTitleDraft] = useState(deal.title);
@@ -329,6 +369,29 @@ export default function DealCard({
             </select>
           ) : null}
         </div>
+        {suggestedActions.length > 0 && onSuggestedAction ? (
+          <div className="mt-2 rounded border border-indigo-100 bg-indigo-50 px-2 py-1.5">
+            <p className="text-[11px] font-medium text-indigo-700">
+              💡 Suggested actions
+            </p>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {suggestedActions.map((action) => (
+                <button
+                  key={action}
+                  type="button"
+                  className="cursor-pointer rounded border border-indigo-300 bg-white px-2 py-0.5 text-[11px] text-indigo-700 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={suggestedActionLoading || deleteDisabled}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void onSuggestedAction(action);
+                  }}
+                >
+                  {action}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
         {inlineSaving || movingStage ? (
           <p className="mt-1 text-xs text-gray-500">Saving...</p>
         ) : null}
