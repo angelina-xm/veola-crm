@@ -112,6 +112,18 @@ function formatActivityAgo(
   return "< 1 hour ago";
 }
 
+const STALE_MS =
+  process.env.NEXT_PUBLIC_DEV_FAST === "true"
+    ? 60 * 1000
+    : 48 * 60 * 60 * 1000;
+
+function isDealStale(lastActivityAt: string | null | undefined): boolean {
+  if (!lastActivityAt) return false;
+  const ts = new Date(lastActivityAt).getTime();
+  if (!Number.isFinite(ts)) return false;
+  return Date.now() - ts > STALE_MS;
+}
+
 /** Сначала пробуем pointerWithin (лучше для колонок/пустых зон), затем closestCorners. */
 const boardCollisionDetection: CollisionDetection = (args) => {
   const pointer = pointerWithin(args);
@@ -509,6 +521,23 @@ export default function Board({
     for (const s of staleDeals) {
       out.add(String(s.id));
     }
+    for (const list of Object.values(dealsByStage)) {
+      for (const deal of list ?? []) {
+        const dealId = String(deal.id);
+        const tasksForDeal = openTasksByDealId[dealId] ?? [];
+        const lastTaskTs = tasksForDeal.reduce((maxTs, t) => {
+          const ts = new Date(t.created_at).getTime();
+          if (!Number.isFinite(ts)) return maxTs;
+          return Math.max(maxTs, ts);
+        }, 0);
+        const fallbackTs = deal.created_at ?? null;
+        const lastActivityAt =
+          lastTaskTs > 0 ? new Date(lastTaskTs).toISOString() : fallbackTs;
+        if (isDealStale(lastActivityAt)) {
+          out.add(dealId);
+        }
+      }
+    }
     const nowTs = Date.now();
     for (const [dealId, tasks] of Object.entries(openTasksByDealId)) {
       const hasOverdue = (tasks ?? []).some((t) => {
@@ -521,7 +550,7 @@ export default function Board({
       }
     }
     return out;
-  }, [openTasksByDealId, staleDeals]);
+  }, [dealsByStage, openTasksByDealId, staleDeals]);
   const attentionCount = attentionDealIds.size;
   const { overdueTasksCount, todayTasksCount } = useMemo(() => {
     let overdue = 0;
