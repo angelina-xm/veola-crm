@@ -140,12 +140,32 @@ const STALE_MS =
   process.env.NEXT_PUBLIC_DEV_FAST === "true"
     ? 60 * 1000
     : 48 * 60 * 60 * 1000;
+const CREATED_GRACE_MS = 24 * 60 * 60 * 1000;
 
-function isDealStale(lastActivityAt: string | null | undefined): boolean {
-  if (!lastActivityAt) return false;
-  const ts = new Date(lastActivityAt).getTime();
-  if (!Number.isFinite(ts)) return false;
-  return Date.now() - ts > STALE_MS;
+function isDealStale({
+  createdAt,
+  lastActivityAt,
+}: {
+  createdAt?: string;
+  lastActivityAt?: string | null;
+}): boolean {
+  const now = Date.now();
+  const createdTs = new Date(createdAt ?? "").getTime();
+  const createdIsValid = Number.isFinite(createdTs);
+
+  if (createdIsValid && now - createdTs < CREATED_GRACE_MS) {
+    return false;
+  }
+
+  const lastTs = new Date(lastActivityAt ?? "").getTime();
+  const referenceTs = Number.isFinite(lastTs)
+    ? lastTs
+    : createdIsValid
+      ? createdTs
+      : NaN;
+
+  if (!Number.isFinite(referenceTs)) return false;
+  return now - referenceTs > STALE_MS;
 }
 
 /** Сначала пробуем pointerWithin (лучше для колонок/пустых зон), затем closestCorners. */
@@ -641,7 +661,12 @@ export default function Board({
         const fallbackTs = deal.created_at ?? null;
         const lastActivityAt =
           lastTaskTs > 0 ? new Date(lastTaskTs).toISOString() : fallbackTs;
-        if (isDealStale(lastActivityAt)) {
+        if (
+          isDealStale({
+            createdAt: deal.created_at,
+            lastActivityAt,
+          })
+        ) {
           out.add(dealId);
         }
       }
