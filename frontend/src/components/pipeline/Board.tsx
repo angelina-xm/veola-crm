@@ -656,9 +656,6 @@ export default function Board({
   const highlightSet = highlightedDealIds ?? new Set<string>();
   const attentionDealIds = useMemo(() => {
     const out = new Set<string>();
-    for (const s of staleDeals) {
-      out.add(String(s.id));
-    }
     for (const list of Object.values(dealsByStage)) {
       for (const deal of list ?? []) {
         const dealId = String(deal.id);
@@ -684,19 +681,8 @@ export default function Board({
         }
       }
     }
-    const nowTs = Date.now();
-    for (const [dealId, tasks] of Object.entries(openTasksByDealId)) {
-      const hasOverdue = (tasks ?? []).some((t) => {
-        if (t.type !== "task" || t.is_completed || !t.due_date) return false;
-        const dueTs = new Date(t.due_date).getTime();
-        return Number.isFinite(dueTs) && dueTs < nowTs;
-      });
-      if (hasOverdue) {
-        out.add(String(dealId));
-      }
-    }
     return out;
-  }, [dealsByStage, openTasksByDealId, staleDeals]);
+  }, [dealsByStage, openTasksByDealId]);
   const attentionCount = attentionDealIds.size;
   const { overdueTasksCount, todayTasksCount } = useMemo(() => {
     let overdue = 0;
