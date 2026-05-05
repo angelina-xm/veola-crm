@@ -44,7 +44,7 @@ def create_automation_tasks(deal, author) -> None:
         _create_task_if_missing(
             deal,
             author,
-            content="Contact client",
+            content="Call client",
             due_date=now + timedelta(days=1),
         )
     elif key == "negotiation":
