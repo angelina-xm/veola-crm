@@ -79,6 +79,37 @@ function daysBetween(a: Date, b: Date): number {
   return ms / (24 * 60 * 60 * 1000);
 }
 
+function calculateAverageInterval(deals: Deal[]): number {
+  const sorted = deals
+    .map((d) => new Date(d.created_at ?? "").getTime())
+    .filter((t) => Number.isFinite(t))
+    .sort((a, b) => a - b);
+  if (sorted.length < 2) return 0;
+  let sum = 0;
+  let count = 0;
+  for (let i = 1; i < sorted.length; i += 1) {
+    const diffDays = (sorted[i] - sorted[i - 1]) / (24 * 60 * 60 * 1000);
+    if (diffDays > 0) {
+      sum += diffDays;
+      count += 1;
+    }
+  }
+  return count > 0 ? sum / count : 0;
+}
+
+function isClientDormant(deals: Deal[]): boolean {
+  const dated = deals
+    .map((d) => new Date(d.created_at ?? "").getTime())
+    .filter((t) => Number.isFinite(t))
+    .sort((a, b) => a - b);
+  if (dated.length < 2) return false;
+  const avgInterval = calculateAverageInterval(deals);
+  if (!Number.isFinite(avgInterval) || avgInterval <= 0) return false;
+  const lastDealTs = dated[dated.length - 1];
+  const daysSinceLastDeal = daysBetween(new Date(lastDealTs), new Date());
+  return daysSinceLastDeal > avgInterval * 1.5;
+}
+
 function getClientRecommendations(
   client: Client | null,
   activities: Activity[],
@@ -107,24 +138,8 @@ function getClientRecommendations(
     }
   }
 
-  // "Regular deals" heuristic: >=3 deals with ~30 day cadence (15..45 days).
-  const dealDates = deals
-    .map((d) => new Date(d.created_at ?? "").getTime())
-    .filter((t) => Number.isFinite(t))
-    .sort((a, b) => a - b);
-  if (dealDates.length >= 3) {
-    const gaps: number[] = [];
-    for (let i = 1; i < dealDates.length; i += 1) {
-      gaps.push((dealDates[i] - dealDates[i - 1]) / (24 * 60 * 60 * 1000));
-    }
-    const regularGaps = gaps.filter((g) => g >= 15 && g <= 45);
-    const isRegular = regularGaps.length >= Math.max(2, Math.floor(gaps.length * 0.6));
-    if (isRegular) {
-      const lastDealTs = dealDates[dealDates.length - 1];
-      if (daysBetween(new Date(lastDealTs), new Date()) > 40) {
-        recs.push("Suggest reorder");
-      }
-    }
+  if (isClientDormant(deals)) {
+    recs.push("Client likely ready to reorder");
   }
 
   return recs.slice(0, 4);
