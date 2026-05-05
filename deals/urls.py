@@ -7,6 +7,7 @@ from .views import DealViewSet, PipelineStageViewSet
 router = DefaultRouter()
 router.register("deals", DealViewSet)
 router.register("pipeline-stages", PipelineStageViewSet)
+router.register("stages", PipelineStageViewSet, basename="stages")
 
 urlpatterns = [
     path("notifications/", NotificationsView.as_view()),

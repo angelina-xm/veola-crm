@@ -16,25 +16,6 @@ import { useAuth } from "@/src/components/auth/AuthProvider";
 import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
 import { Client, DealsByStage, PipelineStage } from "@/src/types";
 
-const FALLBACK_STAGES: PipelineStage[] = [
-  { id: "1", name: "Новые" },
-  { id: "2", name: "В работе" },
-  { id: "3", name: "Переговоры" },
-  { id: "4", name: "Готовые" },
-];
-
-const FALLBACK_DEALS_BY_STAGE: DealsByStage = {
-  "1": [
-    { id: "1", title: "Сделка 1", stage: "1", stageId: "1", amount: 50000 },
-    { id: "2", title: "Сделка 2", stage: "1", stageId: "1", amount: 75000 },
-  ],
-  "2": [
-    { id: "3", title: "Сделка 3", stage: "2", stageId: "2", amount: 100000 },
-  ],
-  "3": [],
-  "4": [],
-};
-
 type ApiDealRow = {
   id: string | number;
   title: string;
@@ -46,9 +27,8 @@ type ApiDealRow = {
 
 export default function PipelinePage() {
   const { isReady, isAuthenticated, logout } = useAuth();
-  const [stages, setStages] = useState<PipelineStage[]>(FALLBACK_STAGES);
-  const [dealsByStage, setDealsByStage] =
-    useState<DealsByStage>(FALLBACK_DEALS_BY_STAGE);
+  const [stages, setStages] = useState<PipelineStage[]>([]);
+  const [dealsByStage, setDealsByStage] = useState<DealsByStage>({});
   const [clients, setClients] = useState<Client[]>([]);
   const [clientsError, setClientsError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -123,6 +103,12 @@ export default function PipelinePage() {
           ...stage,
           id: String(stage.id),
         }));
+        console.log("stages", normalizedStages);
+        if (normalizedStages.length === 0) {
+          setError(
+            "Этапы воронки не найдены. Создайте стадии для текущей компании."
+          );
+        }
 
         const normalizedDeals = normalizeApiList(
           dealsData as ApiDealRow[] | { results: ApiDealRow[] }
@@ -143,8 +129,8 @@ export default function PipelinePage() {
         setClientsError(null);
         if (err instanceof AuthError && err.reason === "network_unreachable") {
           setError(err.message);
-          setStages(FALLBACK_STAGES);
-          setDealsByStage(FALLBACK_DEALS_BY_STAGE);
+          setStages([]);
+          setDealsByStage({});
           setClients([]);
           return;
         }
@@ -156,8 +142,8 @@ export default function PipelinePage() {
         setError(
           err instanceof Error ? err.message : "Ошибка при загрузке данных"
         );
-        setStages(FALLBACK_STAGES);
-        setDealsByStage(FALLBACK_DEALS_BY_STAGE);
+        setStages([]);
+        setDealsByStage({});
         setClients([]);
       } finally {
         setLoading(false);
@@ -200,9 +186,6 @@ export default function PipelinePage() {
         {error ? (
           <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
             <p className="font-semibold">⚠️ {error}</p>
-            <p className="mt-1 text-sm opacity-90">
-              Используются тестовые данные там, где загрузка не удалась.
-            </p>
           </div>
         ) : null}
 

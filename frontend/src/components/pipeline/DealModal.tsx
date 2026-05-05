@@ -81,6 +81,26 @@ export default function DealModal({
   const [clientId, setClientId] = useState("");
 
   useEffect(() => {
+    console.log("stages", stages);
+  }, [stages]);
+
+  useEffect(() => {
+    console.log("selectedStage", stageId);
+  }, [stageId]);
+
+  useEffect(() => {
+    if (mode === "edit" && deal) {
+      setStageId(String(deal.stageId ?? deal.stage ?? firstStageId));
+      return;
+    }
+    setStageId((prev) => {
+      if (!prev) return firstStageId;
+      const stillExists = stages.some((s) => String(s.id) === prev);
+      return stillExists ? prev : firstStageId;
+    });
+  }, [mode, deal, firstStageId, stages]);
+
+  useEffect(() => {
     if (mode !== "create") return;
     setClientId((prev) => {
       const allowed = new Set(clientsInCompany.map((c) => String(c.id)));
@@ -234,14 +254,25 @@ export default function DealModal({
               value={stageId}
               onChange={(e) => setStageId(e.target.value)}
               className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
-              disabled={busy}
+              disabled={busy || stages.length === 0}
+              required
             >
-              {stages.map((s) => (
-                <option key={String(s.id)} value={String(s.id)}>
-                  {s.name}
-                </option>
-              ))}
+              {stages.length === 0 ? (
+                <option value="">Нет доступных стадий</option>
+              ) : (
+                stages.map((s) => (
+                  <option key={String(s.id)} value={String(s.id)}>
+                    {s.name}
+                  </option>
+                ))
+              )}
             </select>
+            {stages.length === 0 ? (
+              <p className="mt-1 text-xs text-amber-700">
+                Добавьте стадии воронки для текущей компании, затем повторите
+                создание сделки.
+              </p>
+            ) : null}
           </div>
 
           {mode === "create" ? (
@@ -288,6 +319,8 @@ export default function DealModal({
               type="submit"
               disabled={
                 busy ||
+                stages.length === 0 ||
+                !stageId ||
                 (mode === "create" && clientsInCompany.length === 0)
               }
               className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"

@@ -515,11 +515,17 @@ export default function Board({
   );
 
   const openCreate = useCallback(() => {
+    if (!stages.length) {
+      if (typeof window !== "undefined") {
+        window.alert("Нет доступных стадий. Сначала добавьте этапы воронки.");
+      }
+      return;
+    }
     setModalMode("create");
     setDealInModal(null);
     setModalError(null);
     setModalOpen(true);
-  }, []);
+  }, [stages]);
 
   const openClientCreate = useCallback(() => {
     setClientError(null);
