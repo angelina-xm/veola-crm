@@ -81,6 +81,30 @@ type DragMutation = {
   fromIndex: number;
 };
 
+function getAnalytics(
+  deals: Deal[],
+  stages: PipelineStage[],
+  openTasksByDealId: Record<string, Activity[]>
+) {
+  const stageById = new Map(
+    stages.map((s) => [String(s.id), String(s.name).trim().toLowerCase()])
+  );
+  const totalDeals = deals.length;
+  const totalRevenue = deals.reduce(
+    (sum, d) => sum + (Number.isFinite(Number(d.amount)) ? Number(d.amount) : 0),
+    0
+  );
+  const atRiskCount = deals.reduce((acc, deal) => {
+    const health = getDealHealth(deal, openTasksByDealId[String(deal.id)] ?? []);
+    return acc + (health === "at_risk" ? 1 : 0);
+  }, 0);
+  const wonCount = deals.reduce((acc, deal) => {
+    const stageId = String(deal.stageId ?? deal.stage ?? "");
+    return acc + (stageById.get(stageId) === "won" ? 1 : 0);
+  }, 0);
+  return { totalDeals, totalRevenue, atRiskCount, wonCount };
+}
+
 function parseDealId(dndId: string) {
   return dndId.startsWith("deal-") ? dndId.slice("deal-".length) : dndId;
 }
@@ -624,6 +648,14 @@ export default function Board({
     clientSubmitting ||
     deletingDealId !== null ||
     deletingClientId !== null;
+  const allDeals = useMemo(
+    () => Object.values(dealsByStage).flatMap((list) => list ?? []),
+    [dealsByStage]
+  );
+  const analytics = useMemo(
+    () => getAnalytics(allDeals, stages, openTasksByDealId),
+    [allDeals, openTasksByDealId, stages]
+  );
   const stagesToRender = useMemo(() => {
     if (!sortByPriority || !priorityStageOrder) return stages;
     const byId = new Map(stages.map((s) => [String(s.id), s]));
@@ -1209,6 +1241,32 @@ export default function Board({
           </ul>
         </div>
       ) : null}
+      <div className="mb-4 grid grid-cols-2 gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 md:grid-cols-4">
+        <div className="rounded-md border border-gray-200 bg-white px-3 py-2">
+          <p className="text-xs text-gray-500">💰 Revenue</p>
+          <p className="text-sm font-semibold text-gray-900">
+            ${analytics.totalRevenue.toLocaleString()}
+          </p>
+        </div>
+        <div className="rounded-md border border-gray-200 bg-white px-3 py-2">
+          <p className="text-xs text-gray-500">📊 Deals</p>
+          <p className="text-sm font-semibold text-gray-900">
+            {analytics.totalDeals}
+          </p>
+        </div>
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
+          <p className="text-xs text-amber-700">🔥 At risk</p>
+          <p className="text-sm font-semibold text-amber-900">
+            {analytics.atRiskCount}
+          </p>
+        </div>
+        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2">
+          <p className="text-xs text-emerald-700">🏆 Won</p>
+          <p className="text-sm font-semibold text-emerald-900">
+            {analytics.wonCount}
+          </p>
+        </div>
+      </div>
       {attentionCount > 0 ? (
         <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
           <p className="font-semibold">
