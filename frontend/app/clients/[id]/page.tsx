@@ -7,9 +7,11 @@ import { useAuth } from "@/src/components/auth/AuthProvider";
 import AppNav from "@/src/components/navigation/AppNav";
 import {
   createActivity,
+  deleteActivity,
   getClients,
   getClientActivities,
   getDeals,
+  patchActivity,
   getPipelineStages,
   normalizeApiList,
 } from "@/src/lib/api";
@@ -42,6 +44,10 @@ export default function ClientProfilePage() {
   const [addingCall, setAddingCall] = useState(false);
   const [noteContent, setNoteContent] = useState("");
   const [callContent, setCallContent] = useState("");
+  const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState("");
+  const [savingActivityId, setSavingActivityId] = useState<string | null>(null);
+  const [deletingActivityId, setDeletingActivityId] = useState<string | null>(null);
 
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
@@ -174,6 +180,63 @@ export default function ClientProfilePage() {
     [activities]
   );
 
+  const startEditActivity = useCallback((a: Activity) => {
+    setEditingActivityId(String(a.id));
+    setEditingContent(String(a.content ?? ""));
+  }, []);
+
+  const cancelEditActivity = useCallback(() => {
+    setEditingActivityId(null);
+    setEditingContent("");
+  }, []);
+
+  const saveEditedActivity = useCallback(
+    async (a: Activity) => {
+      if (!companyId) return;
+      const id = String(a.id);
+      const next = editingContent.trim();
+      if (!next) return;
+      setSavingActivityId(id);
+      try {
+        const tenantId = getStoredCompanyId() ?? companyId;
+        await patchActivity(tenantId, a.id, { content: next });
+        setActivities((prev) =>
+          prev.map((row) => (String(row.id) === id ? { ...row, content: next } : row))
+        );
+        cancelEditActivity();
+      } catch (err) {
+        window.alert(err instanceof Error ? err.message : "Не удалось обновить запись");
+      } finally {
+        setSavingActivityId(null);
+      }
+    },
+    [cancelEditActivity, companyId, editingContent]
+  );
+
+  const handleDeleteActivity = useCallback(
+    async (a: Activity) => {
+      if (!companyId) return;
+      if (
+        typeof window !== "undefined" &&
+        !window.confirm("Удалить activity?")
+      ) {
+        return;
+      }
+      const id = String(a.id);
+      setDeletingActivityId(id);
+      try {
+        const tenantId = getStoredCompanyId() ?? companyId;
+        await deleteActivity(tenantId, a.id);
+        setActivities((prev) => prev.filter((row) => String(row.id) !== id));
+      } catch (err) {
+        window.alert(err instanceof Error ? err.message : "Не удалось удалить запись");
+      } finally {
+        setDeletingActivityId(null);
+      }
+    },
+    [companyId]
+  );
+
   return (
     <ProtectedRoute>
       <div className="p-6">
@@ -250,11 +313,68 @@ export default function ClientProfilePage() {
                       <p className="text-xs text-gray-500">
                         [{new Date(a.created_at).toLocaleString()}]
                       </p>
-                      <p className="text-sm text-gray-800">
-                        {a.type === "note" ? "📝" : a.type === "call" ? "📞" : "•"}{" "}
-                        {a.content || "—"}{" "}
-                        <span className="text-xs uppercase text-gray-500">({a.type})</span>
-                      </p>
+                      {editingActivityId === String(a.id) ? (
+                        <div className="mt-1 space-y-2">
+                          <textarea
+                            value={editingContent}
+                            onChange={(e) => setEditingContent(e.target.value)}
+                            rows={3}
+                            className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                            disabled={savingActivityId === String(a.id)}
+                          />
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => void saveEditedActivity(a)}
+                              disabled={
+                                savingActivityId === String(a.id) ||
+                                editingContent.trim() === ""
+                              }
+                              className="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                            >
+                              {savingActivityId === String(a.id) ? "..." : "Save"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={cancelEditActivity}
+                              disabled={savingActivityId === String(a.id)}
+                              className="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-sm text-gray-800">
+                            {a.type === "note" ? "📝" : a.type === "call" ? "📞" : "•"}{" "}
+                            {a.content || "—"}{" "}
+                            <span className="text-xs uppercase text-gray-500">({a.type})</span>
+                          </p>
+                          {a.type === "note" || a.type === "call" ? (
+                            <div className="mt-1 flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => startEditActivity(a)}
+                                disabled={deletingActivityId === String(a.id)}
+                                className="text-xs text-gray-600 hover:underline disabled:opacity-50"
+                              >
+                                ✏️ Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => void handleDeleteActivity(a)}
+                                disabled={deletingActivityId === String(a.id)}
+                                className="text-xs text-red-600 hover:underline disabled:opacity-50"
+                              >
+                                {deletingActivityId === String(a.id)
+                                  ? "Deleting..."
+                                  : "🗑 Delete"}
+                              </button>
+                            </div>
+                          ) : null}
+                        </>
+                      )}
                     </li>
                   ))}
                 </ul>

@@ -476,6 +476,7 @@ export async function createActivity(
 
 export type PatchActivityPayload = {
   is_completed?: boolean;
+  content?: string;
 };
 
 export async function patchActivity(
@@ -511,6 +512,20 @@ export async function patchActivity(
 
 /** Алиас для PATCH activity (например закрытие задачи). */
 export const updateActivity = patchActivity;
+
+export async function deleteActivity(
+  companyId: number,
+  activityId: string | number
+): Promise<void> {
+  const res = await fetchWithAuth(
+    `/activities/${activityId}/`,
+    { method: "DELETE" },
+    companyId
+  );
+  if (!res.ok && res.status !== 204) {
+    throw new Error(await parseErrorBody(res));
+  }
+}
 
 export type CreateDealPayload = {
   title: string;
