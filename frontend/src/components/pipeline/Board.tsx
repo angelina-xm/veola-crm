@@ -152,16 +152,14 @@ function isDealStale({
   const now = Date.now();
   const parsedCreated = new Date(createdAt ?? "").getTime();
   const parsedLast = new Date(lastActivityAt ?? "").getTime();
-  if (process.env.NODE_ENV === "development") {
-    console.log("DEBUG DEAL FULL", {
-      created_at: createdAt ?? null,
-      parsedCreated,
-      lastActivity: lastActivityAt ?? null,
-      parsedLast: Number.isFinite(parsedLast) ? parsedLast : null,
-      now,
-      STALE_MS,
-    });
-  }
+  console.log("DEBUG DEAL FULL", {
+    created_at: createdAt ?? null,
+    parsedCreated,
+    lastActivity: lastActivityAt ?? null,
+    parsedLast: Number.isFinite(parsedLast) ? parsedLast : null,
+    now,
+    STALE_MS,
+  });
   const createdTs = parsedCreated;
   const createdIsValid = Number.isFinite(createdTs);
 
@@ -677,12 +675,10 @@ export default function Board({
           createdAt: deal.created_at,
           lastActivityAt,
         });
-        if (process.env.NODE_ENV === "development") {
-          console.log("ATTENTION CHECK", {
-            dealId: deal.id,
-            isStale: stale,
-          });
-        }
+        console.log("ATTENTION CHECK", {
+          dealId: deal.id,
+          isStale: stale,
+        });
         if (stale) {
           out.add(dealId);
         }
