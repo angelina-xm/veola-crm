@@ -218,7 +218,7 @@ export default function DealCard({
       ? "ring-2 ring-blue-500 ring-offset-1 bg-blue-50/60"
       : "";
   const attentionClass = needsAttention
-    ? "border border-amber-300 bg-amber-50/70 shadow-[0_0_0_1px_rgba(251,191,36,0.35)]"
+    ? "border border-amber-500 bg-amber-50 shadow-[0_0_0_1px_rgba(245,158,11,0.45)] dark:border-amber-400/70 dark:bg-amber-950/20"
     : "";
   const dimClass = dimmed ? "opacity-40" : "";
 
@@ -226,7 +226,7 @@ export default function DealCard({
     <div
       ref={setNodeRef}
       style={style}
-      className={`mb-2 flex gap-1 overflow-hidden rounded bg-white shadow transition-colors duration-300 hover:shadow-md ${taskSignal.borderClass} ${focusRing} ${attentionClass} ${dimClass}`}
+      className={`mb-3 flex gap-1 overflow-hidden rounded-lg bg-white shadow-md transition-all duration-300 hover:-translate-y-[1px] hover:shadow-lg ${taskSignal.borderClass} ${focusRing} ${attentionClass} ${dimClass}`}
       {...attributes}
     >
       <button
@@ -238,9 +238,9 @@ export default function DealCard({
       >
         ⋮⋮
       </button>
-      <div className="min-w-0 flex-1 py-2 pr-2">
+      <div className="min-w-0 flex-1 py-3 pr-3">
         <div className="w-full text-left">
-          <div className="flex items-start justify-between gap-2">
+          <div className="flex items-start justify-between gap-2.5">
             <div className="min-w-0 flex-1">
               {titleEdit ? (
                 <input
@@ -272,7 +272,7 @@ export default function DealCard({
               ) : (
                 <button
                   type="button"
-                  className="cursor-pointer rounded px-1 text-left text-sm font-semibold text-gray-900 hover:bg-gray-100"
+                  className="cursor-pointer rounded px-1.5 py-0.5 text-left text-base font-bold text-gray-900 hover:bg-gray-100"
                   onClick={() => setTitleEdit(true)}
                   disabled={inlineSaving || deleteDisabled}
                   title="Click to edit title"
@@ -292,7 +292,7 @@ export default function DealCard({
               Details
             </button>
           </div>
-          <p className="mt-1 text-xs text-gray-600">
+          <p className="mt-1 text-xs text-gray-700">
             Client: {clientNameById(clients, deal.client) ?? (deal.client ? String(deal.client) : "—")}
           </p>
           {amountEdit ? (
@@ -333,7 +333,7 @@ export default function DealCard({
           ) : (
             <button
               type="button"
-              className="mt-1 cursor-pointer rounded px-1 text-left text-sm font-medium text-gray-900 hover:bg-gray-100"
+              className="mt-1 cursor-pointer rounded px-1.5 py-0.5 text-left text-base font-semibold text-indigo-900 hover:bg-indigo-50"
               onClick={() => setAmountEdit(true)}
               disabled={inlineSaving || deleteDisabled}
               title="Click to edit amount"
@@ -350,13 +350,13 @@ export default function DealCard({
             </p>
           ) : null}
           {needsAttention ? (
-            <p className="mt-1 inline-flex animate-pulse items-center gap-1 text-xs font-medium text-amber-800">
+            <p className="mt-1 inline-flex animate-pulse items-center gap-1 text-xs font-semibold text-amber-900">
               <span aria-hidden>⚠️</span>
               <span>Needs attention</span>
             </p>
           ) : null}
         </div>
-        <div className="mt-2 flex flex-wrap gap-1.5">
+        <div className="mt-3 flex flex-wrap gap-2">
           {onQuickAddTask ? (
             <DealQuickTaskMenu
               busy={quickAddingTask}
@@ -401,16 +401,16 @@ export default function DealCard({
           ) : null}
         </div>
         {suggestedActions.length > 0 && onSuggestedAction ? (
-          <div className="mt-2 rounded border border-indigo-100 bg-indigo-50 px-2 py-1.5">
-            <p className="text-[11px] font-medium text-indigo-700">
+          <div className="mt-2.5 rounded-md border border-indigo-200 bg-indigo-50 px-2.5 py-2">
+            <p className="text-xs font-semibold text-indigo-800">
               💡 Suggested actions
             </p>
-            <div className="mt-1 flex flex-wrap gap-1">
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
               {suggestedActions.map((action) => (
                 <button
                   key={action}
                   type="button"
-                  className="cursor-pointer rounded border border-indigo-300 bg-white px-2 py-0.5 text-[11px] text-indigo-700 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="cursor-pointer rounded border border-indigo-500 bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white shadow-sm hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={suggestedActionLoading || deleteDisabled}
                   onClick={(e) => {
                     e.stopPropagation();
