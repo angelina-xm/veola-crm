@@ -296,6 +296,7 @@ function normalizeActivityRow(raw: {
   author_email?: string | null;
   type: ActivityType;
   category?: string | null;
+  auto_type?: string | null;
   content?: string | null;
   due_date?: string | null;
   is_completed?: boolean;
@@ -309,6 +310,7 @@ function normalizeActivityRow(raw: {
     author_email: raw.author_email,
     type: raw.type,
     category: raw.category,
+    auto_type: raw.auto_type,
     content: raw.content,
     due_date: raw.due_date,
     is_completed: Boolean(raw.is_completed),
@@ -429,6 +431,7 @@ export type CreateActivityPayload = {
   client?: number;
   type: ActivityType;
   category?: string;
+  auto_type?: string;
   content?: string;
   due_date?: string | null;
 };
@@ -449,6 +452,9 @@ export async function createActivity(
   }
   if (payload.category !== undefined && payload.category.trim() !== "") {
     body.category = payload.category.trim();
+  }
+  if (payload.auto_type !== undefined && payload.auto_type.trim() !== "") {
+    body.auto_type = payload.auto_type.trim();
   }
   if (payload.due_date) {
     body.due_date = payload.due_date;
@@ -473,6 +479,7 @@ export async function createActivity(
     author_email?: string | null;
     type: ActivityType;
     category?: string | null;
+    auto_type?: string | null;
     content?: string | null;
     due_date?: string | null;
     is_completed?: boolean;
@@ -510,6 +517,7 @@ export async function patchActivity(
     author_email?: string | null;
     type: ActivityType;
     category?: string | null;
+    auto_type?: string | null;
     content?: string | null;
     due_date?: string | null;
     is_completed?: boolean;

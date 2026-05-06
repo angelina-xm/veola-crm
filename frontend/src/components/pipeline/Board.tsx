@@ -43,6 +43,7 @@ import {
 } from "@/src/lib/dealDisplay";
 import { groupOpenTasksByDealId } from "@/src/lib/dealTaskSignal";
 import { createTaskFromPreset, type TaskPreset } from "@/src/lib/quickTask";
+import { applyAutoTasks } from "@/src/lib/autoTaskRules";
 import { computeHighlightedDealIds } from "@/src/lib/notificationDealHighlight";
 import { useNotifications } from "@/src/hooks/useNotifications";
 import { getStoredCompanyId } from "@/src/lib/auth";
@@ -374,6 +375,9 @@ export default function Board({
     string | null
   >(null);
   const [addingNoteDealId, setAddingNoteDealId] = useState<string | null>(null);
+  const [autoTaskCreatingKeys, setAutoTaskCreatingKeys] = useState<Set<string>>(
+    () => new Set()
+  );
   const [inlineSavingDealId, setInlineSavingDealId] = useState<string | null>(
     null
   );
@@ -800,6 +804,92 @@ export default function Board({
   useEffect(() => {
     void refreshNotes();
   }, [refreshNotes]);
+
+  useEffect(() => {
+    if (!companyId) return;
+    const run = async () => {
+      const toCreate: Array<{ deal: number; auto_type: string; content: string; key: string }> = [];
+      for (const list of Object.values(dealsByStage)) {
+        for (const deal of list ?? []) {
+          const dealId = String(deal.id);
+          const dealNum = Number.parseInt(dealId, 10);
+          if (!Number.isFinite(dealNum)) continue;
+
+          const tasksForDeal = openTasksByDealId[dealId] ?? [];
+          const notesForDeal = notesByDealId[dealId] ?? [];
+          const lastTaskTs = tasksForDeal.reduce((maxTs, t) => {
+            const ts = new Date(t.created_at).getTime();
+            if (!Number.isFinite(ts)) return maxTs;
+            return Math.max(maxTs, ts);
+          }, 0);
+          const lastActivityAt =
+            lastTaskTs > 0 ? new Date(lastTaskTs).toISOString() : deal.created_at ?? null;
+          const isStale = isDealStale({
+            createdAt: deal.created_at,
+            lastActivityAt,
+          });
+          const pricingCount = notesForDeal.filter(
+            (a) =>
+              String(a.category ?? "")
+                .trim()
+                .toLowerCase() === "pricing"
+          ).length;
+          const createdTs = new Date(deal.created_at ?? "").getTime();
+          const isDormant =
+            Number.isFinite(createdTs) && Date.now() - createdTs > STALE_MS * 2;
+          const candidates = applyAutoTasks(
+            deal,
+            { isStale, pricingCount, isDormant },
+            tasksForDeal
+          );
+          for (const task of candidates) {
+            const key = `${dealId}:${task.autoType}`;
+            if (autoTaskCreatingKeys.has(key)) continue;
+            toCreate.push({
+              deal: dealNum,
+              auto_type: task.autoType,
+              content: task.content,
+              key,
+            });
+          }
+        }
+      }
+      if (toCreate.length === 0) return;
+      setAutoTaskCreatingKeys((prev) => {
+        const next = new Set(prev);
+        for (const row of toCreate) next.add(row.key);
+        return next;
+      });
+      const tenantId = getStoredCompanyId() ?? companyId;
+      await Promise.all(
+        toCreate.map(async (task) => {
+          try {
+            await createActivity(tenantId, {
+              deal: task.deal,
+              type: "task",
+              content: task.content,
+              auto_type: task.auto_type,
+            });
+          } finally {
+            setAutoTaskCreatingKeys((prev) => {
+              const next = new Set(prev);
+              next.delete(task.key);
+              return next;
+            });
+          }
+        })
+      );
+      await refreshOpenTasksAndNotifications();
+    };
+    void run();
+  }, [
+    autoTaskCreatingKeys,
+    companyId,
+    dealsByStage,
+    notesByDealId,
+    openTasksByDealId,
+    refreshOpenTasksAndNotifications,
+  ]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {

@@ -53,6 +53,7 @@ export interface Activity {
   author_email?: string | null;
   type: ActivityType;
   category?: string | null;
+  auto_type?: string | null;
   content?: string | null;
   due_date?: string | null;
   is_completed?: boolean;
