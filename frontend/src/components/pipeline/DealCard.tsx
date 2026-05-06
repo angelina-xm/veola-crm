@@ -15,6 +15,7 @@ import {
   type DealTaskSignal,
 } from "@/src/lib/dealTaskSignal";
 import type { TaskPreset } from "@/src/lib/quickTask";
+import { DAY_MS, scaleMs } from "@/src/lib/timeConfig";
 import { Activity, Client, Deal } from "@/src/types";
 import DealQuickTaskMenu from "./DealQuickTaskMenu";
 
@@ -23,9 +24,10 @@ export type SuggestedAction = "Call client" | "Send proposal" | "Follow up";
 export type DealHealth = "urgent" | "at_risk" | "cold";
 
 const HEALTH_STALE_MS =
-  process.env.NEXT_PUBLIC_DEV_FAST === "true"
-    ? 60 * 1000
-    : 48 * 60 * 60 * 1000;
+  scaleMs(
+    process.env.NEXT_PUBLIC_DEV_FAST === "true" ? 60 * 1000 : 48 * 60 * 60 * 1000
+  );
+const FOLLOW_UP_SUGGEST_MS = scaleMs(2 * DAY_MS);
 
 export function getDealHealth(deal: Deal, activities: Activity[] = []): DealHealth {
   const hasOverdueTasks = activities.some((a) => {
@@ -67,7 +69,7 @@ export function getSuggestedActions(
     ? new Date(deal.created_at as string).getTime()
     : 0);
   const staleForMs = Date.now() - lastActivityTs;
-  if (staleForMs > 2 * 24 * 60 * 60 * 1000) {
+  if (staleForMs > FOLLOW_UP_SUGGEST_MS) {
     out.push("Follow up");
   }
 

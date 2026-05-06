@@ -45,6 +45,7 @@ import { groupOpenTasksByDealId } from "@/src/lib/dealTaskSignal";
 import { createTaskFromPreset, type TaskPreset } from "@/src/lib/quickTask";
 import { applyAutoTasks } from "@/src/lib/autoTaskRules";
 import { computeHighlightedDealIds } from "@/src/lib/notificationDealHighlight";
+import { DAY_MS, scaleMs } from "@/src/lib/timeConfig";
 import { useNotifications } from "@/src/hooks/useNotifications";
 import { getStoredCompanyId } from "@/src/lib/auth";
 import {
@@ -138,10 +139,10 @@ function formatActivityAgo(
 }
 
 const STALE_MS =
-  process.env.NEXT_PUBLIC_DEV_FAST === "true"
-    ? 60 * 1000
-    : 48 * 60 * 60 * 1000;
-const CREATED_GRACE_MS = 24 * 60 * 60 * 1000;
+  scaleMs(
+    process.env.NEXT_PUBLIC_DEV_FAST === "true" ? 60 * 1000 : 48 * 60 * 60 * 1000
+  );
+const CREATED_GRACE_MS = scaleMs(DAY_MS);
 
 function isDealStale({
   createdAt,
@@ -718,7 +719,7 @@ export default function Board({
       now.getMonth(),
       now.getDate()
     ).getTime();
-    const startTomorrow = startToday + 24 * 60 * 60 * 1000;
+    const startTomorrow = startToday + DAY_MS;
     for (const task of openCompanyTasks) {
       if (task.type !== "task" || task.is_completed || !task.due_date) continue;
       const ts = new Date(task.due_date).getTime();
