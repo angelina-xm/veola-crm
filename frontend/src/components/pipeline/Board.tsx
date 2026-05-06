@@ -738,6 +738,10 @@ export default function Board({
     () => Object.values(dealsByStage).flatMap((list) => list ?? []),
     [dealsByStage]
   );
+  const attentionDeals = useMemo(
+    () => allDeals.filter((d) => attentionDealIds.has(String(d.id))),
+    [allDeals, attentionDealIds]
+  );
   const analytics = useMemo(
     () => getAnalytics(allDeals, stages, openTasksByDealId),
     [allDeals, openTasksByDealId, stages]
@@ -1172,17 +1176,29 @@ export default function Board({
         </div>
       ) : null}
 
-      {staleDeals.length > 0 ? (
+      {attentionDeals.length > 0 ? (
         <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950">
           <p className="font-semibold">
-            ⚠️ {staleDeals.length}{" "}
-            {staleDeals.length === 1
+            ⚠️ {attentionDeals.length}{" "}
+            {attentionDeals.length === 1
               ? "deal requires follow-up"
               : "deals require follow-up"}
           </p>
           <ul className="mt-2 max-h-40 space-y-2 overflow-y-auto">
-            {staleDeals.map((s) => {
+            {attentionDeals.map((s) => {
               const staleAmount = formatDealAmountUsd(s.amount);
+              const dealId = String(s.id);
+              const lastTaskAt = (openTasksByDealId[dealId] ?? []).reduce<string | null>(
+                (latest, t) => {
+                  const ts = new Date(t.created_at).getTime();
+                  if (!Number.isFinite(ts)) return latest;
+                  if (!latest) return t.created_at;
+                  return ts > new Date(latest).getTime() ? t.created_at : latest;
+                },
+                null
+              );
+              const clientLabel =
+                clientNameById(clients, s.client) ?? String(s.client ?? "—");
               return (
               <li
                 key={s.id}
@@ -1204,7 +1220,7 @@ export default function Board({
                     </span>
                   </span>
                   <span className="block text-xs text-gray-600">
-                    Client: {s.client_name ?? String(s.client)}
+                    Client: {clientLabel}
                   </span>
                   {staleAmount ? (
                     <span className="mt-0.5 block text-sm font-medium text-gray-900">
@@ -1216,11 +1232,11 @@ export default function Board({
                   </span>
                   <span className="mt-0.5 block text-xs text-gray-500">
                     Last activity:{" "}
-                    {s.last_activity
-                      ? new Date(s.last_activity).toLocaleString()
+                    {lastTaskAt
+                      ? new Date(lastTaskAt).toLocaleString()
                       : "Never"}
                     {" · "}
-                    {formatActivityAgo(s.last_activity, s.created_at)}
+                    {formatActivityAgo(lastTaskAt, s.created_at)}
                   </span>
                 </button>
               </li>
