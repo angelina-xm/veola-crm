@@ -45,6 +45,7 @@ class Company(models.Model):
 
 
     def save(self, *args, **kwargs):
+        creating = self._state.adding
         if self.plan == "free":
             self.max_users = 5
         elif self.plan == "pro":
@@ -53,6 +54,8 @@ class Company(models.Model):
             self.max_users = 999999
 
         super().save(*args, **kwargs)
+        if creating:
+            CompanySettings.objects.get_or_create(company=self)
 
     def __str__(self):
         return self.name
@@ -74,3 +77,17 @@ class Membership(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.company} ({self.role})"
+
+
+class CompanySettings(models.Model):
+    company = models.OneToOneField(
+        "companies.Company",
+        on_delete=models.CASCADE,
+        related_name="settings",
+    )
+    auto_follow_up = models.BooleanField(default=True)
+    auto_discount = models.BooleanField(default=True)
+    auto_reorder = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"Settings for {self.company.name}"

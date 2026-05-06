@@ -7,8 +7,12 @@ from datetime import timedelta
 
 
 
-from .models import Invitation, Membership
-from .serializers import InvitationCreateSerializer, AcceptInviteRegisterSerializer
+from .models import CompanySettings, Invitation, Membership
+from .serializers import (
+    AcceptInviteRegisterSerializer,
+    CompanySettingsSerializer,
+    InvitationCreateSerializer,
+)
 from .utils import check_user_limit
 from .permissions import can_invite
 class InviteUserView(APIView):
@@ -84,3 +88,31 @@ class AcceptInviteRegisterView(APIView):
         return Response({
             "message": "Account created and joined company"
         })
+
+
+class CompanySettingsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self, request):
+        if not getattr(request, "company", None):
+            raise PermissionDenied("Company is required")
+        settings_obj, _ = CompanySettings.objects.get_or_create(
+            company=request.company
+        )
+        return settings_obj
+
+    def get(self, request):
+        settings_obj = self.get_object(request)
+        serializer = CompanySettingsSerializer(settings_obj)
+        return Response(serializer.data)
+
+    def patch(self, request):
+        settings_obj = self.get_object(request)
+        serializer = CompanySettingsSerializer(
+            settings_obj,
+            data=request.data,
+            partial=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)

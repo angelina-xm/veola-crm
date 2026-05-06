@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from .models import Invitation, Membership
+from .models import CompanySettings, Invitation, Membership
 from .utils import check_user_limit
 User = get_user_model()
 
@@ -57,3 +57,13 @@ class AcceptInviteRegisterSerializer(serializers.Serializer):
         invitation.save()
 
         return user
+
+
+class CompanySettingsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CompanySettings
+        fields = [
+            "auto_follow_up",
+            "auto_discount",
+            "auto_reorder",
+        ]
