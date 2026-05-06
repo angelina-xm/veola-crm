@@ -1300,7 +1300,7 @@ export default function Board({
                   type="button"
                   disabled={boardBusy}
                   onClick={() => {
-                    const d = findDealInBoard(dealsByStage, s.id);
+                    const d = findDealInBoard(dealsByStage, String(s.id));
                     if (d) openEdit(d);
                   }}
                   className="w-full text-left hover:underline disabled:opacity-50"
