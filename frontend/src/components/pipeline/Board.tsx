@@ -37,6 +37,7 @@ import {
   type NotificationItem,
 } from "@/src/lib/api";
 import {
+  clientNameById,
   formatCreatedRelative,
   formatDealAmountUsd,
   formatDealIdLabel,
