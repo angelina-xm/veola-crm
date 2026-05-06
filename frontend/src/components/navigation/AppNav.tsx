@@ -20,6 +20,12 @@ export default function AppNav() {
       <Link href="/clients" className={itemClass("/clients")}>
         Clients
       </Link>
+      <Link
+        href="/settings/automation"
+        className={itemClass("/settings/automation")}
+      >
+        Automation
+      </Link>
     </nav>
   );
 }
