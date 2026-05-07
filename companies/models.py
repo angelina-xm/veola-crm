@@ -3,17 +3,17 @@ from django.conf import settings
 from django.db import models
 
 User = settings.AUTH_USER_MODEL
+
+
+class CompanyRole(models.TextChoices):
+    OWNER = "owner", "Owner"
+    MANAGER = "manager", "Manager"
+    EMPLOYEE = "employee", "Employee"
 # приглашения 
 class Invitation(models.Model):
-    ROLE_CHOICES = (
-        ('owner', 'Owner'),
-        ('manager', 'Manager'),
-        ('employee', 'Employee'),
-    )
-
     email = models.EmailField()
     company = models.ForeignKey("Company", on_delete=models.CASCADE)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    role = models.CharField(max_length=20, choices=CompanyRole.choices)
 
     token = models.UUIDField(default=uuid.uuid4, unique=True)
 
@@ -61,16 +61,19 @@ class Company(models.Model):
         return self.name
 
 
-class Membership(models.Model):
-    ROLE_CHOICES = (
-        ('owner', 'Owner'),
-        ('manager', 'Manager'),
-        ('employee', 'Employee'),
-    )
-
+class CompanyMember(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='memberships')
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='memberships')
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    role = models.CharField(max_length=20, choices=CompanyRole.choices)
+    is_active = models.BooleanField(default=True)
+    invited_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="invited_company_memberships",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         unique_together = ('user', 'company')

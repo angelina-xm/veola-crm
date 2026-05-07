@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from companies.models import CompanyMember
 from .models import Deal, PipelineStage
 
 
@@ -24,10 +25,26 @@ class StaleDealSerializer(serializers.ModelSerializer):
 
 
 class DealSerializer(serializers.ModelSerializer):
+    def validate_assigned_to(self, user):
+        if user is None:
+            return None
+        request = self.context.get("request")
+        company = getattr(request, "company", None) if request else None
+        if company is None:
+            return user
+        is_member = CompanyMember.objects.filter(
+            user=user,
+            company=company,
+            is_active=True,
+        ).exists()
+        if not is_member:
+            raise serializers.ValidationError("Assigned user is not in this company.")
+        return user
+
     class Meta:
         model = Deal
         fields = "__all__"
-        read_only_fields = ["company"]
+        read_only_fields = ["company", "created_by"]
 
 
 class PipelineStageSerializer(serializers.ModelSerializer):

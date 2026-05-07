@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from companies.models import Company, Membership
+from companies.models import Company, CompanyMember, CompanyRole
 
 User = get_user_model()
 
@@ -23,7 +23,7 @@ class UsernameTokenObtainPairSerializer(TokenObtainPairSerializer):
         attrs[User.USERNAME_FIELD] = attrs.pop("username")
         data = super().validate(attrs)
         cid = (
-            Membership.objects.filter(user=self.user)
+            CompanyMember.objects.filter(user=self.user, is_active=True)
             .order_by("id")
             .values_list("company_id", flat=True)
             .first()
@@ -50,10 +50,11 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         company = Company.objects.create(name=company_name)
 
-        Membership.objects.create(
+        CompanyMember.objects.create(
             user=user,
             company=company,
-            role='owner'
+            role=CompanyRole.OWNER,
+            invited_by=None,
         )
 
         return user

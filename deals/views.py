@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from .automation import create_automation_tasks
 from .models import Deal, PipelineStage
 from .serializers import DealSerializer, PipelineStageSerializer, StaleDealSerializer
+from .visibility import get_visible_deals
 from clients.permissions import HasCompany, IsOwner, IsManagerOrOwner
 
 
@@ -19,7 +20,11 @@ class DealViewSet(viewsets.ModelViewSet):
     serializer_class = DealSerializer
 
     def get_queryset(self):
-        return Deal.objects.filter(company=self.request.company)
+        return get_visible_deals(
+            user=self.request.user,
+            company=self.request.company,
+            membership=getattr(self.request, "membership", None),
+        )
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve', 'stale']:
@@ -37,7 +42,10 @@ class DealViewSet(viewsets.ModelViewSet):
         return [IsAuthenticated()]
 
     def perform_create(self, serializer):
-        serializer.save(company=self.request.company)
+        serializer.save(
+            company=self.request.company,
+            created_by=self.request.user,
+        )
 
     def perform_update(self, serializer):
         old_stage_id = serializer.instance.stage_id
@@ -50,7 +58,11 @@ class DealViewSet(viewsets.ModelViewSet):
         """Сделки без активности: нет activities или последняя старше 48 ч."""
         stale_time = timezone.now() - timedelta(hours=48)
         qs = (
-            Deal.objects.filter(company=request.company)
+            get_visible_deals(
+                user=request.user,
+                company=request.company,
+                membership=getattr(request, "membership", None),
+            )
             .select_related("client", "stage")
             .annotate(last_activity=Max("activities__created_at"))
             .filter(

@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useMembership } from "@/src/context/MembershipContext";
+import { canManageTeam } from "@/src/lib/roles";
 
 export default function AppNav() {
   const pathname = usePathname();
+  const { role } = useMembership();
   const itemClass = (href: string) =>
     `rounded-md px-3 py-1.5 text-sm font-medium ${
       pathname === href
@@ -20,12 +23,14 @@ export default function AppNav() {
       <Link href="/clients" className={itemClass("/clients")}>
         Clients
       </Link>
-      <Link
-        href="/settings/automation"
-        className={itemClass("/settings/automation")}
-      >
-        Automation
-      </Link>
+      {canManageTeam(role) ? (
+        <Link
+          href="/settings/automation"
+          className={itemClass("/settings/automation")}
+        >
+          Automation
+        </Link>
+      ) : null}
     </nav>
   );
 }

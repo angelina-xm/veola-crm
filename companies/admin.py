@@ -1,9 +1,9 @@
 from django.contrib import admin
-from .models import Company, Membership, Invitation
+from .models import Company, CompanyMember, Invitation
 
 
 admin.site.register(Invitation)
-admin.site.register(Membership)
+admin.site.register(CompanyMember)
 
 
 @admin.register(Company)

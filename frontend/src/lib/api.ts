@@ -23,6 +23,7 @@ import {
   logout,
 } from "@/src/lib/auth";
 import type { AutomationSettings } from "@/src/lib/autoTaskRules";
+import type { MembershipProfile } from "@/src/lib/roles";
 
 export { AuthError } from "@/src/lib/auth";
 
@@ -217,6 +218,30 @@ export async function patchAutomationSettings(
         ? raw.auto_reorder
         : AUTOMATION_SETTINGS_FALLBACK.auto_reorder,
   };
+}
+
+export async function getCurrentMembership(
+  companyId: number
+): Promise<MembershipProfile> {
+  const res = await fetchWithAuth("/membership/me/", {}, companyId);
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const raw = (await res.json()) as Partial<MembershipProfile>;
+  const role = String(raw.role ?? "").toLowerCase();
+  if (
+    typeof raw.user_id !== "number" ||
+    typeof raw.company_id !== "number" ||
+    (role !== "owner" && role !== "manager" && role !== "employee")
+  ) {
+    throw new Error("Invalid membership response");
+  }
+  return {
+    user_id: raw.user_id,
+    company_id: raw.company_id,
+    role,
+    is_active: Boolean(raw.is_active),
+  } as MembershipProfile;
 }
 
 export type NotificationItemType =

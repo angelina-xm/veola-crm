@@ -1,4 +1,5 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
+from companies.permissions import is_manager, is_owner
 
 
 class HasCompany(BasePermission):
@@ -8,12 +9,12 @@ class HasCompany(BasePermission):
 
 class IsOwner(BasePermission):
     def has_permission(self, request, view):
-        return request.membership and request.membership.role == 'owner'
+        return is_owner(request.membership)
 
 
 class IsManagerOrOwner(BasePermission):
     def has_permission(self, request, view):
-        return request.membership and request.membership.role in ['owner', 'manager']
+        return is_owner(request.membership) or is_manager(request.membership)
 
 
 class IsOwnerOrManagerOrReadOnly(BasePermission):
@@ -26,7 +27,7 @@ class IsOwnerOrManagerOrReadOnly(BasePermission):
         if request.method in SAFE_METHODS:
             return True
 
-        return membership.role in ["owner", "manager"]
+        return is_owner(membership) or is_manager(membership)
 
     def has_object_permission(self, request, view, obj):
         return self.has_permission(request, view)

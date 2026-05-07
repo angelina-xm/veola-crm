@@ -7,9 +7,10 @@ from datetime import timedelta
 
 
 
-from .models import CompanySettings, Invitation, Membership
+from .models import CompanyMember, CompanySettings, Invitation
 from .serializers import (
     AcceptInviteRegisterSerializer,
+    CompanyMemberSerializer,
     CompanySettingsSerializer,
     InvitationCreateSerializer,
 )
@@ -65,10 +66,11 @@ class AcceptInviteView(APIView):  #  ВНЕ первого класса
         if invitation.email != request.user.email:
             raise PermissionDenied("This invite is not for your email")
         check_user_limit(invitation.company)
-        Membership.objects.create(
+        CompanyMember.objects.create(
             user=request.user,
             company=invitation.company,
-            role=invitation.role
+            role=invitation.role,
+            invited_by=None,
         )
 
         invitation.is_accepted = True
@@ -115,4 +117,15 @@ class CompanySettingsView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        return Response(serializer.data)
+
+
+class CompanyMemberMeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        membership = getattr(request, "membership", None)
+        if membership is None:
+            raise PermissionDenied("Company membership is required")
+        serializer = CompanyMemberSerializer(membership)
         return Response(serializer.data)

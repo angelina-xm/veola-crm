@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from .models import CompanySettings, Invitation, Membership
+from .models import CompanyMember, CompanySettings, Invitation
 from .utils import check_user_limit
 User = get_user_model()
 
@@ -47,10 +47,11 @@ class AcceptInviteRegisterSerializer(serializers.Serializer):
             password=validated_data["password"]
         )
 
-        Membership.objects.create(
+        CompanyMember.objects.create(
             user=user,
             company=invitation.company,
-            role=invitation.role
+            role=invitation.role,
+            invited_by=None,
         )
 
         invitation.is_accepted = True
@@ -67,3 +68,10 @@ class CompanySettingsSerializer(serializers.ModelSerializer):
             "auto_discount",
             "auto_reorder",
         ]
+
+
+class CompanyMemberSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField(source="user.id", read_only=True)
+    company_id = serializers.IntegerField(source="company.id", read_only=True)
+    role = serializers.CharField(read_only=True)
+    is_active = serializers.BooleanField(read_only=True)

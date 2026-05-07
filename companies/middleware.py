@@ -1,5 +1,5 @@
 from django.utils.deprecation import MiddlewareMixin
-from companies.models import Membership
+from companies.models import CompanyMember
 from django.core.exceptions import PermissionDenied
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
@@ -18,6 +18,7 @@ class CompanyMiddleware(MiddlewareMixin):
 
         request.company = None
         request.membership = None
+        request.company_member = None
 
         # 🔥 ВОТ КЛЮЧ
         try:
@@ -43,13 +44,15 @@ class CompanyMiddleware(MiddlewareMixin):
             return None
 
         try:
-            membership = Membership.objects.select_related("company").get(
+            membership = CompanyMember.objects.select_related("company").get(
                 user=user,
-                company_id=company_id
+                company_id=company_id,
+                is_active=True,
             )
 
             request.company = membership.company
             request.membership = membership
+            request.company_member = membership
 
-        except Membership.DoesNotExist:
+        except CompanyMember.DoesNotExist:
             raise PermissionDenied("You don't have access to this company")

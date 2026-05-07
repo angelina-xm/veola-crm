@@ -1,7 +1,9 @@
 from django.db import models
+from django.conf import settings
 from companies.models import Company
 from clients.models import Client
 
+User = settings.AUTH_USER_MODEL
 
 class PipelineStage(models.Model):
     company = models.ForeignKey(
@@ -41,6 +43,20 @@ class Deal(models.Model):
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_deals",
+    )
+    assigned_to = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assigned_deals",
+    )
 
     def __str__(self):
         return self.title

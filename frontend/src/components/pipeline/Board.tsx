@@ -48,7 +48,9 @@ import { applyAutoTasks, type AutomationSettings } from "@/src/lib/autoTaskRules
 import { computeHighlightedDealIds } from "@/src/lib/notificationDealHighlight";
 import { DAY_MS, scaleMs } from "@/src/lib/timeConfig";
 import { useNotifications } from "@/src/hooks/useNotifications";
+import { useMembership } from "@/src/context/MembershipContext";
 import { getStoredCompanyId } from "@/src/lib/auth";
+import { canDeleteDeals, canManageDeals } from "@/src/lib/roles";
 import {
   normalizeDealPayload,
   removeDealFromGrouped,
@@ -310,6 +312,7 @@ export default function Board({
   automationSettings,
   automationSettingsLoading,
 }: BoardProps) {
+  const { role } = useMembership();
   useEffect(() => {
     console.log("[Board] mount");
     return () => {
@@ -325,6 +328,8 @@ export default function Board({
   }, [automationSettings, automationSettingsLoading]);
 
   const router = useRouter();
+  const allowManageDeals = canManageDeals(role);
+  const allowDeleteDeals = canDeleteDeals(role);
   const [overlayDeal, setOverlayDeal] = useState<Deal | null>(null);
   const [dndLoading, setDndLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -1248,7 +1253,7 @@ export default function Board({
           <button
             type="button"
             onClick={openCreate}
-            disabled={boardBusy}
+            disabled={boardBusy || !allowManageDeals}
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-700 disabled:opacity-50"
           >
             Add Deal
@@ -1416,19 +1421,24 @@ export default function Board({
               deletingDealId={deletingDealId}
               dragDisabled={Boolean(deletingDealId || dndLoading)}
               onDealOpen={openEdit}
-              onDealDelete={(d) => void handleDelete(d)}
+              onDealDelete={(d) => {
+                if (!allowDeleteDeals) return;
+                void handleDelete(d);
+              }}
               onQuickCompleteFirstTask={handleQuickCompleteFirstTask}
               quickCompletingDealId={quickCompletingDealId}
-              onQuickAddTask={handleQuickAddTask}
+              onQuickAddTask={allowManageDeals ? handleQuickAddTask : undefined}
               quickAddingTaskDealId={quickAddingTaskDealId}
-              onInlineSaveDeal={patchDealInline}
+              onInlineSaveDeal={allowManageDeals ? patchDealInline : undefined}
               inlineSavingDealId={inlineSavingDealId}
-              onMoveToFallbackStage={moveDealToFallbackStage}
+              onMoveToFallbackStage={
+                allowManageDeals ? moveDealToFallbackStage : undefined
+              }
               movingStageDealId={movingStageDealId}
-              onSuggestedAction={handleSuggestedAction}
+              onSuggestedAction={allowManageDeals ? handleSuggestedAction : undefined}
               suggestedActionLoadingDealId={suggestedActionDealId}
               attentionDealIds={attentionDealIds}
-              onTaskComplete={handleTaskComplete}
+              onTaskComplete={allowManageDeals ? handleTaskComplete : undefined}
               completingTaskId={completingTaskId}
               priorityLabel={
                 sortByPriority
@@ -1436,7 +1446,7 @@ export default function Board({
                   : null
               }
               notesByDealId={notesByDealId}
-              onAddNote={handleAddNote}
+              onAddNote={allowManageDeals ? handleAddNote : undefined}
               addingNoteDealId={addingNoteDealId}
             />
           ))}
