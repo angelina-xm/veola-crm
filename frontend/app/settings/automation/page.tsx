@@ -1,16 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
 import AppNav from "@/src/components/navigation/AppNav";
-import {
-  type AutomationSettings,
-} from "@/src/lib/autoTaskRules";
-import {
-  AUTOMATION_SETTINGS_FALLBACK,
-  getAutomationSettings,
-  patchAutomationSettings,
-} from "@/src/lib/api";
+import { patchAutomationSettings } from "@/src/lib/api";
+import { useSettings } from "@/src/context/SettingsContext";
 import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
 
 type RuleRow = {
@@ -38,33 +32,9 @@ const RULES: RuleRow[] = [
 ];
 
 export default function AutomationSettingsPage() {
-  const [settings, setSettings] = useState<AutomationSettings>(
-    AUTOMATION_SETTINGS_FALLBACK
-  );
-  const [loading, setLoading] = useState(true);
+  const { settings, setSettings, loading, error: loadError } = useSettings();
   const [savingRuleId, setSavingRuleId] = useState<RuleRow["id"] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const isLoaded = useRef(false);
-
-  useEffect(() => {
-    if (isLoaded.current) return;
-    isLoaded.current = true;
-    const run = async () => {
-      const companyId = getStoredCompanyId() ?? readEnvCompanyId();
-      setLoading(true);
-      setError(null);
-      try {
-        const next = await getAutomationSettings(companyId);
-        setSettings(next);
-      } catch {
-        setSettings(AUTOMATION_SETTINGS_FALLBACK);
-        setError("Failed to load settings. Using safe defaults.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    void run();
-  }, []);
 
   const enabledCount = useMemo(
     () => RULES.reduce((acc, row) => acc + (settings[row.id] ? 1 : 0), 0),
@@ -140,9 +110,9 @@ export default function AutomationSettingsPage() {
             Reset defaults
           </button>
         </div>
-        {error ? (
+        {(error ?? loadError) ? (
           <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            {error}
+            {error ?? loadError}
           </div>
         ) : null}
 

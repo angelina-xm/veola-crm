@@ -3,9 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import Board from "@/src/components/pipeline/Board";
 import {
-  AUTOMATION_SETTINGS_FALLBACK,
   AuthError,
-  getAutomationSettings,
   getClients,
   getDeals,
   getPipelineStages,
@@ -13,9 +11,9 @@ import {
   normalizeApiList,
 } from "@/src/lib/api";
 import { normalizeDealPayload } from "@/src/lib/dealGrouping";
-import type { AutomationSettings } from "@/src/lib/autoTaskRules";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
 import { useAuth } from "@/src/components/auth/AuthProvider";
+import { useSettings } from "@/src/context/SettingsContext";
 import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
 import AppNav from "@/src/components/navigation/AppNav";
 import { Client, DealsByStage, PipelineStage } from "@/src/types";
@@ -31,13 +29,11 @@ type ApiDealRow = {
 
 export default function PipelinePage() {
   const { isReady, isAuthenticated, logout } = useAuth();
+  const { settings: automationSettings } = useSettings();
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [dealsByStage, setDealsByStage] = useState<DealsByStage>({});
   const [clients, setClients] = useState<Client[]>([]);
   const [clientsError, setClientsError] = useState<string | null>(null);
-  const [automationSettings, setAutomationSettings] = useState<AutomationSettings>(
-    AUTOMATION_SETTINGS_FALLBACK
-  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<number | null>(null);
@@ -88,12 +84,9 @@ export default function PipelinePage() {
           tenantIdUsed: tenantId,
         });
 
-        const [stagesData, dealsData, settingsData] = await Promise.all([
+        const [stagesData, dealsData] = await Promise.all([
           getPipelineStages(tenantId),
           getDeals(tenantId),
-          getAutomationSettings(tenantId).catch(
-            () => AUTOMATION_SETTINGS_FALLBACK
-          ),
         ]);
 
         let clientsData: Client[] = [];
@@ -128,7 +121,6 @@ export default function PipelinePage() {
 
         setStages(normalizedStages);
         setDealsByStage(grouped);
-        setAutomationSettings(settingsData);
         setClients(
           clientsData.map((c) => ({
             ...c,
@@ -155,7 +147,6 @@ export default function PipelinePage() {
         );
         setStages([]);
         setDealsByStage({});
-        setAutomationSettings(AUTOMATION_SETTINGS_FALLBACK);
         setClients([]);
       } finally {
         setLoading(false);
