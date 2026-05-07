@@ -29,7 +29,10 @@ type ApiDealRow = {
 
 export default function PipelinePage() {
   const { isReady, isAuthenticated, logout } = useAuth();
-  const { settings: automationSettings } = useSettings();
+  const {
+    settings: automationSettings,
+    loading: automationSettingsLoading,
+  } = useSettings();
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [dealsByStage, setDealsByStage] = useState<DealsByStage>({});
   const [clients, setClients] = useState<Client[]>([]);
@@ -217,6 +220,7 @@ export default function PipelinePage() {
             companyId={companyId}
             clients={clients}
             automationSettings={automationSettings}
+            automationSettingsLoading={automationSettingsLoading}
           />
         ) : null}
       </div>

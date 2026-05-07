@@ -70,6 +70,7 @@ interface BoardProps {
   companyId: number;
   clients: Client[];
   automationSettings: AutomationSettings;
+  automationSettingsLoading: boolean;
 }
 
 type PriorityLabel = "high" | "medium" | "low";
@@ -307,6 +308,7 @@ export default function Board({
   companyId,
   clients,
   automationSettings,
+  automationSettingsLoading,
 }: BoardProps) {
   useEffect(() => {
     console.log("[Board] mount");
@@ -316,8 +318,11 @@ export default function Board({
   }, []);
 
   useEffect(() => {
-    console.log("[Board] automationSettings changed", automationSettings);
-  }, [automationSettings]);
+    console.log("[Board] automationSettings", {
+      automationSettings,
+      automationSettingsLoading,
+    });
+  }, [automationSettings, automationSettingsLoading]);
 
   const router = useRouter();
   const [overlayDeal, setOverlayDeal] = useState<Deal | null>(null);
@@ -821,7 +826,7 @@ export default function Board({
   }, [refreshNotes]);
 
   useEffect(() => {
-    if (!companyId) return;
+    if (!companyId || automationSettingsLoading) return;
     const run = async () => {
       const toCreate: Array<{ deal: number; auto_type: string; content: string; key: string }> = [];
       for (const list of Object.values(dealsByStage)) {
@@ -901,6 +906,7 @@ export default function Board({
   }, [
     autoTaskCreatingKeys,
     automationSettings,
+    automationSettingsLoading,
     companyId,
     dealsByStage,
     notesByDealId,
