@@ -17,6 +17,7 @@ import {
   patchAutomationSettings,
 } from "@/src/lib/api";
 import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
+import { useAuth } from "@/src/components/auth/AuthProvider";
 import type { AutomationSettings } from "@/src/lib/autoTaskRules";
 
 type SettingsContextValue = {
@@ -32,6 +33,7 @@ const SettingsContext = createContext<SettingsContextValue | undefined>(undefine
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const { isReady, isAuthenticated } = useAuth();
   const [settings, setSettings] = useState<AutomationSettings>(
     AUTOMATION_SETTINGS_FALLBACK
   );
@@ -57,6 +59,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [pathname]);
 
   const refreshSettings = useCallback(async () => {
+    if (!isReady || !isAuthenticated) {
+      setLoading(false);
+      setError(null);
+      return;
+    }
     const requestId = ++requestIdRef.current;
     console.log("[SettingsProvider] refresh start", { requestId, companyId });
     setLoading(true);
@@ -93,14 +100,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     }
-  }, [companyId]);
+  }, [companyId, isAuthenticated, isReady]);
 
   useEffect(() => {
+    if (!isReady) return;
     void refreshSettings();
-  }, [refreshSettings]);
+  }, [isReady, refreshSettings]);
 
   const updateSettings = useCallback(
     async (patch: Partial<AutomationSettings>) => {
+      if (!isReady || !isAuthenticated) return;
       setSaving(true);
       setError(null);
       let prevSnapshot: AutomationSettings | null = null;
@@ -135,7 +144,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setSaving(false);
       }
     },
-    [companyId]
+    [companyId, isAuthenticated, isReady]
   );
 
   const value = useMemo(
