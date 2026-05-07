@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
 import AppNav from "@/src/components/navigation/AppNav";
 import {
@@ -44,8 +44,11 @@ export default function AutomationSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [savingRuleId, setSavingRuleId] = useState<RuleRow["id"] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const didInitialFetchRef = useRef(false);
 
   useEffect(() => {
+    if (didInitialFetchRef.current) return;
+    didInitialFetchRef.current = true;
     const run = async () => {
       const companyId = getStoredCompanyId() ?? readEnvCompanyId();
       setLoading(true);
