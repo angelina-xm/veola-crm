@@ -44,11 +44,11 @@ export default function AutomationSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [savingRuleId, setSavingRuleId] = useState<RuleRow["id"] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const didInitialFetchRef = useRef(false);
+  const isLoaded = useRef(false);
 
   useEffect(() => {
-    if (didInitialFetchRef.current) return;
-    didInitialFetchRef.current = true;
+    if (isLoaded.current) return;
+    isLoaded.current = true;
     const run = async () => {
       const companyId = getStoredCompanyId() ?? readEnvCompanyId();
       setLoading(true);
@@ -70,6 +70,10 @@ export default function AutomationSettingsPage() {
     () => RULES.reduce((acc, row) => acc + (settings[row.id] ? 1 : 0), 0),
     [settings]
   );
+
+  useEffect(() => {
+    console.log("SETTINGS UPDATE", settings);
+  }, [settings]);
 
   const toggleRule = async (id: RuleRow["id"]) => {
     const companyId = getStoredCompanyId() ?? readEnvCompanyId();
