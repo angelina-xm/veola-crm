@@ -20,7 +20,7 @@ WSGI-модуль проекта: **`vexora.wsgi:application`** (не `config.ws
 
 ## 2. Команды на Render
 
-**Build Command:**
+**Build Command (обязательно с `collectstatic`):**
 
 ```bash
 pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
@@ -32,7 +32,7 @@ pip install -r requirements.txt && python manage.py collectstatic --noinput && p
 gunicorn vexora.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4
 ```
 
-`Procfile` в репозитории уже содержит эквивалентную команду для `web`.
+`Procfile` в репозитории запускает `collectstatic` перед `gunicorn` как fail-safe, если в Render случайно был сохранён старый build command без шага сборки статики.
 
 ---
 
