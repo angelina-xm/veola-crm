@@ -44,8 +44,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const requestIdRef = useRef(0);
 
   useEffect(() => {
+    console.log("SettingsProvider mounted");
     console.log("[SettingsProvider] mount");
     return () => {
+      console.log("SettingsProvider unmounted");
       console.log("[SettingsProvider] unmount");
     };
   }, []);
