@@ -25,9 +25,11 @@ import {
   type SuggestedAction,
 } from "./DealCard";
 import {
+  AUTOMATION_SETTINGS_FALLBACK,
   createActivity,
   createDeal,
   deleteDeal,
+  getAutomationSettings,
   getCompanyNotes,
   getCompanyOpenTasks,
   getStaleDeals,
@@ -319,6 +321,9 @@ export default function Board({
   const [openCompanyTasks, setOpenCompanyTasks] = useState<Activity[]>([]);
   const [notesByDealId, setNotesByDealId] = useState<Record<string, Activity[]>>(
     {}
+  );
+  const [automationSettings, setAutomationSettings] = useState(
+    AUTOMATION_SETTINGS_FALLBACK
   );
 
   const openTasksByDealId = useMemo(() => {
@@ -808,6 +813,18 @@ export default function Board({
   }, [refreshNotes]);
 
   useEffect(() => {
+    const run = async () => {
+      try {
+        const settings = await getAutomationSettings(companyId);
+        setAutomationSettings(settings);
+      } catch {
+        setAutomationSettings(AUTOMATION_SETTINGS_FALLBACK);
+      }
+    };
+    void run();
+  }, [companyId]);
+
+  useEffect(() => {
     if (!companyId) return;
     const run = async () => {
       const toCreate: Array<{ deal: number; auto_type: string; content: string; key: string }> = [];
@@ -842,7 +859,8 @@ export default function Board({
           const candidates = applyAutoTasks(
             deal,
             { isStale, pricingCount, isDormant },
-            tasksForDeal
+            tasksForDeal,
+            automationSettings
           );
           for (const task of candidates) {
             const key = `${dealId}:${task.autoType}`;
@@ -886,6 +904,7 @@ export default function Board({
     void run();
   }, [
     autoTaskCreatingKeys,
+    automationSettings,
     companyId,
     dealsByStage,
     notesByDealId,

@@ -22,8 +22,15 @@ import {
   AuthError,
   logout,
 } from "@/src/lib/auth";
+import type { AutomationSettings } from "@/src/lib/autoTaskRules";
 
 export { AuthError } from "@/src/lib/auth";
+
+export const AUTOMATION_SETTINGS_FALLBACK: AutomationSettings = {
+  auto_follow_up: true,
+  auto_discount: true,
+  auto_reorder: true,
+};
 
 async function parseErrorBody(res: Response): Promise<string> {
   let message = `Request failed: ${res.statusText}`;
@@ -153,6 +160,63 @@ export async function getDeals(companyId: number) {
   }
 
   return res.json();
+}
+
+export async function getAutomationSettings(
+  companyId: number
+): Promise<AutomationSettings> {
+  const res = await fetchWithAuth("/settings/", {}, companyId);
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const data = (await res.json()) as Partial<AutomationSettings>;
+  return {
+    auto_follow_up:
+      typeof data.auto_follow_up === "boolean"
+        ? data.auto_follow_up
+        : AUTOMATION_SETTINGS_FALLBACK.auto_follow_up,
+    auto_discount:
+      typeof data.auto_discount === "boolean"
+        ? data.auto_discount
+        : AUTOMATION_SETTINGS_FALLBACK.auto_discount,
+    auto_reorder:
+      typeof data.auto_reorder === "boolean"
+        ? data.auto_reorder
+        : AUTOMATION_SETTINGS_FALLBACK.auto_reorder,
+  };
+}
+
+export async function patchAutomationSettings(
+  companyId: number,
+  data: Partial<AutomationSettings>
+): Promise<AutomationSettings> {
+  const res = await fetchWithAuth(
+    "/settings/",
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    },
+    companyId
+  );
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const raw = (await res.json()) as Partial<AutomationSettings>;
+  return {
+    auto_follow_up:
+      typeof raw.auto_follow_up === "boolean"
+        ? raw.auto_follow_up
+        : AUTOMATION_SETTINGS_FALLBACK.auto_follow_up,
+    auto_discount:
+      typeof raw.auto_discount === "boolean"
+        ? raw.auto_discount
+        : AUTOMATION_SETTINGS_FALLBACK.auto_discount,
+    auto_reorder:
+      typeof raw.auto_reorder === "boolean"
+        ? raw.auto_reorder
+        : AUTOMATION_SETTINGS_FALLBACK.auto_reorder,
+  };
 }
 
 export type NotificationItemType =

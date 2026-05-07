@@ -1,64 +1,108 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
 import AppNav from "@/src/components/navigation/AppNav";
 import {
-  DEFAULT_AUTOMATION_SETTINGS,
-  readAutomationSettings,
-  saveAutomationSettings,
   type AutomationSettings,
 } from "@/src/lib/autoTaskRules";
+import {
+  AUTOMATION_SETTINGS_FALLBACK,
+  getAutomationSettings,
+  patchAutomationSettings,
+} from "@/src/lib/api";
+import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
 
 type RuleRow = {
-  id: keyof AutomationSettings;
+  id: "auto_follow_up" | "auto_discount" | "auto_reorder";
   title: string;
   description: string;
 };
 
 const RULES: RuleRow[] = [
   {
-    id: "follow_up",
+    id: "auto_follow_up",
     title: "Follow up when deal is inactive",
     description: "Create task: Follow up with client",
   },
   {
-    id: "pricing",
+    id: "auto_discount",
     title: "Offer discount when pricing objections",
     description: "Create task: Offer discount",
   },
   {
-    id: "reorder",
+    id: "auto_reorder",
     title: "Suggest reorder for returning clients",
     description: "Create task: Suggest reorder",
   },
 ];
 
 export default function AutomationSettingsPage() {
-  const [settings, setSettings] = useState<AutomationSettings>(() =>
-    readAutomationSettings()
+  const [settings, setSettings] = useState<AutomationSettings>(
+    AUTOMATION_SETTINGS_FALLBACK
   );
+  const [loading, setLoading] = useState(true);
+  const [savingRuleId, setSavingRuleId] = useState<RuleRow["id"] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const companyId = getStoredCompanyId() ?? readEnvCompanyId();
+
+  useEffect(() => {
+    const run = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const next = await getAutomationSettings(companyId);
+        setSettings(next);
+      } catch {
+        setSettings(AUTOMATION_SETTINGS_FALLBACK);
+        setError("Failed to load settings. Using safe defaults.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    void run();
+  }, [companyId]);
 
   const enabledCount = useMemo(
     () => RULES.reduce((acc, row) => acc + (settings[row.id] ? 1 : 0), 0),
     [settings]
   );
 
-  const toggleRule = (id: keyof AutomationSettings) => {
-    setSettings((prev) => {
-      const next = {
-        ...prev,
-        [id]: !prev[id],
-      };
-      saveAutomationSettings(next);
-      return next;
-    });
+  const toggleRule = async (id: RuleRow["id"]) => {
+    const previous = settings[id];
+    const optimistic = { ...settings, [id]: !previous };
+    setSettings(optimistic);
+    setSavingRuleId(id);
+    setError(null);
+    try {
+      const next = await patchAutomationSettings(companyId, {
+        [id]: !previous,
+      });
+      setSettings(next);
+    } catch {
+      setSettings((prev) => ({ ...prev, [id]: previous }));
+      setError("Failed to save setting. Please try again.");
+    } finally {
+      setSavingRuleId(null);
+    }
   };
 
-  const resetDefaults = () => {
-    const next = { ...DEFAULT_AUTOMATION_SETTINGS };
-    setSettings(next);
-    saveAutomationSettings(next);
+  const resetDefaults = async () => {
+    setError(null);
+    setSavingRuleId("auto_follow_up");
+    try {
+      const next = await patchAutomationSettings(companyId, {
+        auto_follow_up: true,
+        auto_discount: true,
+        auto_reorder: true,
+      });
+      setSettings(next);
+    } catch {
+      setError("Failed to reset defaults.");
+    } finally {
+      setSavingRuleId(null);
+    }
   };
 
   return (
@@ -75,11 +119,17 @@ export default function AutomationSettingsPage() {
           <button
             type="button"
             onClick={resetDefaults}
+            disabled={loading || savingRuleId !== null}
             className="rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
           >
             Reset defaults
           </button>
         </div>
+        {error ? (
+          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {error}
+          </div>
+        ) : null}
 
         <div className="mb-4 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
           Enabled rules: {enabledCount}/{RULES.length}
@@ -100,7 +150,8 @@ export default function AutomationSettingsPage() {
                   type="button"
                   role="switch"
                   aria-checked={settings[rule.id]}
-                  onClick={() => toggleRule(rule.id)}
+                  onClick={() => void toggleRule(rule.id)}
+                  disabled={loading || savingRuleId !== null}
                   className={`inline-flex h-7 w-14 items-center rounded-full p-1 transition ${
                     settings[rule.id] ? "bg-indigo-600" : "bg-gray-300"
                   }`}
