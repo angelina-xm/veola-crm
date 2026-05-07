@@ -49,18 +49,26 @@ export default function AutomationSettingsPage() {
     const companyId = getStoredCompanyId() ?? readEnvCompanyId();
     const previous = settings[id];
     const optimistic = { ...settings, [id]: !previous };
+    console.log("SETTINGS BEFORE SET", settings);
     setSettings(optimistic);
     setSavingRuleId(id);
     setError(null);
     try {
-      await patchAutomationSettings(companyId, {
+      const data = await patchAutomationSettings(companyId, {
         [id]: !previous,
       });
-      setSettings((prev) => ({
-        ...prev,
-        [id]: !previous,
-      }));
+      console.log("PATCH RESULT", data);
+      console.log("SETTINGS BEFORE SET", settings);
+      setSettings((prev) => {
+        const next = {
+          ...prev,
+          [id]: !previous,
+        };
+        console.log("SETTINGS AFTER SET", next);
+        return next;
+      });
     } catch {
+      console.log("SETTINGS BEFORE SET", settings);
       setSettings((prev) => ({ ...prev, [id]: previous }));
       setError("Failed to save setting. Please try again.");
     } finally {
@@ -73,15 +81,22 @@ export default function AutomationSettingsPage() {
     setError(null);
     setSavingRuleId("auto_follow_up");
     try {
-      await patchAutomationSettings(companyId, {
+      const data = await patchAutomationSettings(companyId, {
         auto_follow_up: true,
         auto_discount: true,
         auto_reorder: true,
       });
-      setSettings({
-        auto_follow_up: true,
-        auto_discount: true,
-        auto_reorder: true,
+      console.log("PATCH RESULT", data);
+      console.log("SETTINGS BEFORE SET", settings);
+      setSettings((prev) => {
+        const next = {
+          ...prev,
+          auto_follow_up: true,
+          auto_discount: true,
+          auto_reorder: true,
+        };
+        console.log("SETTINGS AFTER SET", next);
+        return next;
       });
     } catch {
       setError("Failed to reset defaults.");

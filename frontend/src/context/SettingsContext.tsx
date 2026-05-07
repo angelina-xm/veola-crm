@@ -43,14 +43,26 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setError(null);
     try {
       const next = await getAutomationSettings(companyId);
-      setSettings(next);
+      console.log("FETCH SETTINGS RESULT", next);
+      console.log("SETTINGS BEFORE SET", settings);
+      setSettings((prev) => {
+        const merged = { ...prev, ...next };
+        console.log("SETTINGS AFTER SET", merged);
+        return merged;
+      });
     } catch {
-      setSettings(AUTOMATION_SETTINGS_FALLBACK);
+      console.log("FETCH SETTINGS RESULT", AUTOMATION_SETTINGS_FALLBACK);
+      console.log("SETTINGS BEFORE SET", settings);
+      setSettings((prev) => {
+        const next = { ...prev, ...AUTOMATION_SETTINGS_FALLBACK };
+        console.log("SETTINGS AFTER SET", next);
+        return next;
+      });
       setError("Failed to load settings. Using safe defaults.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [settings]);
 
   useEffect(() => {
     if (isLoaded.current) return;
