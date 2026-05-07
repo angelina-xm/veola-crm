@@ -45,10 +45,9 @@ export default function AutomationSettingsPage() {
   const [savingRuleId, setSavingRuleId] = useState<RuleRow["id"] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const companyId = getStoredCompanyId() ?? readEnvCompanyId();
-
   useEffect(() => {
     const run = async () => {
+      const companyId = getStoredCompanyId() ?? readEnvCompanyId();
       setLoading(true);
       setError(null);
       try {
@@ -62,7 +61,7 @@ export default function AutomationSettingsPage() {
       }
     };
     void run();
-  }, [companyId]);
+  }, []);
 
   const enabledCount = useMemo(
     () => RULES.reduce((acc, row) => acc + (settings[row.id] ? 1 : 0), 0),
@@ -70,16 +69,20 @@ export default function AutomationSettingsPage() {
   );
 
   const toggleRule = async (id: RuleRow["id"]) => {
+    const companyId = getStoredCompanyId() ?? readEnvCompanyId();
     const previous = settings[id];
     const optimistic = { ...settings, [id]: !previous };
     setSettings(optimistic);
     setSavingRuleId(id);
     setError(null);
     try {
-      const next = await patchAutomationSettings(companyId, {
+      await patchAutomationSettings(companyId, {
         [id]: !previous,
       });
-      setSettings(next);
+      setSettings((prev) => ({
+        ...prev,
+        [id]: !previous,
+      }));
     } catch {
       setSettings((prev) => ({ ...prev, [id]: previous }));
       setError("Failed to save setting. Please try again.");
@@ -89,15 +92,20 @@ export default function AutomationSettingsPage() {
   };
 
   const resetDefaults = async () => {
+    const companyId = getStoredCompanyId() ?? readEnvCompanyId();
     setError(null);
     setSavingRuleId("auto_follow_up");
     try {
-      const next = await patchAutomationSettings(companyId, {
+      await patchAutomationSettings(companyId, {
         auto_follow_up: true,
         auto_discount: true,
         auto_reorder: true,
       });
-      setSettings(next);
+      setSettings({
+        auto_follow_up: true,
+        auto_discount: true,
+        auto_reorder: true,
+      });
     } catch {
       setError("Failed to reset defaults.");
     } finally {
