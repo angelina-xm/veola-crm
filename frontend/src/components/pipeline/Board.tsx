@@ -25,11 +25,9 @@ import {
   type SuggestedAction,
 } from "./DealCard";
 import {
-  AUTOMATION_SETTINGS_FALLBACK,
   createActivity,
   createDeal,
   deleteDeal,
-  getAutomationSettings,
   getCompanyNotes,
   getCompanyOpenTasks,
   getStaleDeals,
@@ -46,7 +44,7 @@ import {
 } from "@/src/lib/dealDisplay";
 import { groupOpenTasksByDealId } from "@/src/lib/dealTaskSignal";
 import { createTaskFromPreset, type TaskPreset } from "@/src/lib/quickTask";
-import { applyAutoTasks } from "@/src/lib/autoTaskRules";
+import { applyAutoTasks, type AutomationSettings } from "@/src/lib/autoTaskRules";
 import { computeHighlightedDealIds } from "@/src/lib/notificationDealHighlight";
 import { DAY_MS, scaleMs } from "@/src/lib/timeConfig";
 import { useNotifications } from "@/src/hooks/useNotifications";
@@ -71,6 +69,7 @@ interface BoardProps {
   setDealsByStage: React.Dispatch<React.SetStateAction<DealsByStage>>;
   companyId: number;
   clients: Client[];
+  automationSettings: AutomationSettings;
 }
 
 type PriorityLabel = "high" | "medium" | "low";
@@ -307,6 +306,7 @@ export default function Board({
   setDealsByStage,
   companyId,
   clients,
+  automationSettings,
 }: BoardProps) {
   const router = useRouter();
   const [overlayDeal, setOverlayDeal] = useState<Deal | null>(null);
@@ -321,9 +321,6 @@ export default function Board({
   const [openCompanyTasks, setOpenCompanyTasks] = useState<Activity[]>([]);
   const [notesByDealId, setNotesByDealId] = useState<Record<string, Activity[]>>(
     {}
-  );
-  const [automationSettings, setAutomationSettings] = useState(
-    AUTOMATION_SETTINGS_FALLBACK
   );
 
   const openTasksByDealId = useMemo(() => {
@@ -811,18 +808,6 @@ export default function Board({
   useEffect(() => {
     void refreshNotes();
   }, [refreshNotes]);
-
-  useEffect(() => {
-    const run = async () => {
-      try {
-        const settings = await getAutomationSettings(companyId);
-        setAutomationSettings(settings);
-      } catch {
-        setAutomationSettings(AUTOMATION_SETTINGS_FALLBACK);
-      }
-    };
-    void run();
-  }, [companyId]);
 
   useEffect(() => {
     if (!companyId) return;
