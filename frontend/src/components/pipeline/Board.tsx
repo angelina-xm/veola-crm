@@ -308,6 +308,17 @@ export default function Board({
   clients,
   automationSettings,
 }: BoardProps) {
+  useEffect(() => {
+    console.log("[Board] mount");
+    return () => {
+      console.log("[Board] unmount");
+    };
+  }, []);
+
+  useEffect(() => {
+    console.log("[Board] automationSettings changed", automationSettings);
+  }, [automationSettings]);
+
   const router = useRouter();
   const [overlayDeal, setOverlayDeal] = useState<Deal | null>(null);
   const [dndLoading, setDndLoading] = useState(false);

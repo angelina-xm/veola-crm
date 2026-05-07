@@ -3,9 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
 import AppNav from "@/src/components/navigation/AppNav";
-import { patchAutomationSettings } from "@/src/lib/api";
 import { useSettings } from "@/src/context/SettingsContext";
-import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
 
 type RuleRow = {
   id: "auto_follow_up" | "auto_discount" | "auto_reorder";
@@ -32,9 +30,22 @@ const RULES: RuleRow[] = [
 ];
 
 export default function AutomationSettingsPage() {
-  const { settings, setSettings, loading, error: loadError } = useSettings();
+  const {
+    settings,
+    loading,
+    saving,
+    error: loadError,
+    updateSettings,
+  } = useSettings();
   const [savingRuleId, setSavingRuleId] = useState<RuleRow["id"] | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    console.log("[AutomationSettingsPage] mount");
+    return () => {
+      console.log("[AutomationSettingsPage] unmount");
+    };
+  }, []);
 
   const enabledCount = useMemo(
     () => RULES.reduce((acc, row) => acc + (settings[row.id] ? 1 : 0), 0),
@@ -46,30 +57,14 @@ export default function AutomationSettingsPage() {
   }, [settings]);
 
   const toggleRule = async (id: RuleRow["id"]) => {
-    const companyId = getStoredCompanyId() ?? readEnvCompanyId();
     const previous = settings[id];
-    const optimistic = { ...settings, [id]: !previous };
-    console.log("SETTINGS BEFORE SET", settings);
-    setSettings(optimistic);
     setSavingRuleId(id);
     setError(null);
     try {
-      const data = await patchAutomationSettings(companyId, {
+      await updateSettings({
         [id]: !previous,
       });
-      console.log("PATCH RESULT", data);
-      console.log("SETTINGS BEFORE SET", settings);
-      setSettings((prev) => {
-        const next = {
-          ...prev,
-          [id]: !previous,
-        };
-        console.log("SETTINGS AFTER SET", next);
-        return next;
-      });
     } catch {
-      console.log("SETTINGS BEFORE SET", settings);
-      setSettings((prev) => ({ ...prev, [id]: previous }));
       setError("Failed to save setting. Please try again.");
     } finally {
       setSavingRuleId(null);
@@ -77,26 +72,13 @@ export default function AutomationSettingsPage() {
   };
 
   const resetDefaults = async () => {
-    const companyId = getStoredCompanyId() ?? readEnvCompanyId();
     setError(null);
     setSavingRuleId("auto_follow_up");
     try {
-      const data = await patchAutomationSettings(companyId, {
+      await updateSettings({
         auto_follow_up: true,
         auto_discount: true,
         auto_reorder: true,
-      });
-      console.log("PATCH RESULT", data);
-      console.log("SETTINGS BEFORE SET", settings);
-      setSettings((prev) => {
-        const next = {
-          ...prev,
-          auto_follow_up: true,
-          auto_discount: true,
-          auto_reorder: true,
-        };
-        console.log("SETTINGS AFTER SET", next);
-        return next;
       });
     } catch {
       setError("Failed to reset defaults.");
@@ -119,7 +101,7 @@ export default function AutomationSettingsPage() {
           <button
             type="button"
             onClick={resetDefaults}
-            disabled={loading || savingRuleId !== null}
+            disabled={loading || saving || savingRuleId !== null}
             className="rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
           >
             Reset defaults
@@ -151,7 +133,7 @@ export default function AutomationSettingsPage() {
                   role="switch"
                   aria-checked={settings[rule.id]}
                   onClick={() => void toggleRule(rule.id)}
-                  disabled={loading || savingRuleId !== null}
+                  disabled={loading || saving || savingRuleId !== null}
                   className={`inline-flex h-7 w-14 items-center rounded-full p-1 transition ${
                     settings[rule.id] ? "bg-indigo-600" : "bg-gray-300"
                   }`}
