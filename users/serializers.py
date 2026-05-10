@@ -10,24 +10,29 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
     Тело запроса: { "email", "password" }.
     У модели User USERNAME_FIELD = email — вход только по email, не по Django username.
-    Ответ: { "access", "refresh", "company_id" } — company_id первая компания пользователя (для X-Company-ID).
-    """
+    Ответ: access, refresh; при наличии членства — company_id для X-Company-ID.
 
-    email = serializers.EmailField(write_only=True)
+    Важно: родительский TokenObtainSerializer добавляет USERNAME_FIELD как CharField.
+    Нельзя делать fields.pop(USERNAME_FIELD) — поле исчезает, validate() падает с KeyError → 500.
+    Заменяем на EmailField для корректной валидации адреса.
+    """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields.pop(User.USERNAME_FIELD, None)
+        self.fields[User.USERNAME_FIELD] = serializers.EmailField(write_only=True)
 
     def validate(self, attrs):
-        attrs[User.USERNAME_FIELD] = attrs.pop("email")
         data = super().validate(attrs)
-        cid = (
-            CompanyMember.objects.filter(user=self.user, is_active=True)
-            .order_by("id")
-            .values_list("company_id", flat=True)
-            .first()
-        )
+        cid = None
+        try:
+            cid = (
+                CompanyMember.objects.filter(user=self.user, is_active=True)
+                .order_by("id")
+                .values_list("company_id", flat=True)
+                .first()
+            )
+        except Exception:
+            cid = None
         if cid is not None:
             data["company_id"] = cid
         return data
