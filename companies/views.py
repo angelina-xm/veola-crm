@@ -14,21 +14,20 @@ from .serializers import (
     CompanySettingsSerializer,
     InvitationCreateSerializer,
 )
+from clients.permissions import HasCompany
 from .utils import check_user_limit
 from .permissions import can_invite
+
+
 class InviteUserView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasCompany]
 
     def post(self, request):
-        print("USER:", request.user)
-        print("COMPANY:", request.company)
-        print("MEMBERSHIP:", request.membership)
-
         membership = request.membership
 
         if not can_invite(membership):
-         raise PermissionDenied("Only owner can invite users")
-            
+            raise PermissionDenied("Only owner can invite users")
+
 
         serializer = InvitationCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -93,7 +92,14 @@ class AcceptInviteRegisterView(APIView):
 
 
 class CompanySettingsView(APIView):
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        from clients.permissions import CompanySettingsRead, CompanySettingsWrite
+
+        if self.request.method == "GET":
+            return [IsAuthenticated(), CompanySettingsRead()]
+        if self.request.method == "PATCH":
+            return [IsAuthenticated(), CompanySettingsWrite()]
+        return [IsAuthenticated()]
 
     def get_object(self, request):
         if not getattr(request, "company", None):
@@ -121,7 +127,7 @@ class CompanySettingsView(APIView):
 
 
 class CompanyMemberMeView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasCompany]
 
     def get(self, request):
         membership = getattr(request, "membership", None)

@@ -1,26 +1,48 @@
-from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
+from rest_framework import viewsets
+from rest_framework.permissions import BasePermission, IsAuthenticated
 
-from clients.permissions import HasCompany, IsOwner
+from clients.permissions import HasCompany
+from companies.permissions import can_delete_deals
+from deals.visibility import get_visible_deals
+
 from .models import Activity
 from .serializers import ActivitySerializer
 
 
+class CanDeleteActivity(BasePermission):
+    def has_permission(self, request, view):
+        return can_delete_deals(request.membership)
+
+
 class ActivityViewSet(viewsets.ModelViewSet):
-    queryset = Activity.objects.all()  # ← ДОБАВЬ ЭТО
+    queryset = Activity.objects.all()
     serializer_class = ActivitySerializer
-    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action == "destroy":
+            return [IsAuthenticated(), HasCompany(), CanDeleteActivity()]
+        return [IsAuthenticated(), HasCompany()]
 
     def get_queryset(self):
+        company = self.request.company
+        membership = getattr(self.request, "membership", None)
         qs = (
             Activity.objects.filter(
-                Q(client__company=self.request.company)
-                | Q(deal__company=self.request.company)
+                Q(client__company=company)
+                | Q(deal__company=company)
             )
             .select_related("author", "deal", "client")
             .order_by("-created_at")
         )
+
+        visible_ids = list(
+            get_visible_deals(self.request.user, company, membership).values_list(
+                "pk", flat=True
+            )
+        )
+        qs = qs.filter(Q(deal_id__in=visible_ids) | Q(deal__isnull=True))
+
         deal_id = self.request.query_params.get("deal_id")
         if deal_id:
             qs = qs.filter(deal_id=deal_id)
@@ -41,13 +63,6 @@ class ActivityViewSet(viewsets.ModelViewSet):
                 qs = qs.filter(is_completed=False)
 
         return qs
-
-    def get_permissions(self):
-        if self.action in ["list", "retrieve", "create", "update", "partial_update"]:
-            return [IsAuthenticated(), HasCompany()]
-        if self.action == "destroy":
-            return [IsAuthenticated(), HasCompany(), IsOwner()]
-        return [IsAuthenticated()]
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)

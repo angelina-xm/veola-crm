@@ -70,8 +70,26 @@ class CompanySettingsSerializer(serializers.ModelSerializer):
         ]
 
 
-class CompanyMemberSerializer(serializers.Serializer):
+_COMPANY_MEMBER_READ_FIELDS = [
+    "user_id",
+    "company_id",
+    "role",
+    "is_active",
+    "can_view_all_deals",
+    "can_create_deals",
+    "can_edit_all_deals",
+    "can_delete_deals",
+    "can_manage_team",
+    "can_manage_automations",
+    "can_view_analytics",
+]
+
+
+class CompanyMemberSerializer(serializers.ModelSerializer):
     user_id = serializers.IntegerField(source="user.id", read_only=True)
     company_id = serializers.IntegerField(source="company.id", read_only=True)
-    role = serializers.CharField(read_only=True)
-    is_active = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = CompanyMember
+        fields = _COMPANY_MEMBER_READ_FIELDS
+        read_only_fields = _COMPANY_MEMBER_READ_FIELDS

@@ -5,7 +5,7 @@ import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
 import AppNav from "@/src/components/navigation/AppNav";
 import { useMembership } from "@/src/context/MembershipContext";
 import { useSettings } from "@/src/context/SettingsContext";
-import { canEditAutomationSettings } from "@/src/lib/roles";
+import { canManageAutomations } from "@/src/lib/roles";
 
 type RuleRow = {
   id: "auto_follow_up" | "auto_discount" | "auto_reorder";
@@ -39,7 +39,7 @@ export default function AutomationSettingsPage() {
     error: loadError,
     updateSettings,
   } = useSettings();
-  const { role, loading: roleLoading } = useMembership();
+  const { membership, loading: roleLoading } = useMembership();
   const [savingRuleId, setSavingRuleId] = useState<RuleRow["id"] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,7 +60,7 @@ export default function AutomationSettingsPage() {
   }, [settings]);
 
   const toggleRule = async (id: RuleRow["id"]) => {
-    if (!canEditAutomationSettings(role)) return;
+    if (!canManageAutomations(membership)) return;
     const previous = settings[id];
     setSavingRuleId(id);
     setError(null);
@@ -76,7 +76,7 @@ export default function AutomationSettingsPage() {
   };
 
   const resetDefaults = async () => {
-    if (!canEditAutomationSettings(role)) return;
+    if (!canManageAutomations(membership)) return;
     setError(null);
     setSavingRuleId("auto_follow_up");
     try {
@@ -108,7 +108,7 @@ export default function AutomationSettingsPage() {
             onClick={resetDefaults}
             disabled={
               roleLoading ||
-              !canEditAutomationSettings(role) ||
+              !canManageAutomations(membership) ||
               loading ||
               saving ||
               savingRuleId !== null
@@ -118,9 +118,9 @@ export default function AutomationSettingsPage() {
             Reset defaults
           </button>
         </div>
-        {!roleLoading && !canEditAutomationSettings(role) ? (
+        {!roleLoading && !canManageAutomations(membership) ? (
           <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            Only owner can manage automation settings.
+            You don&apos;t have permission to manage automation settings.
           </div>
         ) : null}
         {(error ?? loadError) ? (
@@ -151,7 +151,7 @@ export default function AutomationSettingsPage() {
                   onClick={() => void toggleRule(rule.id)}
                   disabled={
                     roleLoading ||
-                    !canEditAutomationSettings(role) ||
+                    !canManageAutomations(membership) ||
                     loading ||
                     saving ||
                     savingRuleId !== null

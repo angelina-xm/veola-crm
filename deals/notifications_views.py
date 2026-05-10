@@ -26,7 +26,7 @@ def _stale_deals_count(user, company, membership) -> int:
 
 
 class NotificationsView(APIView):
-    """GET /api/notifications/ — просроченные задачи, сегодня, stale-сделки."""
+    """GET /api/notifications/ — просроченные задачи, сегодня, stale-сделки (только видимые сделки)."""
 
     permission_classes = [IsAuthenticated, HasCompany]
 
@@ -34,18 +34,24 @@ class NotificationsView(APIView):
         company = request.company
         now = timezone.now()
         today = timezone.localdate()
+        membership = getattr(request, "membership", None)
+
+        visible_ids = list(
+            get_visible_deals(request.user, company, membership).values_list(
+                "pk", flat=True
+            )
+        )
 
         overdue = Activity.objects.filter(
-            deal__company=company,
+            deal_id__in=visible_ids,
             type=Activity.Type.TASK,
             is_completed=False,
             due_date__isnull=False,
             due_date__lt=now,
         ).count()
 
-        # Сегодня, но ещё не просрочено (исключаем пересечение с overdue)
         due_today = Activity.objects.filter(
-            deal__company=company,
+            deal_id__in=visible_ids,
             type=Activity.Type.TASK,
             is_completed=False,
             due_date__isnull=False,
@@ -56,7 +62,7 @@ class NotificationsView(APIView):
         stale_count = _stale_deals_count(
             user=request.user,
             company=company,
-            membership=getattr(request, "membership", None),
+            membership=membership,
         )
 
         items = []

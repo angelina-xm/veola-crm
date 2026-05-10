@@ -1,11 +1,8 @@
 from rest_framework import serializers
 
+from deals.visibility import get_visible_deals, user_can_edit_deal
+
 from .models import Activity
-
-
-def _is_manager_or_owner(request):
-    m = getattr(request, "membership", None) if request else None
-    return m and m.role in ("owner", "manager")
 
 
 class ActivitySerializer(serializers.ModelSerializer):
@@ -35,6 +32,12 @@ class ActivitySerializer(serializers.ModelSerializer):
             return value
         if value.company_id != request.company.id:
             raise serializers.ValidationError("Deal does not belong to your company.")
+        membership = getattr(request, "membership", None)
+        vis = get_visible_deals(request.user, request.company, membership).filter(
+            pk=value.pk
+        ).exists()
+        if not vis:
+            raise serializers.ValidationError("Deal is not accessible for your membership.")
         return value
 
     def validate_client(self, value):
@@ -73,14 +76,19 @@ class ActivitySerializer(serializers.ModelSerializer):
                 {"is_completed": "is_completed applies only to tasks."}
             )
 
-        if not _is_manager_or_owner(request):
-            if set(attrs.keys()) != {"is_completed"}:
-                raise serializers.ValidationError(
-                    "Only the task completion flag can be updated."
-                )
-            if instance.type != Activity.Type.TASK:
-                raise serializers.ValidationError(
-                    {"is_completed": "is_completed applies only to tasks."}
-                )
+        deal = instance.deal
+        if deal is not None and user_can_edit_deal(
+            request.user, getattr(request, "membership", None), deal
+        ):
+            return attrs
+
+        if set(attrs.keys()) != {"is_completed"}:
+            raise serializers.ValidationError(
+                "Only the task completion flag can be updated."
+            )
+        if instance.type != Activity.Type.TASK:
+            raise serializers.ValidationError(
+                {"is_completed": "is_completed applies only to tasks."}
+            )
 
         return attrs

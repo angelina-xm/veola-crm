@@ -50,7 +50,11 @@ import { DAY_MS, scaleMs } from "@/src/lib/timeConfig";
 import { useNotifications } from "@/src/hooks/useNotifications";
 import { useMembership } from "@/src/context/MembershipContext";
 import { getStoredCompanyId } from "@/src/lib/auth";
-import { canDeleteDeals, canManageDeals } from "@/src/lib/roles";
+import {
+  canDeleteDeals,
+  canManageDeals,
+  canViewAnalytics,
+} from "@/src/lib/roles";
 import {
   normalizeDealPayload,
   removeDealFromGrouped,
@@ -312,7 +316,7 @@ export default function Board({
   automationSettings,
   automationSettingsLoading,
 }: BoardProps) {
-  const { role } = useMembership();
+  const { membership } = useMembership();
   useEffect(() => {
     console.log("[Board] mount");
     return () => {
@@ -328,8 +332,9 @@ export default function Board({
   }, [automationSettings, automationSettingsLoading]);
 
   const router = useRouter();
-  const allowManageDeals = canManageDeals(role);
-  const allowDeleteDeals = canDeleteDeals(role);
+  const allowManageDeals = canManageDeals(membership);
+  const allowDeleteDeals = canDeleteDeals(membership);
+  const showAnalytics = canViewAnalytics(membership);
   const [overlayDeal, setOverlayDeal] = useState<Deal | null>(null);
   const [dndLoading, setDndLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -1363,32 +1368,34 @@ export default function Board({
           </ul>
         </div>
       ) : null}
-      <div className="mb-4 grid grid-cols-2 gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 md:grid-cols-4">
-        <div className="rounded-md border border-gray-200 bg-white px-3 py-2">
-          <p className="text-xs text-gray-500">💰 Revenue</p>
-          <p className="text-sm font-semibold text-gray-900">
-            ${analytics.totalRevenue.toLocaleString()}
-          </p>
+      {showAnalytics ? (
+        <div className="mb-4 grid grid-cols-2 gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 md:grid-cols-4">
+          <div className="rounded-md border border-gray-200 bg-white px-3 py-2">
+            <p className="text-xs text-gray-500">💰 Revenue</p>
+            <p className="text-sm font-semibold text-gray-900">
+              ${analytics.totalRevenue.toLocaleString()}
+            </p>
+          </div>
+          <div className="rounded-md border border-gray-200 bg-white px-3 py-2">
+            <p className="text-xs text-gray-500">📊 Deals</p>
+            <p className="text-sm font-semibold text-gray-900">
+              {analytics.totalDeals}
+            </p>
+          </div>
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
+            <p className="text-xs text-amber-700">🔥 At risk</p>
+            <p className="text-sm font-semibold text-amber-900">
+              {analytics.atRiskCount}
+            </p>
+          </div>
+          <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2">
+            <p className="text-xs text-emerald-700">🏆 Won</p>
+            <p className="text-sm font-semibold text-emerald-900">
+              {analytics.wonCount}
+            </p>
+          </div>
         </div>
-        <div className="rounded-md border border-gray-200 bg-white px-3 py-2">
-          <p className="text-xs text-gray-500">📊 Deals</p>
-          <p className="text-sm font-semibold text-gray-900">
-            {analytics.totalDeals}
-          </p>
-        </div>
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
-          <p className="text-xs text-amber-700">🔥 At risk</p>
-          <p className="text-sm font-semibold text-amber-900">
-            {analytics.atRiskCount}
-          </p>
-        </div>
-        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2">
-          <p className="text-xs text-emerald-700">🏆 Won</p>
-          <p className="text-sm font-semibold text-emerald-900">
-            {analytics.wonCount}
-          </p>
-        </div>
-      </div>
+      ) : null}
       {attentionCount > 0 ? (
         <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
           <p className="font-semibold">

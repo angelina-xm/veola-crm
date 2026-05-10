@@ -6,14 +6,19 @@ from deals.models import Deal
 
 from .models import Client
 from .serializers import ClientSerializer
-from .permissions import HasCompany, IsOwner, IsManagerOrOwner
+from .permissions import (
+    HasCompany,
+    CanCreateDeals,
+    CanEditClientObject,
+    CanDeleteClientObject,
+)
 
 
 class ClientViewSet(viewsets.ModelViewSet):
     queryset = Client.objects.all()
     serializer_class = ClientSerializer
 
-    #  ФИЛЬТР ПО КОМПАНИИ 
+    #  ФИЛЬТР ПО КОМПАНИИ
     def get_queryset(self):
         return Client.objects.filter(company=self.request.company)
 
@@ -23,13 +28,13 @@ class ClientViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), HasCompany()]
 
         elif self.action == 'create':
-            return [IsAuthenticated(), HasCompany(), IsManagerOrOwner()]
+            return [IsAuthenticated(), HasCompany(), CanCreateDeals()]
 
         elif self.action in ['update', 'partial_update']:
-            return [IsAuthenticated(), HasCompany(), IsManagerOrOwner()]
+            return [IsAuthenticated(), HasCompany(), CanEditClientObject()]
 
         elif self.action == 'destroy':
-            return [IsAuthenticated(), HasCompany(), IsOwner()]
+            return [IsAuthenticated(), HasCompany(), CanDeleteClientObject()]
 
         return [IsAuthenticated()]
 

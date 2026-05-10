@@ -12,7 +12,12 @@ from .automation import create_automation_tasks
 from .models import Deal, PipelineStage
 from .serializers import DealSerializer, PipelineStageSerializer, StaleDealSerializer
 from .visibility import get_visible_deals
-from clients.permissions import HasCompany, IsOwner, IsManagerOrOwner
+from clients.permissions import (
+    HasCompany,
+    CanCreateDeals,
+    CanEditDealObject,
+    CanDeleteDealObject,
+)
 
 
 class DealViewSet(viewsets.ModelViewSet):
@@ -31,13 +36,13 @@ class DealViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), HasCompany()]
 
         elif self.action == 'create':
-            return [IsAuthenticated(), HasCompany(), IsManagerOrOwner()]
+            return [IsAuthenticated(), HasCompany(), CanCreateDeals()]
 
         elif self.action in ['update', 'partial_update']:
-            return [IsAuthenticated(), HasCompany(), IsManagerOrOwner()]
+            return [IsAuthenticated(), HasCompany(), CanEditDealObject()]
 
         elif self.action == 'destroy':
-            return [IsAuthenticated(), HasCompany(), IsOwner()]
+            return [IsAuthenticated(), HasCompany(), CanDeleteDealObject()]
 
         return [IsAuthenticated()]
 
@@ -83,12 +88,12 @@ class PipelineStageViewSet(viewsets.ModelViewSet):
         return PipelineStage.objects.filter(company=self.request.company).order_by("order", "id")
 
     def get_permissions(self):
+        from clients.permissions import CanManageTeam
+
         if self.action in ["list", "retrieve"]:
             return [IsAuthenticated(), HasCompany()]
-        if self.action in ["create", "update", "partial_update"]:
-            return [IsAuthenticated(), HasCompany(), IsManagerOrOwner()]
-        if self.action == "destroy":
-            return [IsAuthenticated(), HasCompany(), IsOwner()]
+        if self.action in ["create", "update", "partial_update", "destroy"]:
+            return [IsAuthenticated(), HasCompany(), CanManageTeam()]
         return [IsAuthenticated()]
 
     def perform_create(self, serializer):
