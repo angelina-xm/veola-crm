@@ -10,7 +10,7 @@ function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isReady, isAuthenticated, markAuthenticated } = useAuth();
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +39,7 @@ function LoginPageInner() {
     setError(null);
 
     try {
-      await login(username, password);
+      await login(email, password);
       markAuthenticated();
       router.replace("/");
     } catch (err) {
@@ -63,14 +63,14 @@ function LoginPageInner() {
         )}
 
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Логин
+          Email
         </label>
         <input
-          type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           className="w-full rounded border border-gray-300 px-3 py-2 mb-4 outline-none focus:border-blue-500"
-          autoComplete="username"
+          autoComplete="email"
           required
         />
 

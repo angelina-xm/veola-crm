@@ -6,21 +6,21 @@ from companies.models import Company, CompanyMember, CompanyRole
 User = get_user_model()
 
 
-class UsernameTokenObtainPairSerializer(TokenObtainPairSerializer):
+class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
-    Тело запроса: { "username", "password" }.
-    Значение username подставляется в USERNAME_FIELD модели (у нас — email).
+    Тело запроса: { "email", "password" }.
+    У модели User USERNAME_FIELD = email — вход только по email, не по Django username.
     Ответ: { "access", "refresh", "company_id" } — company_id первая компания пользователя (для X-Company-ID).
     """
 
-    username = serializers.CharField(write_only=True)
+    email = serializers.EmailField(write_only=True)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields.pop(User.USERNAME_FIELD, None)
 
     def validate(self, attrs):
-        attrs[User.USERNAME_FIELD] = attrs.pop("username")
+        attrs[User.USERNAME_FIELD] = attrs.pop("email")
         data = super().validate(attrs)
         cid = (
             CompanyMember.objects.filter(user=self.user, is_active=True)

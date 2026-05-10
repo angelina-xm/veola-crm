@@ -198,17 +198,17 @@ export async function prepareRequestAccess(): Promise<void> {
 
 /**
  * POST /api/token/
- * Тело: { username, password }
+ * Тело: { email, password } — USERNAME_FIELD на backend = email.
  * Ответ: { access, refresh } → localStorage "access" / "refresh"
  */
-export async function login(username: string, password: string) {
+export async function login(email: string, password: string) {
   const apiBase = getApiBaseUrl();
   let response: Response;
   try {
     response = await fetch(`${apiBase}${TOKEN_OBTAIN_PATH}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ email: email.trim(), password }),
     });
   } catch (err) {
     if (isLikelyNetworkFailure(err)) {
