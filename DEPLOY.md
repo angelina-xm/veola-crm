@@ -32,7 +32,11 @@ pip install -r requirements.txt && python manage.py collectstatic --noinput && p
 gunicorn vexora.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4
 ```
 
-`Procfile` в репозитории запускает `collectstatic` перед `gunicorn` как fail-safe, если в Render случайно был сохранён старый build command без шага сборки статики.
+`Procfile` только запускает Gunicorn. Сборка статики должна выполняться на этапе **Build** (команда ниже или `render.yaml`), а не при каждом старте контейнера — так быстрее старт и меньше сюрпризов при масштабировании.
+
+### Почему админка может быть без CSS на проде
+
+Если в Render **Build Command** нет `collectstatic`, каталог `staticfiles/` не попадает в деплой-слой — WhiteNoise отдаёт только то, что было собрано в `STATIC_ROOT`. Исправление `STATIC_URL` меняет URL в HTML, но **не создаёт файлы**. Проверка: в логах сборки должна быть строка вида `Copying '/.../admin/css/base.css'` и в слое после билда должен существовать `staticfiles/admin/css/base.css`.
 
 ---
 

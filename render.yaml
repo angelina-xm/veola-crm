@@ -1,0 +1,14 @@
+# Render Blueprint — documents the intended build/start pipeline in-repo.
+# If you already have a Web Service on Render, do NOT auto-create a duplicate:
+# copy buildCommand/startCommand into Settings, or merge carefully via Blueprint sync.
+# Python version: see runtime.txt (repo root).
+#
+# https://render.com/docs/deploy-django
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: veola-crm-api
+    runtime: python
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
+    startCommand: gunicorn vexora.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4
