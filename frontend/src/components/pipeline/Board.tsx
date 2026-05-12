@@ -51,6 +51,7 @@ import { useNotifications } from "@/src/hooks/useNotifications";
 import { useMembership } from "@/src/context/MembershipContext";
 import { getStoredCompanyId } from "@/src/lib/auth";
 import {
+  canCreateDeals,
   canDeleteDeals,
   canManageDeals,
   canViewAnalytics,
@@ -316,7 +317,7 @@ export default function Board({
   automationSettings,
   automationSettingsLoading,
 }: BoardProps) {
-  const { membership } = useMembership();
+  const { membership, loading: membershipLoading } = useMembership();
   useEffect(() => {
     console.log("[Board] mount");
     return () => {
@@ -332,7 +333,9 @@ export default function Board({
   }, [automationSettings, automationSettingsLoading]);
 
   const router = useRouter();
-  const allowManageDeals = canManageDeals(membership);
+  const allowCreateDeals =
+    !membershipLoading && canCreateDeals(membership);
+  const allowPipelineMutations = canManageDeals(membership);
   const allowDeleteDeals = canDeleteDeals(membership);
   const showAnalytics = canViewAnalytics(membership);
   const [overlayDeal, setOverlayDeal] = useState<Deal | null>(null);
@@ -1040,6 +1043,7 @@ export default function Board({
   );
 
   const openCreate = useCallback(() => {
+    if (!canCreateDeals(membership)) return;
     if (!stages.length) {
       if (typeof window !== "undefined") {
         window.alert("Нет доступных стадий. Сначала добавьте этапы воронки.");
@@ -1050,7 +1054,7 @@ export default function Board({
     setDealInModal(null);
     setModalError(null);
     setModalOpen(true);
-  }, [stages]);
+  }, [stages, membership]);
 
   const openEdit = useCallback((deal: Deal) => {
     setModalMode("edit");
@@ -1110,6 +1114,11 @@ export default function Board({
       clientId: string;
     }) => {
       setModalError(null);
+
+      if (!canCreateDeals(membership)) {
+        setModalError("Нет права на создание сделок.");
+        return;
+      }
 
       const clientPk = Number.parseInt(values.clientId, 10);
       if (!Number.isFinite(clientPk)) {
@@ -1184,7 +1193,7 @@ export default function Board({
         setModalSubmitting(false);
       }
     },
-    [clients, companyId, setDealsByStage]
+    [clients, companyId, membership, setDealsByStage]
   );
 
   const handleModalEdit = useCallback(
@@ -1258,7 +1267,7 @@ export default function Board({
           <button
             type="button"
             onClick={openCreate}
-            disabled={boardBusy || !allowManageDeals}
+            disabled={boardBusy || membershipLoading || !allowCreateDeals}
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-700 disabled:opacity-50"
           >
             Add Deal
@@ -1434,18 +1443,18 @@ export default function Board({
               }}
               onQuickCompleteFirstTask={handleQuickCompleteFirstTask}
               quickCompletingDealId={quickCompletingDealId}
-              onQuickAddTask={allowManageDeals ? handleQuickAddTask : undefined}
+              onQuickAddTask={allowPipelineMutations ? handleQuickAddTask : undefined}
               quickAddingTaskDealId={quickAddingTaskDealId}
-              onInlineSaveDeal={allowManageDeals ? patchDealInline : undefined}
+              onInlineSaveDeal={allowPipelineMutations ? patchDealInline : undefined}
               inlineSavingDealId={inlineSavingDealId}
               onMoveToFallbackStage={
-                allowManageDeals ? moveDealToFallbackStage : undefined
+                allowPipelineMutations ? moveDealToFallbackStage : undefined
               }
               movingStageDealId={movingStageDealId}
-              onSuggestedAction={allowManageDeals ? handleSuggestedAction : undefined}
+              onSuggestedAction={allowPipelineMutations ? handleSuggestedAction : undefined}
               suggestedActionLoadingDealId={suggestedActionDealId}
               attentionDealIds={attentionDealIds}
-              onTaskComplete={allowManageDeals ? handleTaskComplete : undefined}
+              onTaskComplete={allowPipelineMutations ? handleTaskComplete : undefined}
               completingTaskId={completingTaskId}
               priorityLabel={
                 sortByPriority
@@ -1453,7 +1462,7 @@ export default function Board({
                   : null
               }
               notesByDealId={notesByDealId}
-              onAddNote={allowManageDeals ? handleAddNote : undefined}
+              onAddNote={allowPipelineMutations ? handleAddNote : undefined}
               addingNoteDealId={addingNoteDealId}
             />
           ))}

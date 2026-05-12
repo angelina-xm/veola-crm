@@ -23,7 +23,8 @@ import {
   logout,
 } from "@/src/lib/auth";
 import type { AutomationSettings } from "@/src/lib/autoTaskRules";
-import type { MemberPermissions, MembershipProfile } from "@/src/lib/roles";
+import type { MembershipProfile } from "@/src/lib/roles";
+import { memberPermissionsFromMeResponse } from "@/src/lib/roles";
 
 export { AuthError } from "@/src/lib/auth";
 
@@ -220,20 +221,6 @@ export async function patchAutomationSettings(
   };
 }
 
-function parseMemberPermissions(
-  raw: Record<string, unknown>
-): MemberPermissions {
-  return {
-    can_view_all_deals: Boolean(raw.can_view_all_deals),
-    can_create_deals: Boolean(raw.can_create_deals),
-    can_edit_all_deals: Boolean(raw.can_edit_all_deals),
-    can_delete_deals: Boolean(raw.can_delete_deals),
-    can_manage_team: Boolean(raw.can_manage_team),
-    can_manage_automations: Boolean(raw.can_manage_automations),
-    can_view_analytics: Boolean(raw.can_view_analytics),
-  };
-}
-
 export async function getCurrentMembership(
   companyId: number
 ): Promise<MembershipProfile> {
@@ -250,11 +237,12 @@ export async function getCurrentMembership(
   ) {
     throw new Error("Invalid membership response");
   }
-  const permissions = parseMemberPermissions(raw);
+  const roleNorm = role as MembershipProfile["role"];
+  const permissions = memberPermissionsFromMeResponse(raw, roleNorm);
   return {
     user_id: raw.user_id as number,
     company_id: raw.company_id as number,
-    role: role as MembershipProfile["role"],
+    role: roleNorm,
     is_active: Boolean(raw.is_active),
     permissions,
   };
