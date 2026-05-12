@@ -16,7 +16,7 @@ from .serializers import (
 )
 from clients.permissions import HasCompany
 from .utils import check_user_limit
-from .permissions import can_invite
+from .permissions import can_manage_team
 
 
 class InviteUserView(APIView):
@@ -25,8 +25,8 @@ class InviteUserView(APIView):
     def post(self, request):
         membership = request.membership
 
-        if not can_invite(membership):
-            raise PermissionDenied("Only owner can invite users")
+        if not can_manage_team(membership):
+            raise PermissionDenied("You do not have permission to invite users.")
 
 
         serializer = InvitationCreateSerializer(data=request.data)

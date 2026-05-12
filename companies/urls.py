@@ -1,4 +1,5 @@
 from django.urls import path
+from .team_views import TeamInviteView, TeamMemberDetailView, TeamMembersListView
 from .views import (
     AcceptInviteRegisterView,
     AcceptInviteView,
@@ -13,4 +14,7 @@ urlpatterns = [
     path("invite/register/", AcceptInviteRegisterView.as_view()),
     path("settings/", CompanySettingsView.as_view()),
     path("membership/me/", CompanyMemberMeView.as_view()),
+    path("team/members/", TeamMembersListView.as_view()),
+    path("team/members/<int:pk>/", TeamMemberDetailView.as_view()),
+    path("team/invite/", TeamInviteView.as_view()),
 ]

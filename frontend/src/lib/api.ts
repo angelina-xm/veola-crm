@@ -221,6 +221,192 @@ export async function patchAutomationSettings(
   };
 }
 
+export type TeamMemberRole = "owner" | "manager" | "employee";
+
+export type TeamMember = {
+  id: number;
+  user_id: number;
+  email: string;
+  username: string;
+  role: TeamMemberRole;
+  is_active: boolean;
+  can_view_all_deals: boolean;
+  can_create_deals: boolean;
+  can_edit_all_deals: boolean;
+  can_delete_deals: boolean;
+  can_manage_team: boolean;
+  can_manage_automations: boolean;
+  can_view_analytics: boolean;
+  created_at: string;
+};
+
+export type PendingTeamInvite = {
+  email: string;
+  role: string;
+  expires_at: string;
+  token: string;
+  created_at: string;
+};
+
+export type TeamMembersPayload = {
+  members: TeamMember[];
+  pending_invites: PendingTeamInvite[];
+};
+
+function normalizeTeamMember(raw: Record<string, unknown>): TeamMember {
+  const role = String(raw.role ?? "").toLowerCase();
+  if (role !== "owner" && role !== "manager" && role !== "employee") {
+    throw new Error("Invalid team member role");
+  }
+  return {
+    id: Number(raw.id),
+    user_id: Number(raw.user_id),
+    email: String(raw.email ?? ""),
+    username: String(raw.username ?? ""),
+    role: role as TeamMemberRole,
+    is_active: Boolean(raw.is_active),
+    can_view_all_deals: Boolean(raw.can_view_all_deals),
+    can_create_deals: Boolean(raw.can_create_deals),
+    can_edit_all_deals: Boolean(raw.can_edit_all_deals),
+    can_delete_deals: Boolean(raw.can_delete_deals),
+    can_manage_team: Boolean(raw.can_manage_team),
+    can_manage_automations: Boolean(raw.can_manage_automations),
+    can_view_analytics: Boolean(raw.can_view_analytics),
+    created_at: String(raw.created_at ?? ""),
+  };
+}
+
+export async function getTeamMembers(
+  companyId: number
+): Promise<TeamMembersPayload> {
+  const res = await fetchWithAuth("/team/members/", {}, companyId);
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const data = (await res.json()) as Record<string, unknown>;
+  const membersRaw = data.members;
+  const invitesRaw = data.pending_invites;
+  const members: TeamMember[] = [];
+  if (Array.isArray(membersRaw)) {
+    for (const row of membersRaw) {
+      if (row && typeof row === "object") {
+        members.push(normalizeTeamMember(row as Record<string, unknown>));
+      }
+    }
+  }
+  const pending_invites: PendingTeamInvite[] = [];
+  if (Array.isArray(invitesRaw)) {
+    for (const row of invitesRaw) {
+      if (!row || typeof row !== "object") continue;
+      const o = row as Record<string, unknown>;
+      pending_invites.push({
+        email: String(o.email ?? ""),
+        role: String(o.role ?? ""),
+        expires_at: String(o.expires_at ?? ""),
+        token: String(o.token ?? ""),
+        created_at: String(o.created_at ?? ""),
+      });
+    }
+  }
+  return { members, pending_invites };
+}
+
+export type TeamMemberUpdatePayload = Partial<{
+  role: TeamMemberRole;
+  is_active: boolean;
+  can_view_all_deals: boolean;
+  can_create_deals: boolean;
+  can_edit_all_deals: boolean;
+  can_delete_deals: boolean;
+  can_manage_team: boolean;
+  can_manage_automations: boolean;
+  can_view_analytics: boolean;
+}>;
+
+export async function patchTeamMember(
+  companyId: number,
+  memberId: number,
+  payload: TeamMemberUpdatePayload
+): Promise<TeamMember> {
+  const res = await fetchWithAuth(
+    `/team/members/${memberId}/`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    companyId
+  );
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const raw = (await res.json()) as Record<string, unknown>;
+  return normalizeTeamMember(raw);
+}
+
+export async function deleteTeamMember(
+  companyId: number,
+  memberId: number
+): Promise<void> {
+  const res = await fetchWithAuth(
+    `/team/members/${memberId}/`,
+    { method: "DELETE" },
+    companyId
+  );
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+}
+
+export type TeamInvitePayload = {
+  email: string;
+  role: Exclude<TeamMemberRole, "owner">;
+};
+
+export type TeamInviteResult =
+  | { status: "attached"; member: TeamMember }
+  | {
+      status: "invited";
+      message: string;
+      token: string;
+      expires_at: string;
+    };
+
+export async function postTeamInvite(
+  companyId: number,
+  payload: TeamInvitePayload
+): Promise<TeamInviteResult> {
+  const res = await fetchWithAuth(
+    "/team/invite/",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    companyId
+  );
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const data = (await res.json()) as Record<string, unknown>;
+  const status = String(data.status ?? "");
+  if (status === "attached" && data.member && typeof data.member === "object") {
+    return {
+      status: "attached",
+      member: normalizeTeamMember(data.member as Record<string, unknown>),
+    };
+  }
+  if (status === "invited") {
+    return {
+      status: "invited",
+      message: String(data.message ?? ""),
+      token: String(data.token ?? ""),
+      expires_at: String(data.expires_at ?? ""),
+    };
+  }
+  throw new Error("Unexpected invite response");
+}
+
 export async function getCurrentMembership(
   companyId: number
 ): Promise<MembershipProfile> {
