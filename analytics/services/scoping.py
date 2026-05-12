@@ -22,7 +22,5 @@ def visible_activities_base(user, company, membership) -> QuerySet[Activity]:
         .select_related("author", "deal", "deal__stage", "client")
         .order_by("-created_at")
     )
-    visible_ids = list(
-        get_visible_deals(user, company, membership).values_list("pk", flat=True)
-    )
-    return qs.filter(Q(deal_id__in=visible_ids) | Q(deal__isnull=True))
+    visible = get_visible_deals(user, company, membership)
+    return qs.filter(Q(deal_id__in=visible.values("pk")) | Q(deal__isnull=True))

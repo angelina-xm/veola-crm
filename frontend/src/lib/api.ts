@@ -35,24 +35,36 @@ export const AUTOMATION_SETTINGS_FALLBACK: AutomationSettings = {
   auto_reorder: true,
 };
 
+function formatApiErrorDetail(detail: unknown): string {
+  if (detail == null) return "Unknown error";
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        if (typeof item === "string") return item;
+        if (item && typeof item === "object") return JSON.stringify(item);
+        return String(item);
+      })
+      .join("; ");
+  }
+  return JSON.stringify(detail);
+}
+
 async function parseErrorBody(res: Response): Promise<string> {
-  let message = `Request failed: ${res.statusText}`;
+  const statusLine = `HTTP ${res.status} ${res.statusText || ""}`.trim();
   try {
     const errorData: unknown = await res.json();
-    if (
-      errorData &&
-      typeof errorData === "object" &&
-      "detail" in errorData &&
-      errorData.detail !== undefined
-    ) {
-      message = String((errorData as { detail: unknown }).detail);
-    } else if (typeof errorData === "object" && errorData !== null) {
-      message = JSON.stringify(errorData);
+    if (errorData && typeof errorData === "object") {
+      const o = errorData as Record<string, unknown>;
+      if ("detail" in o && o.detail !== undefined) {
+        return `${statusLine}: ${formatApiErrorDetail(o.detail)}`;
+      }
+      return `${statusLine}: ${JSON.stringify(o)}`;
     }
+    return statusLine;
   } catch {
-    // ignore JSON parse errors
+    return statusLine;
   }
-  return message;
 }
 
 type ListResponse<T> = T[] | { results: T[] };

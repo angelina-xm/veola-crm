@@ -15,20 +15,21 @@ from typing import Any
 
 from django.contrib.auth import get_user_model
 from django.db.models import (
+    BigIntegerField,
     BooleanField,
     Case,
     Count,
+    DateTimeField,
     Exists,
     F,
-    IntegerField,
-    Max,
     OuterRef,
     Q,
+    Subquery,
     Sum,
     Value,
     When,
 )
-from django.db.models.functions import Coalesce, TruncMonth, TruncWeek
+from django.db.models.functions import TruncMonth, TruncWeek
 from django.utils import timezone
 
 from activities.models import Activity
@@ -41,6 +42,14 @@ User = get_user_model()
 STALE_HOURS = 48
 NEW_DEAL_GRACE_HOURS = 24
 WON_STAGE_Q = Q(stage__name__iexact="won")
+
+# Scalar subquery avoids MAX() on joined activities + GROUP BY member_uid (SQLite:
+# "misuse of aggregate function MAX()"; PostgreSQL can also reject nested aggregates).
+_LAST_ACTIVITY_TS = (
+    Activity.objects.filter(deal_id=OuterRef("pk"))
+    .order_by("-created_at")
+    .values("created_at")[:1]
+)
 
 
 def _money(x: Decimal | None) -> str:
@@ -92,7 +101,12 @@ def build_analytics_v1_free(
     base = (
         visible_deals(user, company, membership)
         .select_related("stage")
-        .annotate(last_activity=Max("activities__created_at"))
+        .annotate(
+            last_activity=Subquery(
+                _LAST_ACTIVITY_TS,
+                output_field=DateTimeField(null=True),
+            )
+        )
         .annotate(overdue=Exists(overdue_sq))
         .annotate(
             is_stale=Case(
@@ -201,7 +215,7 @@ def build_analytics_v1_free(
     member_uid_expr = Case(
         When(assigned_to_id__isnull=False, then=F("assigned_to_id")),
         default=F("created_by_id"),
-        output_field=IntegerField(),
+        output_field=BigIntegerField(null=True),
     )
 
     team_rows = (
