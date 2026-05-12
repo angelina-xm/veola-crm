@@ -66,3 +66,73 @@ export interface ApiResponse<T = unknown> {
   error?: string;
   message?: string;
 }
+
+// Analytics v1 (GET /analytics/v1/overview/)
+export type AnalyticsGranularity = "week" | "month";
+
+export type AnalyticsFeedKind =
+  | "deal_won"
+  | "deal_moved"
+  | "note_added"
+  | "task_completed"
+  | "task_open"
+  | "activity_logged";
+
+export interface AnalyticsV1Kpis {
+  pipeline_value: string;
+  active_deals: number;
+  conversion_rate_pct: number;
+  stale_health: { healthy: number; at_risk: number; stale: number };
+  won_this_month: number;
+  won_this_month_revenue: string;
+  average_deal_size: string;
+  visible_deals_total: number;
+  won_deals_total: number;
+}
+
+export interface AnalyticsV1FunnelStage {
+  stage_id: number;
+  name: string;
+  order: number;
+  deal_count: number;
+  dropoff_from_previous_pct: number | null;
+}
+
+export interface AnalyticsV1TrendPoint {
+  period_start: string;
+  revenue: string;
+}
+
+export interface AnalyticsV1TeamRow {
+  user_id: number;
+  email: string;
+  deals_won: number;
+  deals_active: number;
+  revenue_won: string;
+  stale_deals: number;
+}
+
+export interface AnalyticsV1FeedItem {
+  id: number;
+  kind: AnalyticsFeedKind;
+  type: string;
+  auto_type: string | null;
+  content: string;
+  deal_id: number | null;
+  deal_title: string | null;
+  author_id: number;
+  author_email: string | null;
+  is_completed: boolean;
+  created_at: string;
+}
+
+export interface AnalyticsV1Overview {
+  tier: string;
+  granularity: AnalyticsGranularity;
+  meta: Record<string, string>;
+  kpis: AnalyticsV1Kpis;
+  funnel: AnalyticsV1FunnelStage[];
+  revenue_trend: AnalyticsV1TrendPoint[];
+  team_performance: AnalyticsV1TeamRow[];
+  recent_activity: AnalyticsV1FeedItem[];
+}

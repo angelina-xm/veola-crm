@@ -3,6 +3,7 @@
  * Refresh и очистка сессии — в @/src/lib/auth
  */
 
+import type { AnalyticsFeedKind, AnalyticsV1Overview } from "@/src/types";
 import {
   Activity,
   ActivityType,
@@ -500,6 +501,133 @@ export async function getStaleDeals(companyId: number): Promise<StaleDeal[]> {
     ...row,
     id: String(row.id),
   }));
+}
+
+export type AnalyticsV1Granularity = "week" | "month";
+
+export async function getAnalyticsV1Overview(
+  companyId: number,
+  granularity: AnalyticsV1Granularity = "week"
+): Promise<AnalyticsV1Overview> {
+  const res = await fetchWithAuth(
+    `/analytics/v1/overview/?granularity=${encodeURIComponent(granularity)}`,
+    {},
+    companyId
+  );
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const raw = (await res.json()) as Record<string, unknown>;
+  return parseAnalyticsV1Overview(raw);
+}
+
+function parseAnalyticsV1Overview(raw: Record<string, unknown>): AnalyticsV1Overview {
+  const kpisRaw = raw.kpis;
+  const kpis =
+    kpisRaw && typeof kpisRaw === "object"
+      ? (kpisRaw as Record<string, unknown>)
+      : {};
+  const staleRaw = kpis.stale_health;
+  const stale =
+    staleRaw && typeof staleRaw === "object"
+      ? (staleRaw as Record<string, unknown>)
+      : {};
+
+  const funnelIn = Array.isArray(raw.funnel) ? raw.funnel : [];
+  const funnel = funnelIn.map((row) => {
+    const o = row as Record<string, unknown>;
+    return {
+      stage_id: Number(o.stage_id),
+      name: String(o.name ?? ""),
+      order: Number(o.order ?? 0),
+      deal_count: Number(o.deal_count ?? 0),
+      dropoff_from_previous_pct:
+        o.dropoff_from_previous_pct === null ||
+        o.dropoff_from_previous_pct === undefined
+          ? null
+          : Number(o.dropoff_from_previous_pct),
+    };
+  });
+
+  const trendIn = Array.isArray(raw.revenue_trend) ? raw.revenue_trend : [];
+  const revenue_trend = trendIn.map((row) => {
+    const o = row as Record<string, unknown>;
+    return {
+      period_start: String(o.period_start ?? ""),
+      revenue: String(o.revenue ?? "0"),
+    };
+  });
+
+  const teamIn = Array.isArray(raw.team_performance)
+    ? raw.team_performance
+    : [];
+  const team_performance = teamIn.map((row) => {
+    const o = row as Record<string, unknown>;
+    return {
+      user_id: Number(o.user_id),
+      email: String(o.email ?? ""),
+      deals_won: Number(o.deals_won ?? 0),
+      deals_active: Number(o.deals_active ?? 0),
+      revenue_won: String(o.revenue_won ?? "0"),
+      stale_deals: Number(o.stale_deals ?? 0),
+    };
+  });
+
+  const feedIn = Array.isArray(raw.recent_activity)
+    ? raw.recent_activity
+    : [];
+  const recent_activity = feedIn.map((row) => {
+    const o = row as Record<string, unknown>;
+    return {
+      id: Number(o.id),
+      kind: String(o.kind ?? "activity_logged") as AnalyticsFeedKind,
+      type: String(o.type ?? ""),
+      auto_type: o.auto_type == null ? null : String(o.auto_type),
+      content: String(o.content ?? ""),
+      deal_id: o.deal_id == null ? null : Number(o.deal_id),
+      deal_title: o.deal_title == null ? null : String(o.deal_title),
+      author_id: Number(o.author_id ?? 0),
+      author_email:
+        o.author_email == null ? null : String(o.author_email),
+      is_completed: Boolean(o.is_completed),
+      created_at: String(o.created_at ?? ""),
+    };
+  });
+
+  const metaRaw = raw.meta;
+  const meta: Record<string, string> = {};
+  if (metaRaw && typeof metaRaw === "object") {
+    for (const [k, v] of Object.entries(metaRaw as Record<string, unknown>)) {
+      meta[k] = String(v ?? "");
+    }
+  }
+
+  const g = raw.granularity === "month" ? "month" : "week";
+
+  return {
+    tier: String(raw.tier ?? "free"),
+    granularity: g,
+    meta,
+    kpis: {
+      pipeline_value: String(kpis.pipeline_value ?? "0"),
+      active_deals: Number(kpis.active_deals ?? 0),
+      conversion_rate_pct: Number(kpis.conversion_rate_pct ?? 0),
+      stale_health: {
+        healthy: Number(stale.healthy ?? 0),
+        at_risk: Number(stale.at_risk ?? 0),
+        stale: Number(stale.stale ?? 0),
+      },
+      won_this_month: Number(kpis.won_this_month ?? 0),
+      won_this_month_revenue: String(kpis.won_this_month_revenue ?? "0"),
+      average_deal_size: String(kpis.average_deal_size ?? "0"),
+      visible_deals_total: Number(kpis.visible_deals_total ?? 0),
+      won_deals_total: Number(kpis.won_deals_total ?? 0),
+    },
+    funnel,
+    revenue_trend,
+    team_performance,
+    recent_activity,
+  };
 }
 
 export async function getPipelineStages(companyId: number) {

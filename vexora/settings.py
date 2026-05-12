@@ -115,6 +115,7 @@ INSTALLED_APPS = [
     'clients',
     'deals',
     'activities',
+    "analytics",
     "corsheaders",
 
     # DRF

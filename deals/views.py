@@ -8,6 +8,8 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from activities.models import Activity
+
 from .automation import create_automation_tasks
 from .models import Deal, PipelineStage
 from .serializers import DealSerializer, PipelineStageSerializer, StaleDealSerializer
@@ -53,10 +55,35 @@ class DealViewSet(viewsets.ModelViewSet):
         )
 
     def perform_update(self, serializer):
-        old_stage_id = serializer.instance.stage_id
+        inst = serializer.instance
+        old_stage_id = inst.stage_id
+        old_stage = inst.stage
         deal = serializer.save()
         if deal.stage_id != old_stage_id:
             create_automation_tasks(deal, self.request.user)
+            is_won = bool(deal.stage and deal.stage.name.strip().lower() == "won")
+            was_won = bool(old_stage and old_stage.name.strip().lower() == "won")
+            if is_won and not was_won:
+                Activity.objects.create(
+                    deal=deal,
+                    author=self.request.user,
+                    client=deal.client,
+                    type=Activity.Type.NOTE,
+                    category="system",
+                    auto_type="deal_won",
+                    content="Deal won",
+                )
+            else:
+                stage_label = deal.stage.name if deal.stage else "—"
+                Activity.objects.create(
+                    deal=deal,
+                    author=self.request.user,
+                    client=deal.client,
+                    type=Activity.Type.NOTE,
+                    category="system",
+                    auto_type="stage_move",
+                    content=f"Deal moved to {stage_label}",
+                )
 
     @action(detail=False, methods=["get"], url_path="stale")
     def stale(self, request):

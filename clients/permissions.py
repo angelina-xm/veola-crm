@@ -71,6 +71,13 @@ class CompanySettingsWrite(BasePermission):
         return can_manage_automations(request.membership)
 
 
+class CanViewAnalytics(BasePermission):
+    def has_permission(self, request, view):
+        from companies.permissions import can_view_analytics
+
+        return can_view_analytics(request.membership)
+
+
 class IsOwnerOrManagerOrReadOnly(BasePermission):
     def has_permission(self, request, view):
         membership = request.membership

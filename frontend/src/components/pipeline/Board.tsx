@@ -28,6 +28,7 @@ import {
   createActivity,
   createDeal,
   deleteDeal,
+  getAnalyticsV1Overview,
   getCompanyNotes,
   getCompanyOpenTasks,
   getStaleDeals,
@@ -63,12 +64,15 @@ import {
 } from "@/src/lib/dealGrouping";
 import {
   Activity,
+  AnalyticsGranularity,
+  AnalyticsV1Overview,
   Client,
   DealsByStage,
   Deal,
   PipelineStage,
   StaleDeal,
 } from "@/src/types";
+import AnalyticsDashboard from "@/src/components/analytics/AnalyticsDashboard";
 
 interface BoardProps {
   stages: PipelineStage[];
@@ -89,30 +93,6 @@ type DragMutation = {
   targetStageId: string;
   fromIndex: number;
 };
-
-function getAnalytics(
-  deals: Deal[],
-  stages: PipelineStage[],
-  openTasksByDealId: Record<string, Activity[]>
-) {
-  const stageById = new Map(
-    stages.map((s) => [String(s.id), String(s.name).trim().toLowerCase()])
-  );
-  const totalDeals = deals.length;
-  const totalRevenue = deals.reduce(
-    (sum, d) => sum + (Number.isFinite(Number(d.amount)) ? Number(d.amount) : 0),
-    0
-  );
-  const atRiskCount = deals.reduce((acc, deal) => {
-    const health = getDealHealth(deal, openTasksByDealId[String(deal.id)] ?? []);
-    return acc + (health === "at_risk" ? 1 : 0);
-  }, 0);
-  const wonCount = deals.reduce((acc, deal) => {
-    const stageId = String(deal.stageId ?? deal.stage ?? "");
-    return acc + (stageById.get(stageId) === "won" ? 1 : 0);
-  }, 0);
-  return { totalDeals, totalRevenue, atRiskCount, wonCount };
-}
 
 function parseDealId(dndId: string) {
   return dndId.startsWith("deal-") ? dndId.slice("deal-".length) : dndId;
@@ -338,6 +318,39 @@ export default function Board({
   const allowPipelineMutations = canManageDeals(membership);
   const allowDeleteDeals = canDeleteDeals(membership);
   const showAnalytics = canViewAnalytics(membership);
+  const [analyticsOverview, setAnalyticsOverview] =
+    useState<AnalyticsV1Overview | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
+  const [analyticsGranularity, setAnalyticsGranularity] =
+    useState<AnalyticsGranularity>("week");
+
+  const loadAnalyticsOverview = useCallback(async () => {
+    if (!showAnalytics) return;
+    try {
+      setAnalyticsLoading(true);
+      setAnalyticsError(null);
+      const data = await getAnalyticsV1Overview(companyId, analyticsGranularity);
+      setAnalyticsOverview(data);
+    } catch (err) {
+      setAnalyticsError(
+        err instanceof Error ? err.message : "Failed to load analytics"
+      );
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, [analyticsGranularity, companyId, showAnalytics]);
+
+  useEffect(() => {
+    if (!showAnalytics || membershipLoading) return;
+    void loadAnalyticsOverview();
+  }, [
+    dealsByStage,
+    showAnalytics,
+    membershipLoading,
+    analyticsGranularity,
+    loadAnalyticsOverview,
+  ]);
   const [overlayDeal, setOverlayDeal] = useState<Deal | null>(null);
   const [dndLoading, setDndLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -778,10 +791,6 @@ export default function Board({
   const attentionDeals = useMemo(
     () => allDeals.filter((d) => attentionDealIds.has(String(d.id))),
     [allDeals, attentionDealIds]
-  );
-  const analytics = useMemo(
-    () => getAnalytics(allDeals, stages, openTasksByDealId),
-    [allDeals, openTasksByDealId, stages]
   );
   const stagesToRender = useMemo(() => {
     if (!sortByPriority || !priorityStageOrder) return stages;
@@ -1378,32 +1387,14 @@ export default function Board({
         </div>
       ) : null}
       {showAnalytics ? (
-        <div className="mb-4 grid grid-cols-2 gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 md:grid-cols-4">
-          <div className="rounded-md border border-gray-200 bg-white px-3 py-2">
-            <p className="text-xs text-gray-500">💰 Revenue</p>
-            <p className="text-sm font-semibold text-gray-900">
-              ${analytics.totalRevenue.toLocaleString()}
-            </p>
-          </div>
-          <div className="rounded-md border border-gray-200 bg-white px-3 py-2">
-            <p className="text-xs text-gray-500">📊 Deals</p>
-            <p className="text-sm font-semibold text-gray-900">
-              {analytics.totalDeals}
-            </p>
-          </div>
-          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
-            <p className="text-xs text-amber-700">🔥 At risk</p>
-            <p className="text-sm font-semibold text-amber-900">
-              {analytics.atRiskCount}
-            </p>
-          </div>
-          <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2">
-            <p className="text-xs text-emerald-700">🏆 Won</p>
-            <p className="text-sm font-semibold text-emerald-900">
-              {analytics.wonCount}
-            </p>
-          </div>
-        </div>
+        <AnalyticsDashboard
+          data={analyticsOverview}
+          loading={analyticsLoading}
+          error={analyticsError}
+          granularity={analyticsGranularity}
+          onGranularityChange={setAnalyticsGranularity}
+          onRetry={() => void loadAnalyticsOverview()}
+        />
       ) : null}
       {attentionCount > 0 ? (
         <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
