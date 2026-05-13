@@ -32,7 +32,7 @@ class ActivityViewSet(viewsets.ModelViewSet):
                 Q(client__company=company)
                 | Q(deal__company=company)
             )
-            .select_related("author", "deal", "client")
+            .select_related("author", "deal", "client", "assigned_to", "completed_by")
             .order_by("-created_at")
         )
 
@@ -65,4 +65,7 @@ class ActivityViewSet(viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+        inst = serializer.save(author=self.request.user)
+        if inst.type == Activity.Type.TASK and inst.assigned_to_id is None:
+            inst.assigned_to = self.request.user
+            inst.save(update_fields=["assigned_to"])

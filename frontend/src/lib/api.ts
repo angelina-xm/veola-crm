@@ -3,15 +3,20 @@
  * Refresh и очистка сессии — в @/src/lib/auth
  */
 
-import type { AnalyticsFeedKind, AnalyticsV1Overview } from "@/src/types";
-import {
+import type {
   Activity,
   ActivityType,
+  AnalyticsFeedKind,
+  AnalyticsV1Overview,
   Client,
+  CrmTask,
   Deal,
   DealsByStage,
   PipelineStage,
   StaleDeal,
+  TaskBucketQuery,
+  TaskPriority,
+  TaskUiState,
 } from "@/src/types";
 import {
   authPaths,
@@ -737,7 +742,6 @@ function normalizeActivityRow(raw: {
   };
 }
 
-/** Все незавершённые задачи компании (для карточек pipeline, без нового API). */
 export async function getCompanyOpenTasks(
   companyId: number
 ): Promise<Activity[]> {
@@ -764,6 +768,155 @@ export async function getCompanyOpenTasks(
     }>
   );
   return list.map((row) => normalizeActivityRow(row));
+}
+
+const TASK_PRIORITIES: TaskPriority[] = ["low", "medium", "high", "urgent"];
+const TASK_UI_STATES: TaskUiState[] = [
+  "completed",
+  "overdue",
+  "today",
+  "upcoming",
+  "backlog",
+  "other",
+];
+
+function parseTaskPriority(v: unknown): TaskPriority {
+  const s = String(v ?? "medium").toLowerCase();
+  return TASK_PRIORITIES.includes(s as TaskPriority) ? (s as TaskPriority) : "medium";
+}
+
+function parseTaskUiState(v: unknown): TaskUiState {
+  const s = String(v ?? "other").toLowerCase();
+  return TASK_UI_STATES.includes(s as TaskUiState) ? (s as TaskUiState) : "other";
+}
+
+function normalizeCrmTask(row: Record<string, unknown>): CrmTask {
+  return {
+    id: Number(row.id),
+    deal: row.deal == null ? null : Number(row.deal),
+    client: row.client == null ? null : Number(row.client),
+    author: Number(row.author ?? 0),
+    author_email:
+      row.author_email == null ? undefined : String(row.author_email),
+    assigned_to: row.assigned_to == null ? null : Number(row.assigned_to),
+    assigned_to_email:
+      row.assigned_to_email == null ? null : String(row.assigned_to_email),
+    completed_by: row.completed_by == null ? null : Number(row.completed_by),
+    completed_by_email:
+      row.completed_by_email == null ? null : String(row.completed_by_email),
+    type: "task",
+    category: row.category == null ? null : String(row.category),
+    auto_type: row.auto_type == null ? null : String(row.auto_type),
+    content: String(row.content ?? ""),
+    due_date: row.due_date == null ? null : String(row.due_date),
+    priority: parseTaskPriority(row.priority),
+    is_completed: Boolean(row.is_completed),
+    completed_at: row.completed_at == null ? null : String(row.completed_at),
+    created_at: String(row.created_at ?? ""),
+    deal_title: row.deal_title == null ? null : String(row.deal_title),
+    client_name: row.client_name == null ? null : String(row.client_name),
+    state: parseTaskUiState(row.state),
+  };
+}
+
+/** CRM tasks: GET /tasks/ or /tasks/my/ with ?bucket= */
+export async function getTasksBucket(
+  companyId: number,
+  bucket: TaskBucketQuery,
+  opts?: { scope?: "my" | "team" }
+): Promise<CrmTask[]> {
+  const scope = opts?.scope ?? "my";
+  const path = scope === "my" ? "/tasks/my/" : "/tasks/";
+  const q = new URLSearchParams({ bucket });
+  const res = await fetchWithAuth(`${path}?${q.toString()}`, {}, companyId);
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const data: unknown = await res.json();
+  const list = normalizeApiList(data as ListResponse<Record<string, unknown>>);
+  return list.map((row) => normalizeCrmTask(row));
+}
+
+export type PatchCrmTaskPayload = Partial<{
+  content: string;
+  due_date: string | null;
+  priority: TaskPriority;
+  assigned_to: number | null;
+  is_completed: boolean;
+}>;
+
+export async function patchCrmTask(
+  companyId: number,
+  taskId: number,
+  body: PatchCrmTaskPayload
+): Promise<CrmTask> {
+  const res = await fetchWithAuth(
+    `/tasks/${taskId}/`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    companyId
+  );
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const raw = (await res.json()) as Record<string, unknown>;
+  return normalizeCrmTask(raw);
+}
+
+export async function completeCrmTask(
+  companyId: number,
+  taskId: number
+): Promise<CrmTask> {
+  const res = await fetchWithAuth(
+    `/tasks/${taskId}/complete/`,
+    { method: "POST" },
+    companyId
+  );
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const raw = (await res.json()) as Record<string, unknown>;
+  return normalizeCrmTask(raw);
+}
+
+export type CreateCrmTaskPayload = {
+  deal?: number | null;
+  client?: number | null;
+  content: string;
+  due_date?: string | null;
+  priority?: TaskPriority;
+  assigned_to?: number | null;
+};
+
+export async function createCrmTask(
+  companyId: number,
+  payload: CreateCrmTaskPayload
+): Promise<CrmTask> {
+  const body: Record<string, unknown> = {
+    content: payload.content,
+  };
+  if (payload.deal != null) body.deal = payload.deal;
+  if (payload.client != null) body.client = payload.client;
+  if (payload.due_date) body.due_date = payload.due_date;
+  if (payload.priority) body.priority = payload.priority;
+  if (payload.assigned_to != null) body.assigned_to = payload.assigned_to;
+  const res = await fetchWithAuth(
+    "/tasks/",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    companyId
+  );
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const raw = (await res.json()) as Record<string, unknown>;
+  return normalizeCrmTask(raw);
 }
 
 /** Все заметки компании (type=note), для карточек/last activity без нового API. */

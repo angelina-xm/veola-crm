@@ -47,6 +47,7 @@ import { groupOpenTasksByDealId } from "@/src/lib/dealTaskSignal";
 import { createTaskFromPreset, type TaskPreset } from "@/src/lib/quickTask";
 import { applyAutoTasks, type AutomationSettings } from "@/src/lib/autoTaskRules";
 import { computeHighlightedDealIds } from "@/src/lib/notificationDealHighlight";
+import { OPEN_DEAL_SESSION_KEY } from "@/src/lib/openDealBridge";
 import { DAY_MS, scaleMs } from "@/src/lib/timeConfig";
 import { useNotifications } from "@/src/hooks/useNotifications";
 import { useMembership } from "@/src/context/MembershipContext";
@@ -1062,6 +1063,23 @@ export default function Board({
     setModalError(null);
     setModalOpen(true);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = sessionStorage.getItem(OPEN_DEAL_SESSION_KEY);
+    if (!raw) return;
+    let deal: Deal | null = null;
+    for (const deals of Object.values(dealsByStage)) {
+      const d = deals.find((x) => String(x.id) === raw);
+      if (d) {
+        deal = d;
+        break;
+      }
+    }
+    if (!deal) return;
+    sessionStorage.removeItem(OPEN_DEAL_SESSION_KEY);
+    openEdit(deal);
+  }, [dealsByStage, openEdit]);
 
   const closeModal = useCallback(() => {
     if (modalSubmitting) return;

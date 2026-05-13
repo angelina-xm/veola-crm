@@ -60,6 +60,43 @@ export interface Activity {
   created_at: string;
 }
 
+/** GET/PATCH /tasks/ — CRM follow-up task row (backed by Activity.type === "task"). */
+export type TaskPriority = "low" | "medium" | "high" | "urgent";
+
+export type TaskUiState =
+  | "completed"
+  | "overdue"
+  | "today"
+  | "upcoming"
+  | "backlog"
+  | "other";
+
+export type TaskBucketQuery = "today" | "upcoming" | "overdue" | "completed";
+
+export interface CrmTask {
+  id: number;
+  deal: number | null;
+  client: number | null;
+  author: number;
+  author_email?: string;
+  assigned_to: number | null;
+  assigned_to_email?: string | null;
+  completed_by: number | null;
+  completed_by_email?: string | null;
+  type: "task";
+  category?: string | null;
+  auto_type?: string | null;
+  content: string;
+  due_date: string | null;
+  priority: TaskPriority;
+  is_completed: boolean;
+  completed_at: string | null;
+  created_at: string;
+  deal_title: string | null;
+  client_name: string | null;
+  state: TaskUiState;
+}
+
 // API Response
 export interface ApiResponse<T = unknown> {
   data: T;

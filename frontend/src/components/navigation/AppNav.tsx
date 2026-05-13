@@ -24,6 +24,9 @@ export default function AppNav() {
       <Link href="/" className={itemClass("/")}>
         Dashboard
       </Link>
+      <Link href="/tasks" className={itemClass("/tasks")}>
+        Tasks
+      </Link>
       <Link href="/clients" className={itemClass("/clients")}>
         Clients
       </Link>

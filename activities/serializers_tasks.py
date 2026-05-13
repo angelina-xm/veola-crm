@@ -1,14 +1,29 @@
+from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import serializers
 
 from companies.models import CompanyMember
-from deals.visibility import get_visible_deals, user_can_edit_deal
+from deals.visibility import get_visible_deals
 
 from .models import Activity
+from .task_state import task_ui_bucket
+
+User = get_user_model()
 
 
-class ActivitySerializer(serializers.ModelSerializer):
+class TaskSerializer(serializers.ModelSerializer):
+    """Read/update representation for CRM tasks (Activity.type == task)."""
+
     author_email = serializers.EmailField(source="author.email", read_only=True)
+    assigned_to_email = serializers.EmailField(
+        source="assigned_to.email", read_only=True, allow_null=True
+    )
+    completed_by_email = serializers.EmailField(
+        source="completed_by.email", read_only=True, allow_null=True
+    )
+    deal_title = serializers.CharField(source="deal.title", read_only=True, allow_null=True)
+    client_name = serializers.CharField(source="client.name", read_only=True, allow_null=True)
+    state = serializers.SerializerMethodField()
 
     class Meta:
         model = Activity
@@ -19,6 +34,9 @@ class ActivitySerializer(serializers.ModelSerializer):
             "author",
             "author_email",
             "assigned_to",
+            "assigned_to_email",
+            "completed_by",
+            "completed_by_email",
             "type",
             "category",
             "auto_type",
@@ -27,10 +45,26 @@ class ActivitySerializer(serializers.ModelSerializer):
             "priority",
             "is_completed",
             "completed_at",
-            "completed_by",
             "created_at",
+            "deal_title",
+            "client_name",
+            "state",
         ]
-        read_only_fields = ["author", "created_at", "completed_at", "completed_by"]
+        read_only_fields = [
+            "author",
+            "author_email",
+            "type",
+            "created_at",
+            "completed_by",
+            "completed_by_email",
+            "completed_at",
+            "deal_title",
+            "client_name",
+            "state",
+        ]
+
+    def get_state(self, obj: Activity) -> str:
+        return task_ui_bucket(obj)
 
     def validate_deal(self, value):
         request = self.context.get("request")
@@ -68,9 +102,8 @@ class ActivitySerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
-        instance = getattr(self, "instance", None)
         request = self.context.get("request")
-
+        instance = getattr(self, "instance", None)
         if instance is None:
             deal = attrs.get("deal")
             client = attrs.get("client")
@@ -85,40 +118,36 @@ class ActivitySerializer(serializers.ModelSerializer):
                     )
             elif deal is not None and client is None:
                 attrs["client"] = deal.client
-            if attrs.get("type") != Activity.Type.TASK:
-                attrs["is_completed"] = False
+            attrs["type"] = Activity.Type.TASK
             return attrs
 
-        merged_type = attrs.get("type", instance.type)
-        if "is_completed" in attrs and merged_type != Activity.Type.TASK:
-            raise serializers.ValidationError(
-                {"is_completed": "is_completed applies only to tasks."}
-            )
-
-        deal = instance.deal
-        if deal is not None and user_can_edit_deal(
-            request.user, getattr(request, "membership", None), deal
-        ):
-            return attrs
-
-        if set(attrs.keys()) != {"is_completed"}:
-            raise serializers.ValidationError(
-                "Only the task completion flag can be updated."
-            )
         if instance.type != Activity.Type.TASK:
-            raise serializers.ValidationError(
-                {"is_completed": "is_completed applies only to tasks."}
-            )
-
+            raise serializers.ValidationError({"type": "Only tasks can be updated here."})
         return attrs
 
     def update(self, instance, validated_data):
         user = self.context["request"].user
-        if instance.type == Activity.Type.TASK and "is_completed" in validated_data:
+        if "is_completed" in validated_data:
             if validated_data["is_completed"] and not instance.is_completed:
                 validated_data["completed_at"] = timezone.now()
                 validated_data["completed_by"] = user
-            elif validated_data["is_completed"] is False:
+            elif not validated_data["is_completed"]:
                 validated_data["completed_at"] = None
                 validated_data["completed_by"] = None
         return super().update(instance, validated_data)
+
+
+class TaskWriteSerializer(TaskSerializer):
+    """POST /tasks/ — minimal writable fields."""
+
+    class Meta(TaskSerializer.Meta):
+        fields = ["deal", "client", "content", "due_date", "priority", "assigned_to"]
+        read_only_fields = []
+
+    def create(self, validated_data):
+        user = self.context["request"].user
+        validated_data["author"] = user
+        validated_data["type"] = Activity.Type.TASK
+        if validated_data.get("assigned_to") is None:
+            validated_data["assigned_to"] = user
+        return Activity.objects.create(**validated_data)
