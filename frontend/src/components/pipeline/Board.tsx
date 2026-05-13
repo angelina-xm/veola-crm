@@ -64,7 +64,6 @@ import {
 } from "@/src/lib/dealGrouping";
 import {
   Activity,
-  AnalyticsGranularity,
   AnalyticsV1Overview,
   Client,
   DealsByStage,
@@ -72,7 +71,7 @@ import {
   PipelineStage,
   StaleDeal,
 } from "@/src/types";
-import AnalyticsDashboard from "@/src/components/analytics/AnalyticsDashboard";
+import PipelineAnalyticsCompact from "@/src/components/analytics/PipelineAnalyticsCompact";
 
 interface BoardProps {
   stages: PipelineStage[];
@@ -322,15 +321,13 @@ export default function Board({
     useState<AnalyticsV1Overview | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [analyticsError, setAnalyticsError] = useState<string | null>(null);
-  const [analyticsGranularity, setAnalyticsGranularity] =
-    useState<AnalyticsGranularity>("week");
 
   const loadAnalyticsOverview = useCallback(async () => {
     if (!showAnalytics) return;
     try {
       setAnalyticsLoading(true);
       setAnalyticsError(null);
-      const data = await getAnalyticsV1Overview(companyId, analyticsGranularity);
+      const data = await getAnalyticsV1Overview(companyId, "week");
       setAnalyticsOverview(data);
     } catch (err) {
       setAnalyticsError(
@@ -339,18 +336,12 @@ export default function Board({
     } finally {
       setAnalyticsLoading(false);
     }
-  }, [analyticsGranularity, companyId, showAnalytics]);
+  }, [companyId, showAnalytics]);
 
   useEffect(() => {
     if (!showAnalytics || membershipLoading) return;
     void loadAnalyticsOverview();
-  }, [
-    dealsByStage,
-    showAnalytics,
-    membershipLoading,
-    analyticsGranularity,
-    loadAnalyticsOverview,
-  ]);
+  }, [dealsByStage, showAnalytics, membershipLoading, loadAnalyticsOverview]);
   const [overlayDeal, setOverlayDeal] = useState<Deal | null>(null);
   const [dndLoading, setDndLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -1387,12 +1378,10 @@ export default function Board({
         </div>
       ) : null}
       {showAnalytics ? (
-        <AnalyticsDashboard
+        <PipelineAnalyticsCompact
           data={analyticsOverview}
           loading={analyticsLoading}
           error={analyticsError}
-          granularity={analyticsGranularity}
-          onGranularityChange={setAnalyticsGranularity}
           onRetry={() => void loadAnalyticsOverview()}
         />
       ) : null}
