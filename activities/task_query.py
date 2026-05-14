@@ -16,6 +16,6 @@ def visible_tasks_queryset(user, company, membership) -> QuerySet[Activity]:
     qs = Activity.objects.filter(
         Q(client__company=company) | Q(deal__company=company),
         type=Activity.Type.TASK,
-    )
+    ).exclude(category__iexact="system")
     visible = get_visible_deals(user, company, membership)
     return qs.filter(Q(deal_id__in=visible.values("pk")) | Q(deal__isnull=True))

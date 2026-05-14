@@ -25,6 +25,7 @@ def _create_task_if_missing(deal, author, *, content: str, due_date):
         deal=deal,
         author=author,
         type=Activity.Type.TASK,
+        category="automation",
         content=content,
         due_date=due_date,
     )

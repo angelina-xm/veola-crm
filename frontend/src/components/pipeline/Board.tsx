@@ -13,7 +13,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Stage from "./Stage";
 import DealModal from "./DealModal";
@@ -413,9 +413,8 @@ export default function Board({
     string | null
   >(null);
   const [addingNoteDealId, setAddingNoteDealId] = useState<string | null>(null);
-  const [autoTaskCreatingKeys, setAutoTaskCreatingKeys] = useState<Set<string>>(
-    () => new Set()
-  );
+  /** In-flight auto-task keys — ref avoids re-running the auto-task effect on each Set update. */
+  const autoTaskInflightRef = useRef<Set<string>>(new Set());
   const [inlineSavingDealId, setInlineSavingDealId] = useState<string | null>(
     null
   );
@@ -879,7 +878,7 @@ export default function Board({
           );
           for (const task of candidates) {
             const key = `${dealId}:${task.autoType}`;
-            if (autoTaskCreatingKeys.has(key)) continue;
+            if (autoTaskInflightRef.current.has(key)) continue;
             toCreate.push({
               deal: dealNum,
               auto_type: task.autoType,
@@ -890,41 +889,37 @@ export default function Board({
         }
       }
       if (toCreate.length === 0) return;
-      setAutoTaskCreatingKeys((prev) => {
-        const next = new Set(prev);
-        for (const row of toCreate) next.add(row.key);
-        return next;
-      });
+      for (const row of toCreate) {
+        autoTaskInflightRef.current.add(row.key);
+      }
       const tenantId = getStoredCompanyId() ?? companyId;
-      await Promise.all(
-        toCreate.map(async (task) => {
-          try {
-            await createActivity(tenantId, {
+      try {
+        await Promise.all(
+          toCreate.map((task) =>
+            createActivity(tenantId, {
               deal: task.deal,
               type: "task",
               content: task.content,
               auto_type: task.auto_type,
-            });
-          } finally {
-            setAutoTaskCreatingKeys((prev) => {
-              const next = new Set(prev);
-              next.delete(task.key);
-              return next;
-            });
-          }
-        })
-      );
-      await refreshOpenTasksAndNotifications();
+              category: "automation",
+            })
+          )
+        );
+        await refreshOpenTasksAndNotifications();
+      } finally {
+        for (const row of toCreate) {
+          autoTaskInflightRef.current.delete(row.key);
+        }
+      }
     };
     void run();
   }, [
-    autoTaskCreatingKeys,
     automationSettings,
     automationSettingsLoading,
     companyId,
     dealsByStage,
     notesByDealId,
-    openTasksByDealId,
+    openCompanyTasks,
     refreshOpenTasksAndNotifications,
   ]);
 

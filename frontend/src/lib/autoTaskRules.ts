@@ -53,13 +53,25 @@ export function hasAutoTask(
   activities: Activity[]
 ): boolean {
   const dealId = String(deal.id);
-  return activities.some(
-    (a) =>
-      a.type === "task" &&
-      String(a.deal ?? "") === dealId &&
-      String(a.auto_type ?? "").trim().toLowerCase() ===
-        autoType.trim().toLowerCase()
+  const norm = (s: string) => s.trim().toLowerCase();
+  const at = norm(autoType);
+  const rule = AUTO_TASK_RULES.find(
+    (r) => norm(r.autoType) === at
   );
+  const ruleContentNorm = rule ? norm(rule.content) : null;
+
+  return activities.some((a) => {
+    if (a.type !== "task" || String(a.deal ?? "") !== dealId) return false;
+    if (a.auto_type && norm(String(a.auto_type)) === at) return true;
+    if (
+      ruleContentNorm &&
+      a.content &&
+      norm(String(a.content)) === ruleContentNorm
+    ) {
+      return true;
+    }
+    return false;
+  });
 }
 
 export function applyAutoTasks(
