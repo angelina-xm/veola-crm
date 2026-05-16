@@ -9,7 +9,6 @@ import {
   getPipelineStages,
   groupDealsByStage,
   normalizeApiList,
-  postSyncAutomationTasks,
 } from "@/src/lib/api";
 import { normalizeDealPayload } from "@/src/lib/dealGrouping";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
@@ -131,11 +130,7 @@ export default function PipelinePage() {
             id: String(c.id),
           }))
         );
-        try {
-          await postSyncAutomationTasks(tenantId);
-        } catch {
-          /* best-effort: board open-tasks / notifications refresh on Board mount */
-        }
+        /* Automation reconcile runs server-side (throttled); not on every pipeline load. */
       } catch (err) {
         console.error("Failed to load pipeline data:", err);
         setClientsError(null);

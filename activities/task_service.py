@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from django.utils import timezone
 
 from .models import Activity
@@ -28,55 +28,54 @@ def ensure_open_automation_task(
     category: str = "automation",
 ) -> tuple[Activity, bool]:
     """
-    Create at most one *open* task per ``automation_key`` (enforced by DB partial unique).
+    Delegates to AutomationOrchestrator (reopen, one-per-deal, cooldown).
 
     Returns (instance, created).
     """
+    from .automation_intents import (
+        INTENT_OFFER_DISCOUNT,
+        INTENT_REACH_OUT,
+        INTENT_SUGGEST_REORDER,
+        AutomationCandidate,
+        intent_for_task,
+    )
+    from .automation_orchestrator import AutomationOrchestrator
+
     if not automation_key:
         raise ValueError("automation_key is required")
 
-    existing = (
-        Activity.objects.filter(
+    intent = intent_for_task(auto_type=auto_type, automation_key=automation_key)
+    if intent is None:
+        at = (auto_type or "").strip().lower()
+        if at == "offer_discount":
+            intent = INTENT_OFFER_DISCOUNT
+        elif at == "reorder":
+            intent = INTENT_SUGGEST_REORDER
+        else:
+            intent = INTENT_REACH_OUT
+
+    candidate = AutomationCandidate(
+        intent=intent,
+        automation_key=automation_key,
+        content=content,
+        auto_type=auto_type,
+        due_date=due_date,
+        create_task=True,
+    )
+    result = AutomationOrchestrator.ensure_deal_action(
+        deal=deal,
+        author=author,
+        candidate=candidate,
+    )
+    if result.task is None:
+        open_row = Activity.objects.filter(
             automation_key=automation_key,
             type=Activity.Type.TASK,
             is_completed=False,
-        )
-        .first()
-    )
-    if existing is not None:
-        return existing, False
-
-    try:
-        with transaction.atomic():
-            row = Activity.objects.create(
-                deal=deal,
-                client=deal.client,
-                author=author,
-                assigned_to=author,
-                type=Activity.Type.TASK,
-                category=category,
-                auto_type=auto_type,
-                content=content,
-                due_date=due_date,
-                automation_key=automation_key,
-            )
-            return row, True
-    except IntegrityError:
-        logger.warning(
-            "ensure_open_automation_task: IntegrityError for key=%s (race)",
-            automation_key,
-        )
-        row = (
-            Activity.objects.filter(
-                automation_key=automation_key,
-                type=Activity.Type.TASK,
-                is_completed=False,
-            )
-            .first()
-        )
-        if row is None:
-            raise
-        return row, False
+            archived_at__isnull=True,
+        ).first()
+        return open_row, False
+    return result.task, result.created
 
 
 class TaskService:
