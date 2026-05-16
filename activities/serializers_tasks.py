@@ -5,8 +5,12 @@ from rest_framework import serializers
 from companies.models import CompanyMember
 from deals.visibility import get_visible_deals
 
+from deals.models import DealSignal
+
 from .models import Activity
+from .task_service import TaskService
 from .task_state import task_ui_bucket
+from .task_status import is_automation_task
 
 User = get_user_model()
 
@@ -24,6 +28,8 @@ class TaskSerializer(serializers.ModelSerializer):
     deal_title = serializers.CharField(source="deal.title", read_only=True, allow_null=True)
     client_name = serializers.CharField(source="client.name", read_only=True, allow_null=True)
     state = serializers.SerializerMethodField()
+    is_snoozed = serializers.SerializerMethodField()
+    is_visible = serializers.SerializerMethodField()
 
     class Meta:
         model = Activity
@@ -40,12 +46,19 @@ class TaskSerializer(serializers.ModelSerializer):
             "type",
             "category",
             "auto_type",
+            "automation_key",
             "content",
             "due_date",
             "priority",
             "is_completed",
+            "is_manually_modified",
+            "snoozed_until",
+            "is_snoozed",
+            "archived_at",
+            "is_visible",
             "completed_at",
             "created_at",
+            "updated_at",
             "deal_title",
             "client_name",
             "state",
@@ -55,16 +68,27 @@ class TaskSerializer(serializers.ModelSerializer):
             "author_email",
             "type",
             "created_at",
+            "updated_at",
             "completed_by",
             "completed_by_email",
             "completed_at",
+            "archived_at",
             "deal_title",
             "client_name",
             "state",
+            "automation_key",
+            "is_snoozed",
+            "is_visible",
         ]
 
     def get_state(self, obj: Activity) -> str:
         return task_ui_bucket(obj)
+
+    def get_is_snoozed(self, obj: Activity) -> bool:
+        return bool(obj.snoozed_until and timezone.now() < obj.snoozed_until)
+
+    def get_is_visible(self, obj: Activity) -> bool:
+        return obj.is_visible_in_operational_ui
 
     def validate_deal(self, value):
         request = self.context.get("request")
@@ -127,6 +151,8 @@ class TaskSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         user = self.context["request"].user
+        if is_automation_task(instance):
+            TaskService.mark_manually_modified(instance)
         if "is_completed" in validated_data:
             if validated_data["is_completed"] and not instance.is_completed:
                 validated_data["completed_at"] = timezone.now()
@@ -135,6 +161,32 @@ class TaskSerializer(serializers.ModelSerializer):
                 validated_data["completed_at"] = None
                 validated_data["completed_by"] = None
         return super().update(instance, validated_data)
+
+
+class DealSignalSerializer(serializers.ModelSerializer):
+    deal_title = serializers.CharField(source="deal.title", read_only=True)
+
+    class Meta:
+        model = DealSignal
+        fields = [
+            "id",
+            "signal_type",
+            "severity",
+            "is_active",
+            "deal",
+            "deal_title",
+            "metadata",
+            "first_seen_at",
+            "last_checked_at",
+        ]
+        read_only_fields = fields
+
+
+class WorkspaceHealthSerializer(serializers.Serializer):
+    overdue_count = serializers.IntegerField()
+    open_count = serializers.IntegerField()
+    completed_today = serializers.IntegerField()
+    snoozed_count = serializers.IntegerField()
 
 
 class TaskWriteSerializer(TaskSerializer):
@@ -148,6 +200,7 @@ class TaskWriteSerializer(TaskSerializer):
         user = self.context["request"].user
         validated_data["author"] = user
         validated_data["type"] = Activity.Type.TASK
+        validated_data.setdefault("category", "manual")
         if validated_data.get("assigned_to") is None:
             validated_data["assigned_to"] = user
         return Activity.objects.create(**validated_data)

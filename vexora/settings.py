@@ -243,3 +243,28 @@ STORAGES = {
 }
 
 AUTH_USER_MODEL = 'users.User'
+
+# --- Celery (optional broker via CELERY_BROKER_URL; eager in DEBUG without broker) ---
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "").strip() or "memory://"
+CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "").strip() or None
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_ALWAYS_EAGER = _env_bool(
+    "CELERY_TASK_ALWAYS_EAGER",
+    default=DEBUG and not os.environ.get("CELERY_BROKER_URL", "").strip(),
+)
+CELERY_BEAT_SCHEDULE = {
+    "archive-completed-tasks": {
+        "task": "activities.archive_completed_tasks",
+        "schedule": 3600.0,
+    },
+    "refresh-deal-signals": {
+        "task": "activities.refresh_deal_signals",
+        "schedule": 3600.0,
+    },
+}
+
+# Operational workspace / signals
+SIGNAL_HIGH_VALUE_THRESHOLD = int(os.environ.get("SIGNAL_HIGH_VALUE_THRESHOLD", "50000"))

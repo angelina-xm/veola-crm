@@ -22,6 +22,7 @@ class ActivitySerializer(serializers.ModelSerializer):
             "type",
             "category",
             "auto_type",
+            "automation_key",
             "content",
             "due_date",
             "priority",
@@ -30,7 +31,7 @@ class ActivitySerializer(serializers.ModelSerializer):
             "completed_by",
             "created_at",
         ]
-        read_only_fields = ["author", "created_at", "completed_at", "completed_by"]
+        read_only_fields = ["author", "created_at", "completed_at", "completed_by", "automation_key"]
 
     def validate_deal(self, value):
         request = self.context.get("request")

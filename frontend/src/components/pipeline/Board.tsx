@@ -13,7 +13,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Stage from "./Stage";
 import DealModal from "./DealModal";
@@ -45,7 +45,7 @@ import {
 } from "@/src/lib/dealDisplay";
 import { groupOpenTasksByDealId } from "@/src/lib/dealTaskSignal";
 import { createTaskFromPreset, type TaskPreset } from "@/src/lib/quickTask";
-import { applyAutoTasks, type AutomationSettings } from "@/src/lib/autoTaskRules";
+import { type AutomationSettings } from "@/src/lib/autoTaskRules";
 import { computeHighlightedDealIds } from "@/src/lib/notificationDealHighlight";
 import { OPEN_DEAL_SESSION_KEY } from "@/src/lib/openDealBridge";
 import { DAY_MS, scaleMs } from "@/src/lib/timeConfig";
@@ -413,8 +413,6 @@ export default function Board({
     string | null
   >(null);
   const [addingNoteDealId, setAddingNoteDealId] = useState<string | null>(null);
-  /** In-flight auto-task keys — ref avoids re-running the auto-task effect on each Set update. */
-  const autoTaskInflightRef = useRef<Set<string>>(new Set());
   const [inlineSavingDealId, setInlineSavingDealId] = useState<string | null>(
     null
   );
@@ -837,91 +835,6 @@ export default function Board({
   useEffect(() => {
     void refreshNotes();
   }, [refreshNotes]);
-
-  useEffect(() => {
-    if (!companyId || automationSettingsLoading) return;
-    const run = async () => {
-      const toCreate: Array<{ deal: number; auto_type: string; content: string; key: string }> = [];
-      for (const list of Object.values(dealsByStage)) {
-        for (const deal of list ?? []) {
-          const dealId = String(deal.id);
-          const dealNum = Number.parseInt(dealId, 10);
-          if (!Number.isFinite(dealNum)) continue;
-
-          const tasksForDeal = openTasksByDealId[dealId] ?? [];
-          const notesForDeal = notesByDealId[dealId] ?? [];
-          const lastTaskTs = tasksForDeal.reduce((maxTs, t) => {
-            const ts = new Date(t.created_at).getTime();
-            if (!Number.isFinite(ts)) return maxTs;
-            return Math.max(maxTs, ts);
-          }, 0);
-          const lastActivityAt =
-            lastTaskTs > 0 ? new Date(lastTaskTs).toISOString() : deal.created_at ?? null;
-          const isStale = isDealStale({
-            createdAt: deal.created_at,
-            lastActivityAt,
-          });
-          const pricingCount = notesForDeal.filter(
-            (a) =>
-              String(a.category ?? "")
-                .trim()
-                .toLowerCase() === "pricing"
-          ).length;
-          const createdTs = new Date(deal.created_at ?? "").getTime();
-          const isDormant =
-            Number.isFinite(createdTs) && Date.now() - createdTs > STALE_MS * 2;
-          const candidates = applyAutoTasks(
-            deal,
-            { isStale, pricingCount, isDormant },
-            tasksForDeal,
-            automationSettings
-          );
-          for (const task of candidates) {
-            const key = `${dealId}:${task.autoType}`;
-            if (autoTaskInflightRef.current.has(key)) continue;
-            toCreate.push({
-              deal: dealNum,
-              auto_type: task.autoType,
-              content: task.content,
-              key,
-            });
-          }
-        }
-      }
-      if (toCreate.length === 0) return;
-      for (const row of toCreate) {
-        autoTaskInflightRef.current.add(row.key);
-      }
-      const tenantId = getStoredCompanyId() ?? companyId;
-      try {
-        await Promise.all(
-          toCreate.map((task) =>
-            createActivity(tenantId, {
-              deal: task.deal,
-              type: "task",
-              content: task.content,
-              auto_type: task.auto_type,
-              category: "automation",
-            })
-          )
-        );
-        await refreshOpenTasksAndNotifications();
-      } finally {
-        for (const row of toCreate) {
-          autoTaskInflightRef.current.delete(row.key);
-        }
-      }
-    };
-    void run();
-  }, [
-    automationSettings,
-    automationSettingsLoading,
-    companyId,
-    dealsByStage,
-    notesByDealId,
-    openCompanyTasks,
-    refreshOpenTasksAndNotifications,
-  ]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {

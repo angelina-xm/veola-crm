@@ -721,6 +721,7 @@ function normalizeActivityRow(raw: {
   type: ActivityType;
   category?: string | null;
   auto_type?: string | null;
+  automation_key?: string | null;
   content?: string | null;
   due_date?: string | null;
   is_completed?: boolean;
@@ -735,6 +736,7 @@ function normalizeActivityRow(raw: {
     type: raw.type,
     category: raw.category,
     auto_type: raw.auto_type,
+    automation_key: raw.automation_key,
     content: raw.content,
     due_date: raw.due_date,
     is_completed: Boolean(raw.is_completed),
@@ -768,6 +770,22 @@ export async function getCompanyOpenTasks(
     }>
   );
   return list.map((row) => normalizeActivityRow(row));
+}
+
+/** Server-side pipeline automation (stale / pricing / dormant heuristics). */
+export async function postSyncAutomationTasks(companyId: number): Promise<{
+  created: number;
+}> {
+  const res = await fetchWithAuth(
+    "/activities/sync-automation/",
+    { method: "POST" },
+    companyId
+  );
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const raw = (await res.json()) as { created?: number };
+  return { created: Number(raw.created ?? 0) };
 }
 
 const TASK_PRIORITIES: TaskPriority[] = ["low", "medium", "high", "urgent"];
