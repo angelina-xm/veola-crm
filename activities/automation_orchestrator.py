@@ -14,6 +14,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Max
 from django.utils import timezone
 
+from deals.operational import is_operational_deal
 from deals.signal_engine import SignalEngine
 
 from .automation_intents import (
@@ -52,6 +53,9 @@ class AutomationOrchestrator:
         """
         Apply one automation action: supersede lower-priority open tasks, reopen or create.
         """
+        if not is_operational_deal(deal):
+            return EnsureResult(task=None, skipped_signal_only=True)
+
         if not candidate.create_task:
             SignalEngine.refresh_for_deal(deal)
             return EnsureResult(task=None, skipped_signal_only=True)
@@ -92,6 +96,9 @@ class AutomationOrchestrator:
         """
         Pick at most one heuristic winner; refresh signals; clear stale heuristic tasks.
         """
+        if not is_operational_deal(deal):
+            return EnsureResult(task=None)
+
         SignalEngine.refresh_for_deal(deal)
 
         if any(not c.create_task for c in candidates):

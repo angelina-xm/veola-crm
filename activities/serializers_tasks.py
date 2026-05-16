@@ -3,6 +3,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from companies.models import CompanyMember
+from deals.operational import is_operational_deal
 from deals.visibility import get_visible_deals
 
 from deals.models import DealSignal
@@ -30,6 +31,7 @@ class TaskSerializer(serializers.ModelSerializer):
     state = serializers.SerializerMethodField()
     is_snoozed = serializers.SerializerMethodField()
     is_visible = serializers.SerializerMethodField()
+    deal_closed_warning = serializers.SerializerMethodField()
 
     class Meta:
         model = Activity
@@ -62,6 +64,7 @@ class TaskSerializer(serializers.ModelSerializer):
             "deal_title",
             "client_name",
             "state",
+            "deal_closed_warning",
         ]
         read_only_fields = [
             "author",
@@ -79,7 +82,13 @@ class TaskSerializer(serializers.ModelSerializer):
             "automation_key",
             "is_snoozed",
             "is_visible",
+            "deal_closed_warning",
         ]
+
+    def get_deal_closed_warning(self, obj: Activity) -> str | None:
+        if obj.deal_id and obj.deal and not is_operational_deal(obj.deal):
+            return "Deal closed"
+        return None
 
     def get_state(self, obj: Activity) -> str:
         return task_ui_bucket(obj)

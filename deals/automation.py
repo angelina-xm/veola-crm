@@ -12,6 +12,8 @@ from activities.automation_intents import (
 from activities.automation_orchestrator import AutomationOrchestrator
 from activities.models import Activity
 
+from .operational import is_operational_deal
+
 
 def _stage_name_key(stage) -> str | None:
     if stage is None:
@@ -38,6 +40,9 @@ def create_automation_tasks(deal, author) -> None:
     """
     Ensure the single stage-appropriate automation task after stage change.
     """
+    if not is_operational_deal(deal):
+        return
+
     key = _stage_name_key(deal.stage)
     if key is None:
         return

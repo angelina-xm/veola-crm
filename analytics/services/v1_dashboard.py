@@ -130,18 +130,19 @@ def build_analytics_v1_free(
         )
     )
 
+    operational = base.operational()
     total = base.count()
     won_qs = base.filter(WON_STAGE_Q)
     won_count = won_qs.count()
-    active_qs = base.exclude(WON_STAGE_Q).exclude(stage__isnull=True)
+    active_qs = operational
     active_count = active_qs.count()
     pipeline_value = (
         active_qs.aggregate(s=Sum("amount", default=Decimal("0")))["s"] or Decimal("0")
     )
 
-    stale_count = base.filter(is_stale=True).count()
-    at_risk_count = base.filter(is_at_risk=True).count()
-    healthy_count = base.filter(is_stale=False, is_at_risk=False).count()
+    stale_count = operational.filter(is_stale=True).count()
+    at_risk_count = operational.filter(is_at_risk=True).count()
+    healthy_count = operational.filter(is_stale=False, is_at_risk=False).count()
 
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     won_this_month = base.filter(WON_STAGE_Q, created_at__gte=month_start).count()

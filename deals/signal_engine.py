@@ -13,6 +13,7 @@ from activities.models import Activity
 from activities.task_state import is_task_overdue
 
 from .models import Deal, DealSignal
+from .operational import is_operational_deal
 
 logger = logging.getLogger(__name__)
 
@@ -28,13 +29,16 @@ class SignalEngine:
 
     @classmethod
     def _active_deals_qs(cls, *, company=None):
-        qs = Deal.objects.select_related("client", "stage", "company")
+        qs = Deal.objects.operational().select_related("client", "stage", "company")
         if company is not None:
             qs = qs.filter(company=company)
-        return qs.exclude(stage__name__iregex=r"^(won|lost|closed)$")
+        return qs
 
     @classmethod
     def refresh_for_deal(cls, deal: Deal) -> None:
+        if not is_operational_deal(deal):
+            DealSignal.objects.filter(deal=deal, is_active=True).update(is_active=False)
+            return
         with transaction.atomic():
             cls._check_stale(deal)
             cls._check_closing_soon(deal)

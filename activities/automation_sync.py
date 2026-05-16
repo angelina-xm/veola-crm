@@ -22,7 +22,7 @@ from activities.automation_orchestrator import AutomationOrchestrator, last_mean
 from activities.models import Activity
 from companies.models import CompanySettings
 from deals.models import Deal
-from deals.visibility import get_visible_deals
+from deals.visibility import get_operational_visible_deals
 
 STALE_HOURS = 48
 DORMANT_HOURS = 96
@@ -74,7 +74,9 @@ def reconcile_automation_tasks(
         "signals_only": 0,
     }
 
-    deals = get_visible_deals(user, company, membership).select_related("client", "stage")
+    deals = get_operational_visible_deals(user, company, membership).select_related(
+        "client", "stage"
+    )
 
     for deal in deals:
         stats["deals_processed"] += 1

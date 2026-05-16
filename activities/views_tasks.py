@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from clients.permissions import HasCompany
 from companies.permissions import can_create_deals
 from deals.models import DealSignal
-from deals.visibility import get_visible_deals
+from deals.visibility import get_operational_visible_deals
 
 from .models import Activity
 from .serializers_tasks import (
@@ -141,12 +141,14 @@ class TaskViewSet(viewsets.ModelViewSet):
                 Q(assigned_to=user) | Q(assigned_to__isnull=True, author=user)
             )
 
-        visible_deal_ids = get_visible_deals(user, company, membership).values("pk")
+        operational_deal_ids = get_operational_visible_deals(
+            user, company, membership
+        ).values("pk")
         signals = (
             DealSignal.objects.filter(
                 company=company,
                 is_active=True,
-                deal_id__in=visible_deal_ids,
+                deal_id__in=operational_deal_ids,
             )
             .select_related("deal")
             .order_by("-severity", "-first_seen_at")

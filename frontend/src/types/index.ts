@@ -17,6 +17,52 @@ export interface Deal {
   amount?: number;
   client?: string | number;
   created_at?: string;
+  closed_at?: string | null;
+  win_reason?: string;
+  loss_reason?: string;
+  close_competitor?: string;
+  close_notes?: string;
+  is_operational?: boolean;
+  close_transition?: DealCloseTransition | null;
+}
+
+/** PATCH /deals/:id/ when closing as Won */
+export interface DealCloseTransition {
+  outcome: "won" | "lost" | "closed";
+  deal_id: number;
+  title: string;
+  amount: string;
+  cycle_days: number;
+  client_id: number;
+  closed_at: string | null;
+  win_reason: string | null;
+  loss_reason: string | null;
+  links: {
+    view_customer: string;
+    back_to_pipeline: string;
+  };
+}
+
+/** GET /deals/closed-summary/ */
+export interface ClosedDealSummaryItem {
+  id: number;
+  title: string;
+  amount: string | number;
+  client_id: number;
+  client_name: string;
+  stage_name: string | null;
+  closed_at: string | null;
+  win_reason?: string;
+  loss_reason?: string;
+}
+
+export interface ClosedDealsSummary {
+  closed_today_count: number;
+  won_today_count: number;
+  revenue_closed_today: string | number;
+  revenue_closed_this_week: string | number;
+  recent_wins: ClosedDealSummaryItem[];
+  closed_today: ClosedDealSummaryItem[];
 }
 
 /** GET /deals/stale/ */
@@ -96,6 +142,7 @@ export interface CrmTask {
   deal_title: string | null;
   client_name: string | null;
   state: TaskUiState;
+  deal_closed_warning?: string | null;
 }
 
 // API Response

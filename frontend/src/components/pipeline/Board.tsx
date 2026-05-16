@@ -34,9 +34,10 @@ import {
   getStaleDeals,
   patchActivity,
   patchDeal,
-  updateDealStage,
   type NotificationItem,
+  type PatchDealPayload,
 } from "@/src/lib/api";
+import DealWonConfirmation from "@/src/components/deals/DealWonConfirmation";
 import {
   clientNameById,
   formatCreatedRelative,
@@ -69,6 +70,7 @@ import {
   Client,
   DealsByStage,
   Deal,
+  DealCloseTransition,
   PipelineStage,
   StaleDeal,
 } from "@/src/types";
@@ -268,7 +270,33 @@ function rollbackSingleMovedDeal(
   return next;
 }
 
-function readDealPatch(raw: unknown): Deal {
+function promptClosePatchBody(
+  stageId: number,
+  stageName: string
+): PatchDealPayload | null {
+  const key = stageName.trim().toLowerCase();
+  const body: PatchDealPayload = { stage: stageId };
+  if (key === "won") {
+    const reason =
+      typeof window !== "undefined"
+        ? window.prompt("Win reason (required):")
+        : "";
+    if (!reason?.trim()) return null;
+    body.win_reason = reason.trim();
+  } else if (key === "lost") {
+    const reason =
+      typeof window !== "undefined"
+        ? window.prompt("Loss reason (required):")
+        : "";
+    if (!reason?.trim()) return null;
+    body.loss_reason = reason.trim();
+  }
+  return body;
+}
+
+function readDealPatch(raw: unknown): Deal & {
+  closeTransition?: DealCloseTransition | null;
+} {
   if (
     typeof raw !== "object" ||
     raw === null ||
@@ -284,8 +312,12 @@ function readDealPatch(raw: unknown): Deal {
     amount?: string | number;
     client?: string | number | null;
     created_at?: string;
+    close_transition?: DealCloseTransition | null;
   };
-  return normalizeDealPayload(o);
+  return {
+    ...normalizeDealPayload(o),
+    closeTransition: o.close_transition ?? null,
+  };
 }
 
 export default function Board({
@@ -322,6 +354,9 @@ export default function Board({
     useState<AnalyticsV1Overview | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [analyticsError, setAnalyticsError] = useState<string | null>(null);
+  const [wonTransition, setWonTransition] = useState<DealCloseTransition | null>(
+    null
+  );
 
   const loadAnalyticsOverview = useCallback(async () => {
     if (!showAnalytics) return;
@@ -519,10 +554,17 @@ export default function Board({
       setMovingStageDealId(dealId);
       setDealsByStage((prev) => upsertDealInGrouped(prev, optimistic));
       try {
-        const raw = await patchDeal(companyId, dealId, {
-          stage: Number.parseInt(String(targetStage.id), 10),
-        });
+        const stageNum = Number.parseInt(String(targetStage.id), 10);
+        const patchBody = promptClosePatchBody(stageNum, targetStage.name);
+        if (patchBody === null) {
+          setDealsByStage((prev) => upsertDealInGrouped(prev, current));
+          return;
+        }
+        const raw = await patchDeal(companyId, dealId, patchBody);
         const normalized = readDealPatch(raw);
+        if (normalized.closeTransition) {
+          setWonTransition(normalized.closeTransition);
+        }
         setDealsByStage((prev) =>
           upsertDealInGrouped(prev, {
             ...optimistic,
@@ -876,12 +918,21 @@ export default function Board({
       setDndLoading(true);
 
       try {
-        const raw = await updateDealStage(
-          companyId,
-          movedDealId,
-          targetStageId
-        );
+        const targetStage = stages.find((s) => String(s.id) === targetStageId);
+        const stageNum = Number.parseInt(String(targetStageId), 10);
+        const patchBody =
+          targetStage != null
+            ? promptClosePatchBody(stageNum, targetStage.name)
+            : { stage: stageNum };
+        if (patchBody === null) {
+          setDealsByStage((prev) => rollbackSingleMovedDeal(prev, mutation));
+          return;
+        }
+        const raw = await patchDeal(companyId, movedDealId, patchBody);
         const updatedDeal = readDealPatch(raw);
+        if (updatedDeal.closeTransition) {
+          setWonTransition(updatedDeal.closeTransition);
+        }
 
         setDealsByStage((prev) => {
           const next: DealsByStage = {};
@@ -1212,6 +1263,14 @@ export default function Board({
         </div>
       </div>
 
+      {wonTransition ? (
+        <div className="mb-4">
+          <DealWonConfirmation
+            transition={wonTransition}
+            onDismiss={() => setWonTransition(null)}
+          />
+        </div>
+      ) : null}
       <NotificationBar
         items={syncedNotificationItems}
         totalBadge={syncedNotificationTotal}

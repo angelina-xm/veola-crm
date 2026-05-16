@@ -12,13 +12,13 @@ from activities.models import Activity
 from clients.permissions import HasCompany
 
 from .serializers import NotificationItemSerializer
-from .visibility import get_visible_deals
+from .visibility import get_operational_visible_deals
 
 
 def _stale_deals_count(user, company, membership) -> int:
     stale_time = timezone.now() - timedelta(hours=48)
     return (
-        get_visible_deals(user=user, company=company, membership=membership)
+        get_operational_visible_deals(user=user, company=company, membership=membership)
         .annotate(last_activity=Max("activities__created_at"))
         .filter(Q(last_activity__lt=stale_time) | Q(last_activity__isnull=True))
         .count()
@@ -37,7 +37,7 @@ class NotificationsView(APIView):
         membership = getattr(request, "membership", None)
 
         visible_ids = list(
-            get_visible_deals(request.user, company, membership).values_list(
+            get_operational_visible_deals(request.user, company, membership).values_list(
                 "pk", flat=True
             )
         )

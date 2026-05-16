@@ -1163,13 +1163,32 @@ export type PatchDealPayload = {
   title?: string;
   amount?: number;
   stage?: number;
+  win_reason?: string;
+  loss_reason?: string;
+  close_competitor?: string;
+  close_notes?: string;
 };
+
+export type PatchDealResponse = {
+  close_transition?: import("@/src/types").DealCloseTransition | null;
+  [key: string]: unknown;
+};
+
+export async function getClosedDealsSummary(
+  companyId: number
+): Promise<import("@/src/types").ClosedDealsSummary> {
+  const res = await fetchWithAuth("/deals/closed-summary/", {}, companyId);
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  return res.json();
+}
 
 export async function patchDeal(
   companyId: number,
   dealId: string | number,
   body: PatchDealPayload
-): Promise<unknown> {
+): Promise<PatchDealResponse> {
   const res = await fetchWithAuth(
     `/deals/${dealId}/`,
     {

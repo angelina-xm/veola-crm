@@ -6,6 +6,8 @@ from django.db import models
 from clients.models import Client
 from companies.models import Company
 
+from .operational import DealQuerySet
+
 User = settings.AUTH_USER_MODEL
 
 class PipelineStage(models.Model):
@@ -60,9 +62,22 @@ class Deal(models.Model):
         blank=True,
         related_name="assigned_deals",
     )
+    closed_at = models.DateTimeField(null=True, blank=True)
+    win_reason = models.CharField(max_length=255, blank=True, default="")
+    loss_reason = models.CharField(max_length=255, blank=True, default="")
+    close_competitor = models.CharField(max_length=255, blank=True, default="")
+    close_notes = models.TextField(blank=True, default="")
+
+    objects = DealQuerySet.as_manager()
 
     def __str__(self):
         return self.title
+
+    @property
+    def is_operational(self) -> bool:
+        from .operational import is_operational_deal
+
+        return is_operational_deal(self)
 
 
 class DealSignal(models.Model):

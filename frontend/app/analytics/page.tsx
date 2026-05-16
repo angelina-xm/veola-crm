@@ -6,7 +6,9 @@ import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
 import AppNav from "@/src/components/navigation/AppNav";
 import { useAuth } from "@/src/components/auth/AuthProvider";
 import { useMembership } from "@/src/context/MembershipContext";
-import { getAnalyticsV1Overview } from "@/src/lib/api";
+import { getAnalyticsV1Overview, getClosedDealsSummary } from "@/src/lib/api";
+import RecentClosesWidget from "@/src/components/analytics/RecentClosesWidget";
+import type { ClosedDealsSummary } from "@/src/types";
 import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
 import { canViewAnalytics } from "@/src/lib/roles";
 import type { AnalyticsGranularity, AnalyticsV1Overview } from "@/src/types";
@@ -18,6 +20,8 @@ export default function AnalyticsPage() {
   const [companyId, setCompanyId] = useState<number | null>(null);
   const [granularity, setGranularity] = useState<AnalyticsGranularity>("week");
   const [data, setData] = useState<AnalyticsV1Overview | null>(null);
+  const [closedSummary, setClosedSummary] = useState<ClosedDealsSummary | null>(null);
+  const [closedLoading, setClosedLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,14 +41,21 @@ export default function AnalyticsPage() {
     if (!canViewAnalytics(membership) || companyId === null) return;
     try {
       setLoading(true);
+      setClosedLoading(true);
       setError(null);
-      const payload = await getAnalyticsV1Overview(companyId, granularity);
+      const [payload, closed] = await Promise.all([
+        getAnalyticsV1Overview(companyId, granularity),
+        getClosedDealsSummary(companyId),
+      ]);
       setData(payload);
+      setClosedSummary(closed);
     } catch (e) {
       setData(null);
+      setClosedSummary(null);
       setError(e instanceof Error ? e.message : "Failed to load analytics");
     } finally {
       setLoading(false);
+      setClosedLoading(false);
     }
   }, [membership, companyId, granularity]);
 
@@ -92,6 +103,9 @@ export default function AnalyticsPage() {
                 >
                   Sign out
                 </button>
+              </div>
+              <div className="mb-6">
+                <RecentClosesWidget data={closedSummary} loading={closedLoading} />
               </div>
               <AnalyticsWorkspace
                 data={data}

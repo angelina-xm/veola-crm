@@ -17,6 +17,11 @@ def get_visible_deals(user, company, membership) -> QuerySet[Deal]:
     return base_qs.filter(Q(assigned_to=user) | Q(created_by=user))
 
 
+def get_operational_visible_deals(user, company, membership) -> QuerySet[Deal]:
+    """Visible deals still in the operational pipeline (excludes Won/Lost/Closed)."""
+    return get_visible_deals(user, company, membership).operational()
+
+
 def user_owns_deal(user, deal: Deal) -> bool:
     return deal.created_by_id == user.id or deal.assigned_to_id == user.id
 
