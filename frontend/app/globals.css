@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --vx-bg: #f4f4f5;
+  --vx-bg: #f8fafc;
   --vx-bg-subtle: #fafafa;
   --vx-surface: #ffffff;
   --vx-surface-raised: #ffffff;
@@ -10,17 +10,21 @@
   --vx-text: #18181b;
   --vx-text-secondary: #52525b;
   --vx-text-muted: #71717a;
-  --vx-accent: #4f46e5;
-  --vx-accent-muted: #eef2ff;
-  --vx-accent-hover: #4338ca;
-  --vx-sidebar-width: 15.5rem;
-  --vx-topbar-height: 3.5rem;
+  --vx-accent: #2563eb;
+  --vx-accent-muted: #eff6ff;
+  --vx-accent-hover: #1d4ed8;
+  --vx-sidebar-width: 16.5rem;
+  --vx-topbar-height: 4rem;
   --vx-radius-sm: 0.375rem;
   --vx-radius: 0.625rem;
   --vx-radius-lg: 0.75rem;
+  --vx-radius-xl: 1rem;
   --vx-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.04);
   --vx-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04);
   --vx-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.04);
+  --vx-shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 16px rgb(15 23 42 / 0.04);
+  --vx-shadow-sidebar: 1px 0 0 rgb(0 0 0 / 0.04), 4px 0 24px rgb(15 23 42 / 0.03);
+  --vx-shadow-accent: 0 4px 14px rgb(37 99 235 / 0.35);
 }
 
 @theme inline {
@@ -48,22 +52,22 @@ body {
 
 @media (min-width: 1024px) {
   .vx-container {
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
+    padding-left: 1.75rem;
+    padding-right: 1.75rem;
   }
 }
 
 .vx-card {
   background: var(--vx-surface);
   border: 1px solid var(--vx-border);
-  border-radius: var(--vx-radius-lg);
-  box-shadow: var(--vx-shadow-sm);
+  border-radius: var(--vx-radius-xl);
+  box-shadow: var(--vx-shadow-card);
 }
 
 .vx-label {
   font-size: 0.6875rem;
-  font-weight: 500;
-  letter-spacing: 0.04em;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--vx-text-muted);
 }

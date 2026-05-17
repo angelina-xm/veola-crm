@@ -32,7 +32,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           menuOpen={mobileNav}
           onMenuToggle={() => setMobileNav((v) => !v)}
         />
-        <main className="vx-container flex-1 py-6 vx-animate-in">{children}</main>
+        <main className="vx-container flex-1 py-6 pb-10 vx-animate-in">{children}</main>
       </div>
     </div>
   );

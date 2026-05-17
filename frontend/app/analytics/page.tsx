@@ -81,7 +81,7 @@ export default function AnalyticsPage() {
                 &quot;View analytics&quot; for your seat.
               </p>
               <Link
-                href="/"
+                href="/pipeline"
                 className="mt-6 inline-flex rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
               >
                 Back to pipeline
@@ -91,7 +91,7 @@ export default function AnalyticsPage() {
             <>
               <div className="mb-6 flex items-start justify-between gap-4">
                 <Link
-                  href="/"
+                  href="/pipeline"
                   className="text-sm font-medium text-zinc-500 transition hover:text-zinc-900"
                 >
                   ← Pipeline

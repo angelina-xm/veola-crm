@@ -450,9 +450,23 @@ export async function getCurrentMembership(
   }
   const roleNorm = role as MembershipProfile["role"];
   const permissions = memberPermissionsFromMeResponse(raw, roleNorm);
+  const companyName =
+    typeof raw.company_name === "string" && raw.company_name.trim()
+      ? raw.company_name.trim()
+      : `Company #${raw.company_id}`;
+  const userEmail =
+    typeof raw.user_email === "string" ? raw.user_email : "";
+  const userDisplay =
+    typeof raw.user_display_name === "string" && raw.user_display_name.trim()
+      ? raw.user_display_name.trim()
+      : userEmail.split("@")[0] || "User";
+
   return {
     user_id: raw.user_id as number,
     company_id: raw.company_id as number,
+    company_name: companyName,
+    user_email: userEmail,
+    user_display_name: userDisplay,
     role: roleNorm,
     is_active: Boolean(raw.is_active),
     permissions,

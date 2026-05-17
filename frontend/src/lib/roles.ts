@@ -14,6 +14,9 @@ export type MemberPermissions = {
 export type MembershipProfile = {
   user_id: number;
   company_id: number;
+  company_name: string;
+  user_email: string;
+  user_display_name: string;
   role: CompanyRole;
   is_active: boolean;
   permissions: MemberPermissions;

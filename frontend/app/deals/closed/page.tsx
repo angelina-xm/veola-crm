@@ -68,7 +68,7 @@ export default function ClosedDealsPage() {
           description="Won and lost deals — relationship memory, not active pipeline."
           actions={
             <Link
-              href="/"
+              href="/pipeline"
               className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
             >
               Back to pipeline
