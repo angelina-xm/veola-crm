@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
-import AppNav from "@/src/components/navigation/AppNav";
+import PageHeader from "@/src/components/ui/PageHeader";
 import { useAuth } from "@/src/components/auth/AuthProvider";
 import { useMembership } from "@/src/context/MembershipContext";
 import {
@@ -199,18 +199,12 @@ export default function TeamPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-slate-50 p-6">
-        <div className="mx-auto max-w-6xl">
-          <AppNav />
-          <header className="mb-8">
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
-              Team
-            </h1>
-            <p className="mt-1 text-sm text-slate-600">
-              Invite people, assign roles, and tune permissions. Role presets seed
-              defaults; flags are the source of truth for access.
-            </p>
-          </header>
+      <>
+          <PageHeader
+            eyebrow="Workspace"
+            title="Team"
+            description="Invite people, assign roles, and tune permissions."
+          />
 
           {membershipLoading ? (
             <p className="text-sm text-slate-500">Checking access…</p>
@@ -332,7 +326,6 @@ export default function TeamPage() {
               ) : null}
             </>
           )}
-        </div>
 
         {inviteOpen ? (
           <div
@@ -504,7 +497,7 @@ export default function TeamPage() {
             </div>
           </div>
         ) : null}
-      </div>
+      </>
     </ProtectedRoute>
   );
 }

@@ -96,27 +96,27 @@ export default function Stage({
   return (
     <div
       ref={setNodeRef}
-      className={`w-64 bg-gray-100 p-3 rounded min-h-[200px] ${
-        isLoading ? "opacity-70" : ""
+      className={`flex w-72 shrink-0 flex-col rounded-xl border border-zinc-200/80 bg-zinc-50/50 p-2.5 min-h-[280px] transition-opacity ${
+        isLoading ? "opacity-60" : ""
       }`}
     >
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <h2 className="font-bold">{stage.name}</h2>
+      <div className="mb-3 flex items-center justify-between gap-2 px-1">
+        <h2 className="text-sm font-semibold text-zinc-800">{stage.name}</h2>
         {priorityLabel ? (
           <span
-            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+            className={`rounded-md px-1.5 py-0.5 text-[10px] font-medium ${
               priorityLabel === "high"
-                ? "bg-red-100 text-red-700"
+                ? "bg-rose-50 text-rose-700 ring-1 ring-rose-100"
                 : priorityLabel === "medium"
-                  ? "bg-amber-100 text-amber-700"
-                  : "bg-slate-100 text-slate-700"
+                  ? "bg-amber-50 text-amber-800 ring-1 ring-amber-100"
+                  : "bg-zinc-100 text-zinc-600"
             }`}
           >
             {priorityLabel === "high"
-              ? "🔥 High priority"
+              ? "High"
               : priorityLabel === "medium"
-                ? "⚠️ Medium"
-                : "🧊 Low"}
+                ? "Medium"
+                : "Low"}
           </span>
         ) : null}
       </div>

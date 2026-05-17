@@ -259,11 +259,11 @@ export default function DealCard({
       ? "ring-2 ring-blue-500 ring-offset-1 bg-blue-50/60"
       : "";
   const attentionClass = needsAttention
-    ? "border border-amber-500 bg-amber-50 shadow-[0_0_0_1px_rgba(245,158,11,0.45)] dark:border-amber-400/70 dark:bg-amber-950/20"
+    ? "border-amber-200/80 bg-amber-50/50 ring-1 ring-amber-100"
     : "";
   const urgentClass =
     dealHealth === "urgent"
-      ? "border border-red-400 bg-red-50 shadow-[0_0_0_1px_rgba(248,113,113,0.35)]"
+      ? "border-rose-200/80 bg-rose-50/40 ring-1 ring-rose-100"
       : "";
   const dimClass = dimmed ? "opacity-40" : "";
 
@@ -271,7 +271,7 @@ export default function DealCard({
     <div
       ref={setNodeRef}
       style={style}
-      className={`mb-3 flex gap-1 overflow-hidden rounded-lg bg-white shadow-md transition-all duration-300 hover:-translate-y-[1px] hover:shadow-lg ${taskSignal.borderClass} ${focusRing} ${attentionClass} ${urgentClass} ${dimClass}`}
+      className={`mb-2 flex gap-0 overflow-hidden rounded-lg border border-zinc-200/90 bg-white shadow-sm transition-all duration-200 hover:border-zinc-300 hover:shadow-md ${taskSignal.borderClass} ${focusRing} ${attentionClass} ${urgentClass} ${dimClass}`}
       {...attributes}
     >
       <button

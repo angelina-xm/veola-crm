@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
-import AppNav from "@/src/components/navigation/AppNav";
+import PageHeader from "@/src/components/ui/PageHeader";
 import { useMembership } from "@/src/context/MembershipContext";
 import { useSettings } from "@/src/context/SettingsContext";
 import { canManageAutomations } from "@/src/lib/roles";
@@ -95,30 +95,28 @@ export default function AutomationSettingsPage() {
 
   return (
     <ProtectedRoute>
-      <div className="p-6">
-        <AppNav />
-        <div className="mb-6 flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Automation Settings</h1>
-            <p className="mt-1 text-gray-600">
-              Manage which automation rules can create tasks.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={resetDefaults}
-            disabled={
-              roleLoading ||
-              !canManageAutomations(membership) ||
-              loading ||
-              saving ||
-              savingRuleId !== null
-            }
-            className="rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-          >
-            Reset defaults
-          </button>
-        </div>
+      <>
+        <PageHeader
+          eyebrow="Workspace"
+          title="Automation"
+          description="Control when the system creates follow-up tasks."
+          actions={
+            <button
+              type="button"
+              onClick={resetDefaults}
+              disabled={
+                roleLoading ||
+                !canManageAutomations(membership) ||
+                loading ||
+                saving ||
+                savingRuleId !== null
+              }
+              className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50"
+            >
+              Reset defaults
+            </button>
+          }
+        />
         {!roleLoading && !canManageAutomations(membership) ? (
           <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             You don&apos;t have permission to manage automation settings.
@@ -134,7 +132,7 @@ export default function AutomationSettingsPage() {
           Enabled rules: {enabledCount}/{RULES.length}
         </div>
 
-        <div className="rounded-lg border border-gray-200 bg-white">
+        <div className="vx-card overflow-hidden">
           <ul className="divide-y divide-gray-100">
             {RULES.map((rule) => (
               <li
@@ -171,7 +169,7 @@ export default function AutomationSettingsPage() {
             ))}
           </ul>
         </div>
-      </div>
+      </>
     </ProtectedRoute>
   );
 }

@@ -18,7 +18,8 @@ import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
 import { useAuth } from "@/src/components/auth/AuthProvider";
 import { useSettings } from "@/src/context/SettingsContext";
 import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
-import AppNav from "@/src/components/navigation/AppNav";
+import PageHeader from "@/src/components/ui/PageHeader";
+import EmptyState from "@/src/components/ui/EmptyState";
 import { Client, DealsByStage, PipelineStage } from "@/src/types";
 
 type ApiDealRow = {
@@ -46,11 +47,9 @@ export default function PipelinePage() {
   const [error, setError] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<number | null>(null);
 
-  /** Сразу подставляем tenant из LS + env, чтобы не грузить данные с companyId === null и не расходиться с X-Company-ID. */
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
-    const next = getStoredCompanyId() ?? readEnvCompanyId();
-    setCompanyId(next);
+    setCompanyId(getStoredCompanyId() ?? readEnvCompanyId());
   }, []);
 
   useLayoutEffect(() => {
@@ -70,9 +69,7 @@ export default function PipelinePage() {
   );
 
   useEffect(() => {
-    if (!isReady || !isAuthenticated || companyId === null) {
-      return;
-    }
+    if (!isReady || !isAuthenticated || companyId === null) return;
 
     const loadData = async () => {
       try {
@@ -86,12 +83,6 @@ export default function PipelinePage() {
           setCompanyId(fromLs);
         }
 
-        console.log("LOAD CLIENTS", {
-          companyId: getStoredCompanyId(),
-          companyIdState: companyId,
-          tenantIdUsed: tenantId,
-        });
-
         const [stagesData, dealsData] = await Promise.all([
           getPipelineStages(tenantId),
           getDeals(tenantId, { layer: "operational" }),
@@ -104,7 +95,7 @@ export default function PipelinePage() {
           setClientsError(
             clientsErr instanceof Error
               ? clientsErr.message
-              : "Не удалось загрузить список клиентов."
+              : "Could not load clients."
           );
         }
 
@@ -114,11 +105,9 @@ export default function PipelinePage() {
           ...stage,
           id: String(stage.id),
         }));
-        console.log("stages", normalizedStages);
+
         if (normalizedStages.length === 0) {
-          setError(
-            "Этапы воронки не найдены. Создайте стадии для текущей компании."
-          );
+          setError("No pipeline stages found for this company.");
         }
 
         const normalizedDeals = normalizeApiList(
@@ -139,10 +128,7 @@ export default function PipelinePage() {
             id: String(c.id),
           }))
         );
-        /* Automation reconcile runs server-side (throttled); not on every pipeline load. */
       } catch (err) {
-        console.error("Failed to load pipeline data:", err);
-        setClientsError(null);
         if (err instanceof AuthError && err.reason === "network_unreachable") {
           setError(err.message);
           setStages([]);
@@ -151,12 +137,12 @@ export default function PipelinePage() {
           return;
         }
         if (err instanceof AuthError) {
-          setError("Сессия истекла. Перенаправляем на вход...");
+          setError("Session expired. Redirecting to sign in…");
           logout(err.reason);
           return;
         }
         setError(
-          err instanceof Error ? err.message : "Ошибка при загрузке данных"
+          err instanceof Error ? err.message : "Failed to load pipeline data"
         );
         setStages([]);
         setDealsByStage({});
@@ -171,58 +157,37 @@ export default function PipelinePage() {
 
   return (
     <ProtectedRoute>
-      <div className="p-6">
-        <AppNav />
-        <div className="mb-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Pipeline 🚀</h1>
-              <p className="text-gray-600 mt-1">
-                Active deals only. Drop on Won or Lost to close with confirmation.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => logout("manual_logout")}
-              className="rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-            >
-              Выйти
-            </button>
-          </div>
-        </div>
+      <>
+        <PageHeader
+          eyebrow="Operational"
+          title="Pipeline"
+          description="Active deals only. Drop on Won or Lost to close with confirmation."
+        />
 
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <div className="mb-4 inline-block h-12 w-12 animate-spin rounded-full border-b-2 border-blue-500"></div>
-              <p className="text-gray-600">Загрузка данных...</p>
-            </div>
+          <div className="flex justify-center py-16">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-800" />
           </div>
         ) : null}
 
         {error ? (
-          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
-            <p className="font-semibold">⚠️ {error}</p>
-          </div>
+          <p className="mb-4 rounded-lg border border-amber-200/80 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {error}
+          </p>
         ) : null}
 
         {clientsError ? (
-          <div className="mb-4 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-orange-900">
-            <p className="font-semibold">Не удалось загрузить клиентов</p>
-            <p className="mt-1 text-sm opacity-90">{clientsError}</p>
-          </div>
+          <p className="mb-4 text-sm text-zinc-500">{clientsError}</p>
         ) : null}
 
         {!loading && totalDeals === 0 ? (
-          <div className="mb-6 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-6 py-10 text-center text-gray-600">
-            <p className="text-lg font-medium text-gray-800">No deals yet</p>
-            <p className="mt-1 text-sm">
-              Создайте первую сделку кнопкой «Add Deal» — она появится в выбранной колонке.
-            </p>
-          </div>
+          <EmptyState
+            title="No deals yet"
+            description="Create your first deal with Add Deal — it will appear in the selected stage."
+          />
         ) : null}
 
-        {!loading && companyId !== null ? (
+        {!loading && companyId !== null && totalDeals > 0 ? (
           <Board
             stages={stages}
             wonStage={wonStage}
@@ -235,7 +200,7 @@ export default function PipelinePage() {
             automationSettingsLoading={automationSettingsLoading}
           />
         ) : null}
-      </div>
+      </>
     </ProtectedRoute>
   );
 }

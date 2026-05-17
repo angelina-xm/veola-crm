@@ -4,7 +4,6 @@ import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
 import { useAuth } from "@/src/components/auth/AuthProvider";
-import AppNav from "@/src/components/navigation/AppNav";
 import CustomerTimeline from "@/src/components/clients/CustomerTimeline";
 import {
   createActivity,
@@ -163,9 +162,7 @@ export default function ClientProfilePage() {
 
   return (
     <ProtectedRoute>
-      <div className="mx-auto max-w-3xl p-6">
-        <AppNav />
-
+      <>
         <header className="mb-8">
           <p className="text-sm text-slate-500">Customer</p>
           {loading ? (
@@ -283,7 +280,7 @@ export default function ClientProfilePage() {
             </section>
           </div>
         ) : null}
-      </div>
+      </>
     </ProtectedRoute>
   );
 }

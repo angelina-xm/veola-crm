@@ -1,26 +1,103 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --vx-bg: #f4f4f5;
+  --vx-bg-subtle: #fafafa;
+  --vx-surface: #ffffff;
+  --vx-surface-raised: #ffffff;
+  --vx-border: #e4e4e7;
+  --vx-border-subtle: #f4f4f5;
+  --vx-text: #18181b;
+  --vx-text-secondary: #52525b;
+  --vx-text-muted: #71717a;
+  --vx-accent: #4f46e5;
+  --vx-accent-muted: #eef2ff;
+  --vx-accent-hover: #4338ca;
+  --vx-sidebar-width: 15.5rem;
+  --vx-topbar-height: 3.5rem;
+  --vx-radius-sm: 0.375rem;
+  --vx-radius: 0.625rem;
+  --vx-radius-lg: 0.75rem;
+  --vx-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --vx-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+  --vx-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.04);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--vx-bg);
+  --color-foreground: var(--vx-text);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+body {
+  background: var(--vx-bg);
+  color: var(--vx-text);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.vx-container {
+  width: 100%;
+  max-width: 90rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+
+@media (min-width: 1024px) {
+  .vx-container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.vx-card {
+  background: var(--vx-surface);
+  border: 1px solid var(--vx-border);
+  border-radius: var(--vx-radius-lg);
+  box-shadow: var(--vx-shadow-sm);
+}
+
+.vx-label {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--vx-text-muted);
+}
+
+.vx-tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes vx-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.vx-animate-in {
+  animation: vx-fade-in 0.2s ease-out;
+}
+
+@keyframes vx-modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.vx-modal-surface {
+  animation: vx-modal-in 0.18s ease-out;
 }

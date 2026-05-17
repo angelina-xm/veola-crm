@@ -1328,7 +1328,7 @@ export default function Board({
             type="button"
             onClick={openCreate}
             disabled={boardBusy || membershipLoading || !allowCreateDeals}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-zinc-800 disabled:opacity-50"
           >
             Add Deal
           </button>

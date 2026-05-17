@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
-import AppNav from "@/src/components/navigation/AppNav";
+import PageHeader from "@/src/components/ui/PageHeader";
 import { useAuth } from "@/src/components/auth/AuthProvider";
 import { useMembership } from "@/src/context/MembershipContext";
 import { getAnalyticsV1Overview, getClosedDealsSummary } from "@/src/lib/api";
@@ -68,7 +68,7 @@ export default function AnalyticsPage() {
     <ProtectedRoute>
       <div className="min-h-screen bg-zinc-50/80">
         <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-          <AppNav />
+          <PageHeader eyebrow="Historical" title="Analytics" description="Closed deals and performance — not the operational workspace." />
           {membershipLoading ? (
             <div className="flex min-h-[30vh] items-center justify-center rounded-2xl border border-zinc-200 bg-white py-16 text-sm text-zinc-500">
               Loading…

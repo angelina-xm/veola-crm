@@ -25,7 +25,7 @@ function LoginPageInner() {
 
   if (!isReady) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+      <main className="flex min-h-screen items-center justify-center bg-zinc-50 p-6">
         <p className="text-sm text-gray-500">Загрузка…</p>
       </main>
     );
@@ -118,7 +118,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+        <main className="flex min-h-screen items-center justify-center bg-zinc-50 p-6">
           <p className="text-sm text-gray-500">Загрузка…</p>
         </main>
       }

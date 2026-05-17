@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
+import AppShell from "@/src/components/layout/AppShell";
 
 export default function ProtectedRoute({
   children,
@@ -22,10 +23,12 @@ export default function ProtectedRoute({
   if (!isReady) {
     return (
       <div
-        className="min-h-[240px] w-full animate-pulse rounded-lg bg-gray-100"
+        className="flex min-h-[40vh] items-center justify-center"
         aria-busy="true"
-        aria-label="Загрузка"
-      />
+        aria-label="Loading"
+      >
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-800" />
+      </div>
     );
   }
 
@@ -33,5 +36,5 @@ export default function ProtectedRoute({
     return null;
   }
 
-  return <>{children}</>;
+  return <AppShell>{children}</AppShell>;
 }

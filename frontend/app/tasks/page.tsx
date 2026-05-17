@@ -4,7 +4,6 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "reac
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
-import AppNav from "@/src/components/navigation/AppNav";
 import { useAuth } from "@/src/components/auth/AuthProvider";
 import { useMembership } from "@/src/context/MembershipContext";
 import {
@@ -271,9 +270,7 @@ export default function TasksPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-zinc-50/90">
-        <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-          <AppNav />
+      <>
           <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
@@ -393,8 +390,7 @@ export default function TasksPage() {
             ))}
           </div>
           )}
-        </div>
-      </div>
+      </>
     </ProtectedRoute>
   );
 }

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import Link from "next/link";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
 import { useAuth } from "@/src/components/auth/AuthProvider";
-import AppNav from "@/src/components/navigation/AppNav";
+import PageHeader from "@/src/components/ui/PageHeader";
 import ClientModal from "@/src/components/pipeline/ClientModal";
 import { createClient, deleteClient, getClients } from "@/src/lib/api";
 import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
@@ -99,33 +99,24 @@ export default function ClientsPage() {
 
   return (
     <ProtectedRoute>
-      <div className="p-6">
-        <AppNav />
-        <div className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Clients</h1>
-            <p className="mt-1 text-gray-600">Управление клиентами компании</p>
-          </div>
-          <div className="flex items-center gap-2">
+      <>
+        <PageHeader
+          eyebrow="Relationships"
+          title="Clients"
+          description="Persistent accounts and relationship history."
+          actions={
             <button
               type="button"
               onClick={() => {
                 setClientError(null);
                 setClientModalOpen(true);
               }}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-700"
+              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-zinc-800"
             >
-              Add Client
+              Add client
             </button>
-            <button
-              type="button"
-              onClick={() => logout("manual_logout")}
-              className="rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-            >
-              Выйти
-            </button>
-          </div>
-        </div>
+          }
+        />
 
         {error ? (
           <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
@@ -133,7 +124,7 @@ export default function ClientsPage() {
           </div>
         ) : null}
 
-        <div className="rounded-lg border border-gray-200 bg-white">
+        <div className="vx-card overflow-hidden">
           {loading ? (
             <div className="px-4 py-6 text-sm text-gray-600">Загрузка клиентов...</div>
           ) : clients.length === 0 ? (
@@ -177,7 +168,7 @@ export default function ClientsPage() {
           }}
           onSubmit={(values) => void handleCreateClient(values)}
         />
-      </div>
+      </>
     </ProtectedRoute>
   );
 }

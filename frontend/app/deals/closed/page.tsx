@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import Link from "next/link";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
-import AppNav from "@/src/components/navigation/AppNav";
+import PageHeader from "@/src/components/ui/PageHeader";
 import RecentClosesWidget from "@/src/components/analytics/RecentClosesWidget";
 import { useAuth } from "@/src/components/auth/AuthProvider";
 import { getClosedDealsSummary, getDeals } from "@/src/lib/api";
@@ -61,22 +61,20 @@ export default function ClosedDealsPage() {
 
   return (
     <ProtectedRoute>
-      <div className="p-6">
-        <AppNav />
-        <div className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Closed deals</h1>
-            <p className="mt-1 text-sm text-gray-600">
-              Historical outcomes — not part of the active pipeline.
-            </p>
-          </div>
-          <Link
-            href="/"
-            className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Back to pipeline
-          </Link>
-        </div>
+      <>
+        <PageHeader
+          eyebrow="Historical"
+          title="Closed deals"
+          description="Won and lost deals — relationship memory, not active pipeline."
+          actions={
+            <Link
+              href="/"
+              className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+            >
+              Back to pipeline
+            </Link>
+          }
+        />
 
         {error ? (
           <p className="mb-4 text-sm text-red-600">{error}</p>
@@ -128,7 +126,7 @@ export default function ClosedDealsPage() {
             </table>
           </div>
         )}
-      </div>
+      </>
     </ProtectedRoute>
   );
 }
