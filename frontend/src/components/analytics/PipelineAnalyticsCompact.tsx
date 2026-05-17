@@ -51,7 +51,7 @@ export default function PipelineAnalyticsCompact({
       <div className="flex flex-col gap-2 border-b border-zinc-100 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:px-4">
         <div>
           <h2 className="text-sm font-semibold tracking-tight text-zinc-900">Overview</h2>
-          <p className="text-[11px] text-zinc-500">Quick read on your visible pipeline</p>
+          <p className="text-[11px] text-zinc-500">Quick read on your active deals</p>
         </div>
         <Link
           href="/analytics"
@@ -68,8 +68,8 @@ export default function PipelineAnalyticsCompact({
         <section aria-label="Key metrics">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
             <KpiCard
-              label="Pipeline"
-              hint="Open deals"
+              label="Open value"
+              hint="Active deals"
               value={formatUsd(kpis.pipeline_value)}
             />
             <KpiCard label="Active" value={String(kpis.active_deals)} />

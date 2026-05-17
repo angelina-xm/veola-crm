@@ -49,7 +49,7 @@ export default function CloseDealWonModal({
           Close deal?
         </h2>
         <p className="mt-1 text-sm text-gray-600">
-          This deal will leave the pipeline and move to your closed history.
+          This deal will leave your active board and move to closed history.
         </p>
 
         <dl className="mt-4 space-y-2 rounded-lg bg-gray-50 px-4 py-3 text-sm">

@@ -14,6 +14,7 @@ import {
   getTasksBucket,
 } from "@/src/lib/api";
 import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
+import { COPY, ROUTES } from "@/src/lib/product";
 import type { AnalyticsV1Overview, CrmTask, PipelineHealth } from "@/src/types";
 
 export default function DashboardPage() {
@@ -95,10 +96,7 @@ export default function DashboardPage() {
   return (
     <ProtectedRoute>
       <div className="space-y-6">
-        <p className="text-sm text-zinc-500">
-          Your operational cockpit — revenue, pipeline health, and what needs
-          attention today.
-        </p>
+        <p className="text-sm text-zinc-500">{COPY.dashboardHint}</p>
 
         {error ? (
           <p className="rounded-xl border border-amber-200/80 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -127,10 +125,10 @@ export default function DashboardPage() {
 
         <div className="flex flex-wrap gap-3">
           <Link
-            href="/pipeline"
+            href={ROUTES.deals}
             className="rounded-xl border border-zinc-200/80 bg-white px-4 py-2.5 text-sm font-medium text-zinc-800 shadow-sm transition-colors hover:border-zinc-300 hover:bg-zinc-50"
           >
-            Open pipeline →
+            {COPY.openDeals} →
           </Link>
           <Link
             href="/tasks"

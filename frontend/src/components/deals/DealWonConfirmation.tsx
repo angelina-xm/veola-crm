@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { COPY, resolveDealsReturnHref } from "@/src/lib/product";
 import type { DealCloseTransition } from "@/src/types";
 
 type Props = {
@@ -44,10 +45,10 @@ export default function DealWonConfirmation({ transition, onDismiss }: Props) {
           View customer
         </Link>
         <Link
-          href={transition.links.back_to_pipeline}
+          href={resolveDealsReturnHref(transition.links.back_to_pipeline)}
           className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-50"
         >
-          Back to pipeline
+          {COPY.backToDeals}
         </Link>
         <button
           type="button"

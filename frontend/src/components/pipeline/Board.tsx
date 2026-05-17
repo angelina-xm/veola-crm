@@ -894,7 +894,7 @@ export default function Board({
       if (!stage) {
         if (typeof window !== "undefined") {
           window.alert(
-            `Pipeline stage "${outcome}" is not configured. Add it in settings or contact an admin.`
+            `Deal stage "${outcome}" is not configured. Add it in settings or contact an admin.`
           );
         }
         return;

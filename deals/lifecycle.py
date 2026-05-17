@@ -92,7 +92,7 @@ def build_close_transition_payload(deal: Deal) -> dict | None:
         "loss_reason": deal.loss_reason or None,
         "links": {
             "view_customer": f"/clients/{deal.client_id}",
-            "back_to_pipeline": "/",
+            "back_to_pipeline": "/deals",
         },
     }
 

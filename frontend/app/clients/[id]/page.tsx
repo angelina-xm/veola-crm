@@ -11,6 +11,7 @@ import {
   getClients,
 } from "@/src/lib/api";
 import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
+import { ROUTES } from "@/src/lib/product";
 import type { Client, ClientTimeline, TimelineFilter } from "@/src/types";
 
 const CATEGORY_OPTIONS = [
@@ -272,10 +273,10 @@ export default function ClientProfilePage() {
               </div>
               <button
                 type="button"
-                onClick={() => router.push("/")}
+                onClick={() => router.push(ROUTES.deals)}
                 className="mt-4 text-sm text-slate-600 underline hover:text-slate-900"
               >
-                Open pipeline to create a deal
+                Open deals board to create a deal
               </button>
             </section>
           </div>

@@ -81,8 +81,8 @@ export default function AnalyticsWorkspace({
             Analytics
           </h1>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-zinc-500">
-            Revenue, funnel, and team performance for deals you can access. Same data as the
-            pipeline snapshot — with room to go deeper.
+            Revenue, funnel, and team performance for deals you can access. Deeper view than
+            the board snapshot on your Deals workspace.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -126,8 +126,8 @@ export default function AnalyticsWorkspace({
         </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           <KpiCard
-            label="Pipeline value"
-            hint="Sum of open pipeline"
+            label="Open value"
+            hint="Sum of active deals"
             value={formatUsd(kpis.pipeline_value)}
           />
           <KpiCard label="Active deals" value={String(kpis.active_deals)} />
@@ -172,7 +172,7 @@ export default function AnalyticsWorkspace({
         </div>
         <div className="rounded-2xl border border-zinc-200/70 bg-white p-5 shadow-sm lg:col-span-5 lg:p-6">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-            Pipeline funnel
+            Deal funnel
           </h3>
           <p className="mt-1 text-xs text-zinc-400">Deal count per stage · drop from prior</p>
           <div className="mt-5 max-h-[min(420px,55vh)] overflow-y-auto pr-1">

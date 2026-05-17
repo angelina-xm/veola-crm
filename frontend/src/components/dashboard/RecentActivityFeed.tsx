@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { cn } from "@/src/lib/cn";
 import { formatRelative } from "@/src/lib/formatRelative";
+import { COPY, ROUTES } from "@/src/lib/product";
 import type { AnalyticsV1FeedItem } from "@/src/types";
 
 function feedTitle(item: AnalyticsV1FeedItem): string {
@@ -69,10 +70,10 @@ export default function RecentActivityFeed({
           </p>
         </div>
         <Link
-          href="/pipeline"
+          href={ROUTES.deals}
           className="text-xs font-medium text-[var(--vx-accent)] hover:text-[var(--vx-accent-hover)]"
         >
-          View pipeline
+          {COPY.viewDeals}
         </Link>
       </div>
       {loading ? (
@@ -112,7 +113,7 @@ export default function RecentActivityFeed({
                 </div>
                 {item.deal_id ? (
                   <Link
-                    href={`/pipeline`}
+                    href={ROUTES.deals}
                     className="hidden text-sm font-medium text-zinc-900 sm:block"
                   >
                     Open

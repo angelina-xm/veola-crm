@@ -58,7 +58,7 @@ export default function CloseDealLostModal({
           Close deal as lost?
         </h2>
         <p className="mt-1 text-sm text-gray-600">
-          The deal will leave your active pipeline. Loss reason is required.
+          The deal will leave your active board. Loss reason is required.
         </p>
 
         <dl className="mt-4 space-y-2 rounded-lg bg-gray-50 px-4 py-3 text-sm">

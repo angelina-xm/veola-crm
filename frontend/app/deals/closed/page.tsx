@@ -12,6 +12,7 @@ import { formatDealAmountUsd } from "@/src/lib/dealDisplay";
 import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
 import type { ClosedDealsSummary, Deal } from "@/src/types";
 import { normalizeApiList } from "@/src/lib/api";
+import { COPY, ROUTES } from "@/src/lib/product";
 
 export default function ClosedDealsPage() {
   const { isReady, isAuthenticated } = useAuth();
@@ -63,15 +64,15 @@ export default function ClosedDealsPage() {
     <ProtectedRoute>
       <>
         <PageHeader
-          eyebrow="Historical"
+          eyebrow={COPY.historicalEyebrow}
           title="Closed deals"
-          description="Won and lost deals — relationship memory, not active pipeline."
+          description={COPY.closedDealsHint}
           actions={
             <Link
-              href="/pipeline"
+              href={ROUTES.deals}
               className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
             >
-              Back to pipeline
+              {COPY.backToDeals}
             </Link>
           }
         />

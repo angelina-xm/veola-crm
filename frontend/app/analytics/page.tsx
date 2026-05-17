@@ -13,6 +13,7 @@ import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
 import { canViewAnalytics } from "@/src/lib/roles";
 import type { AnalyticsGranularity, AnalyticsV1Overview } from "@/src/types";
 import AnalyticsWorkspace from "@/src/components/analytics/AnalyticsWorkspace";
+import { COPY, NAV_LABELS, ROUTES } from "@/src/lib/product";
 
 export default function AnalyticsPage() {
   const { isReady, isAuthenticated, logout } = useAuth();
@@ -68,7 +69,7 @@ export default function AnalyticsPage() {
     <ProtectedRoute>
       <div className="min-h-screen bg-zinc-50/80">
         <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-          <PageHeader eyebrow="Historical" title="Analytics" description="Closed deals and performance — not the operational workspace." />
+          <PageHeader eyebrow={COPY.historicalEyebrow} title="Analytics" description={COPY.analyticsHint} />
           {membershipLoading ? (
             <div className="flex min-h-[30vh] items-center justify-center rounded-2xl border border-zinc-200 bg-white py-16 text-sm text-zinc-500">
               Loading…
@@ -81,20 +82,20 @@ export default function AnalyticsPage() {
                 &quot;View analytics&quot; for your seat.
               </p>
               <Link
-                href="/pipeline"
+                href={ROUTES.deals}
                 className="mt-6 inline-flex rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
               >
-                Back to pipeline
+                {COPY.backToDeals}
               </Link>
             </div>
           ) : (
             <>
               <div className="mb-6 flex items-start justify-between gap-4">
                 <Link
-                  href="/pipeline"
+                  href={ROUTES.deals}
                   className="text-sm font-medium text-zinc-500 transition hover:text-zinc-900"
                 >
-                  ← Pipeline
+                  ← {NAV_LABELS.deals}
                 </Link>
                 <button
                   type="button"

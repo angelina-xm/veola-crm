@@ -17,7 +17,8 @@ import {
 } from "@/src/lib/api";
 import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
 import { normalizeDealPayload } from "@/src/lib/dealGrouping";
-import { queueOpenDealOnPipeline } from "@/src/lib/openDealBridge";
+import { queueOpenDeal } from "@/src/lib/openDealBridge";
+import { ROUTES } from "@/src/lib/product";
 import { canCreateDeals } from "@/src/lib/roles";
 import type { Client, CrmTask, Deal, TaskBucketQuery, TaskPriority } from "@/src/types";
 
@@ -172,11 +173,11 @@ export default function TasksPage() {
     }
   }, [createOpen, allowCreate, companyId, ensureCreateRefs]);
 
-  const openPipelineDeal = useCallback(
+  const openDealOnBoard = useCallback(
     (dealId: number | null) => {
       if (dealId == null) return;
-      queueOpenDealOnPipeline(dealId);
-      router.push("/");
+      queueOpenDeal(dealId);
+      router.push(ROUTES.deals);
     },
     [router]
   );
@@ -376,7 +377,7 @@ export default function TasksPage() {
                           section={key}
                           busy={busyId === task.id}
                           onComplete={() => onComplete(task)}
-                          onOpenDeal={() => openPipelineDeal(task.deal)}
+                          onOpenDeal={() => openDealOnBoard(task.deal)}
                           onReschedule={(localDue) =>
                             onSaveReschedule(task, localDue)
                           }

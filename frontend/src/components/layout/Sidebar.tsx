@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/src/lib/cn";
 import { initialsFromLabel } from "@/src/lib/nav";
+import { NAV_LABELS, ROUTES } from "@/src/lib/product";
 import { useMembership } from "@/src/context/MembershipContext";
 import {
   canManageAutomations,
@@ -30,7 +31,7 @@ function IconDashboard() {
   );
 }
 
-function IconPipeline() {
+function IconDeals() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path
@@ -198,22 +199,22 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
   const mainNav: NavItem[] = [
     {
-      href: "/dashboard",
-      label: "Dashboard",
+      href: ROUTES.dashboard,
+      label: NAV_LABELS.dashboard,
       icon: <IconDashboard />,
-      match: (p) => p === "/dashboard" || p === "/",
+      match: (p) => p === ROUTES.dashboard || p === "/",
     },
-    { href: "/clients", label: "Clients", icon: <IconClients /> },
     {
-      href: "/pipeline",
-      label: "Pipeline",
-      icon: <IconPipeline />,
-      match: (p) => p === "/pipeline",
+      href: ROUTES.deals,
+      label: NAV_LABELS.deals,
+      icon: <IconDeals />,
+      match: (p) => p === ROUTES.deals || p === ROUTES.pipeline,
     },
-    { href: "/tasks", label: "Tasks", icon: <IconTasks /> },
+    { href: ROUTES.clients, label: NAV_LABELS.clients, icon: <IconClients /> },
+    { href: ROUTES.tasks, label: NAV_LABELS.tasks, icon: <IconTasks /> },
     {
-      href: "/analytics",
-      label: "Analytics",
+      href: ROUTES.analytics,
+      label: NAV_LABELS.analytics,
       icon: <IconChart />,
       muted: !canViewAnalytics(membership),
     },
@@ -221,12 +222,12 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
   const systemNav: NavItem[] = [];
   if (canManageTeam(membership)) {
-    systemNav.push({ href: "/team", label: "Team", icon: <IconTeam /> });
+    systemNav.push({ href: ROUTES.team, label: NAV_LABELS.team, icon: <IconTeam /> });
   }
   if (canManageAutomations(membership)) {
     systemNav.push({
-      href: "/settings/automation",
-      label: "Automation",
+      href: ROUTES.automation,
+      label: NAV_LABELS.automation,
       icon: <IconAutomation />,
     });
   }

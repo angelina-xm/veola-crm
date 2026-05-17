@@ -9,6 +9,7 @@ import { useNotifications } from "@/src/hooks/useNotifications";
 import { cn } from "@/src/lib/cn";
 import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
 import { initialsFromLabel, pageTitleForPath } from "@/src/lib/nav";
+import { COPY, ROUTES } from "@/src/lib/product";
 
 export default function Topbar({
   onMenuToggle,
@@ -201,11 +202,11 @@ export default function Topbar({
           {createOpen ? (
             <div className="absolute right-0 top-full z-50 mt-2 w-44 overflow-hidden rounded-xl border border-zinc-200/90 bg-white py-1 shadow-lg vx-animate-in">
               <Link
-                href="/pipeline"
+                href={ROUTES.deals}
                 className="block px-3 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
                 onClick={() => setCreateOpen(false)}
               >
-                New deal
+                {COPY.newDeal}
               </Link>
               <Link
                 href="/tasks"

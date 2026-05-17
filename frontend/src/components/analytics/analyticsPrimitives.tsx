@@ -148,7 +148,7 @@ export function FunnelStagesList({
     return (
       <EmptyBlock
         title="No funnel stages"
-        body="Add pipeline stages in settings so deal flow appears here."
+        body="Add deal stages in settings so your board flow appears here."
       />
     );
   }
