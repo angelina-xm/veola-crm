@@ -30,6 +30,9 @@ export default function AppNav() {
       <Link href="/clients" className={itemClass("/clients")}>
         Clients
       </Link>
+      <Link href="/deals/closed" className={itemClass("/deals/closed")}>
+        Closed
+      </Link>
       {canViewAnalytics(membership) ? (
         <Link href="/analytics" className={itemClass("/analytics")}>
           Analytics

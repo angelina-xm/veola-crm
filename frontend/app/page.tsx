@@ -7,9 +7,12 @@ import {
   getClients,
   getDeals,
   getPipelineStages,
-  groupDealsByStage,
   normalizeApiList,
 } from "@/src/lib/api";
+import {
+  groupOperationalDeals,
+  partitionPipelineStages,
+} from "@/src/lib/pipelineLifecycle";
 import { normalizeDealPayload } from "@/src/lib/dealGrouping";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
 import { useAuth } from "@/src/components/auth/AuthProvider";
@@ -34,6 +37,8 @@ export default function PipelinePage() {
     loading: automationSettingsLoading,
   } = useSettings();
   const [stages, setStages] = useState<PipelineStage[]>([]);
+  const [wonStage, setWonStage] = useState<PipelineStage | undefined>();
+  const [lostStage, setLostStage] = useState<PipelineStage | undefined>();
   const [dealsByStage, setDealsByStage] = useState<DealsByStage>({});
   const [clients, setClients] = useState<Client[]>([]);
   const [clientsError, setClientsError] = useState<string | null>(null);
@@ -89,7 +94,7 @@ export default function PipelinePage() {
 
         const [stagesData, dealsData] = await Promise.all([
           getPipelineStages(tenantId),
-          getDeals(tenantId),
+          getDeals(tenantId, { layer: "operational" }),
         ]);
 
         let clientsData: Client[] = [];
@@ -120,9 +125,13 @@ export default function PipelinePage() {
           dealsData as ApiDealRow[] | { results: ApiDealRow[] }
         ).map((deal) => normalizeDealPayload(deal));
 
-        const grouped = groupDealsByStage(normalizedDeals, normalizedStages);
+        const { operationalStages, wonStage: won, lostStage: lost } =
+          partitionPipelineStages(normalizedStages);
+        const grouped = groupOperationalDeals(normalizedDeals, operationalStages);
 
-        setStages(normalizedStages);
+        setStages(operationalStages);
+        setWonStage(won);
+        setLostStage(lost);
         setDealsByStage(grouped);
         setClients(
           clientsData.map((c) => ({
@@ -169,7 +178,7 @@ export default function PipelinePage() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Pipeline 🚀</h1>
               <p className="text-gray-600 mt-1">
-                Перетащите сделки между колонками для изменения статуса
+                Active deals only. Drop on Won or Lost to close with confirmation.
               </p>
             </div>
             <button
@@ -216,6 +225,8 @@ export default function PipelinePage() {
         {!loading && companyId !== null ? (
           <Board
             stages={stages}
+            wonStage={wonStage}
+            lostStage={lostStage}
             dealsByStage={dealsByStage}
             setDealsByStage={setDealsByStage}
             companyId={companyId}

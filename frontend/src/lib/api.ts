@@ -172,8 +172,15 @@ export async function fetchWithAuth(
   return response;
 }
 
-export async function getDeals(companyId: number) {
-  const res = await fetchWithAuth("/deals/", {}, companyId);
+export type DealsLayer = "all" | "operational" | "closed";
+
+export async function getDeals(
+  companyId: number,
+  options?: { layer?: DealsLayer }
+) {
+  const layer = options?.layer ?? "all";
+  const qs = layer !== "all" ? `?layer=${encodeURIComponent(layer)}` : "";
+  const res = await fetchWithAuth(`/deals/${qs}`, {}, companyId);
 
   if (!res.ok) {
     throw new Error(await parseErrorBody(res));

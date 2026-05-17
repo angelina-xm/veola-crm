@@ -35,11 +35,17 @@ class DealViewSet(viewsets.ModelViewSet):
     serializer_class = DealSerializer
 
     def get_queryset(self):
-        return get_visible_deals(
+        qs = get_visible_deals(
             user=self.request.user,
             company=self.request.company,
             membership=getattr(self.request, "membership", None),
         )
+        layer = (self.request.query_params.get("layer") or "all").lower()
+        if layer == "operational":
+            return qs.operational()
+        if layer == "closed":
+            return qs.closed()
+        return qs
 
     def get_permissions(self):
         if self.action in ["list", "retrieve", "stale", "closed_summary"]:

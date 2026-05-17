@@ -29,6 +29,7 @@ class StaleDealSerializer(serializers.ModelSerializer):
 
 class DealSerializer(serializers.ModelSerializer):
     is_operational = serializers.SerializerMethodField()
+    stage_name = serializers.CharField(source="stage.name", read_only=True, allow_null=True)
     close_transition = serializers.SerializerMethodField()
 
     class Meta:
@@ -40,6 +41,7 @@ class DealSerializer(serializers.ModelSerializer):
             "title",
             "amount",
             "stage",
+            "stage_name",
             "created_by",
             "assigned_to",
             "created_at",
@@ -88,10 +90,6 @@ class DealSerializer(serializers.ModelSerializer):
             win_reason = (attrs.get("win_reason") or (instance.win_reason if instance else "") or "").strip()
             loss_reason = (attrs.get("loss_reason") or (instance.loss_reason if instance else "") or "").strip()
 
-            if kind == "won" and not win_reason:
-                raise serializers.ValidationError(
-                    {"win_reason": "Required when closing a deal as Won."}
-                )
             if kind == "lost" and not loss_reason:
                 raise serializers.ValidationError(
                     {"loss_reason": "Required when closing a deal as Lost."}

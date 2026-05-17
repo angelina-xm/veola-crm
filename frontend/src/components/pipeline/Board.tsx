@@ -37,7 +37,19 @@ import {
   type NotificationItem,
   type PatchDealPayload,
 } from "@/src/lib/api";
-import DealWonConfirmation from "@/src/components/deals/DealWonConfirmation";
+import CloseDealLostModal, {
+  type CloseDealLostPayload,
+} from "@/src/components/pipeline/CloseDealLostModal";
+import CloseDealWonModal, {
+  type CloseDealWonPayload,
+} from "@/src/components/pipeline/CloseDealWonModal";
+import CloseDropZones from "@/src/components/pipeline/CloseDropZones";
+import {
+  type CloseOutcome,
+  isCloseDropZoneId,
+  isClosedStageName,
+  outcomeFromCloseZoneId,
+} from "@/src/lib/pipelineLifecycle";
 import {
   clientNameById,
   formatCreatedRelative,
@@ -70,14 +82,21 @@ import {
   Client,
   DealsByStage,
   Deal,
-  DealCloseTransition,
   PipelineStage,
   StaleDeal,
 } from "@/src/types";
 import PipelineAnalyticsCompact from "@/src/components/analytics/PipelineAnalyticsCompact";
 
+type PendingClose = {
+  deal: Deal;
+  outcome: CloseOutcome;
+  targetStageId: number;
+};
+
 interface BoardProps {
   stages: PipelineStage[];
+  wonStage?: PipelineStage;
+  lostStage?: PipelineStage;
   dealsByStage: DealsByStage;
   setDealsByStage: React.Dispatch<React.SetStateAction<DealsByStage>>;
   companyId: number;
@@ -270,33 +289,7 @@ function rollbackSingleMovedDeal(
   return next;
 }
 
-function promptClosePatchBody(
-  stageId: number,
-  stageName: string
-): PatchDealPayload | null {
-  const key = stageName.trim().toLowerCase();
-  const body: PatchDealPayload = { stage: stageId };
-  if (key === "won") {
-    const reason =
-      typeof window !== "undefined"
-        ? window.prompt("Win reason (required):")
-        : "";
-    if (!reason?.trim()) return null;
-    body.win_reason = reason.trim();
-  } else if (key === "lost") {
-    const reason =
-      typeof window !== "undefined"
-        ? window.prompt("Loss reason (required):")
-        : "";
-    if (!reason?.trim()) return null;
-    body.loss_reason = reason.trim();
-  }
-  return body;
-}
-
-function readDealPatch(raw: unknown): Deal & {
-  closeTransition?: DealCloseTransition | null;
-} {
+function readDealPatch(raw: unknown): Deal {
   if (
     typeof raw !== "object" ||
     raw === null ||
@@ -312,16 +305,14 @@ function readDealPatch(raw: unknown): Deal & {
     amount?: string | number;
     client?: string | number | null;
     created_at?: string;
-    close_transition?: DealCloseTransition | null;
   };
-  return {
-    ...normalizeDealPayload(o),
-    closeTransition: o.close_transition ?? null,
-  };
+  return normalizeDealPayload(o);
 }
 
 export default function Board({
   stages,
+  wonStage,
+  lostStage,
   dealsByStage,
   setDealsByStage,
   companyId,
@@ -354,9 +345,9 @@ export default function Board({
     useState<AnalyticsV1Overview | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [analyticsError, setAnalyticsError] = useState<string | null>(null);
-  const [wonTransition, setWonTransition] = useState<DealCloseTransition | null>(
-    null
-  );
+  const [pendingClose, setPendingClose] = useState<PendingClose | null>(null);
+  const [closeSubmitting, setCloseSubmitting] = useState(false);
+  const [closeError, setCloseError] = useState<string | null>(null);
 
   const loadAnalyticsOverview = useCallback(async () => {
     if (!showAnalytics) return;
@@ -527,12 +518,7 @@ export default function Board({
 
   const moveDealToFallbackStage = useCallback(
     async (dealId: string, preset: StageFallbackPreset) => {
-      const targetName =
-        preset === "new"
-          ? "new"
-          : preset === "negotiation"
-            ? "negotiation"
-            : "won";
+      const targetName = preset === "new" ? "new" : "negotiation";
       const targetStage = stages.find(
         (s) => String(s.name).trim().toLowerCase() === targetName
       );
@@ -554,17 +540,10 @@ export default function Board({
       setMovingStageDealId(dealId);
       setDealsByStage((prev) => upsertDealInGrouped(prev, optimistic));
       try {
-        const stageNum = Number.parseInt(String(targetStage.id), 10);
-        const patchBody = promptClosePatchBody(stageNum, targetStage.name);
-        if (patchBody === null) {
-          setDealsByStage((prev) => upsertDealInGrouped(prev, current));
-          return;
-        }
-        const raw = await patchDeal(companyId, dealId, patchBody);
+        const raw = await patchDeal(companyId, dealId, {
+          stage: Number.parseInt(String(targetStage.id), 10),
+        });
         const normalized = readDealPatch(raw);
-        if (normalized.closeTransition) {
-          setWonTransition(normalized.closeTransition);
-        }
         setDealsByStage((prev) =>
           upsertDealInGrouped(prev, {
             ...optimistic,
@@ -893,14 +872,105 @@ export default function Board({
     []
   );
 
+  const openCloseIntent = useCallback(
+    (deal: Deal, outcome: CloseOutcome) => {
+      const stage = outcome === "won" ? wonStage : lostStage;
+      if (!stage) {
+        if (typeof window !== "undefined") {
+          window.alert(
+            `Pipeline stage "${outcome}" is not configured. Add it in settings or contact an admin.`
+          );
+        }
+        return;
+      }
+      setCloseError(null);
+      setPendingClose({
+        deal,
+        outcome,
+        targetStageId: Number.parseInt(String(stage.id), 10),
+      });
+    },
+    [lostStage, wonStage]
+  );
+
+  const handleConfirmCloseWon = useCallback(
+    async (payload: CloseDealWonPayload) => {
+      if (!pendingClose || pendingClose.outcome !== "won") return;
+      setCloseSubmitting(true);
+      setCloseError(null);
+      try {
+        await patchDeal(companyId, pendingClose.deal.id, {
+          stage: pendingClose.targetStageId,
+          win_reason: payload.win_reason,
+        });
+        setDealsByStage((prev) =>
+          removeDealFromGrouped(prev, String(pendingClose.deal.id))
+        );
+        setPendingClose(null);
+      } catch (err) {
+        setCloseError(
+          err instanceof Error ? err.message : "Failed to close deal"
+        );
+      } finally {
+        setCloseSubmitting(false);
+      }
+    },
+    [companyId, pendingClose, setDealsByStage]
+  );
+
+  const handleConfirmCloseLost = useCallback(
+    async (payload: CloseDealLostPayload) => {
+      if (!pendingClose || pendingClose.outcome !== "lost") return;
+      setCloseSubmitting(true);
+      setCloseError(null);
+      try {
+        await patchDeal(companyId, pendingClose.deal.id, {
+          stage: pendingClose.targetStageId,
+          loss_reason: payload.loss_reason,
+          close_competitor: payload.close_competitor,
+          close_notes: payload.close_notes,
+        });
+        setDealsByStage((prev) =>
+          removeDealFromGrouped(prev, String(pendingClose.deal.id))
+        );
+        setPendingClose(null);
+      } catch (err) {
+        setCloseError(
+          err instanceof Error ? err.message : "Failed to close deal"
+        );
+      } finally {
+        setCloseSubmitting(false);
+      }
+    },
+    [companyId, pendingClose, setDealsByStage]
+  );
+
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
-      if (dndLoading) return;
+      if (dndLoading || closeSubmitting) return;
       const { active, over } = event;
 
       if (!over) return;
       const activeDealId = parseDealId(String(active.id));
       const overRawId = String(over.id);
+
+      const deal = findDealInBoard(dealsByStage, activeDealId);
+      if (!deal) return;
+
+      if (isCloseDropZoneId(overRawId)) {
+        openCloseIntent(deal, outcomeFromCloseZoneId(overRawId));
+        return;
+      }
+
+      const targetStageId = parseStageId(overRawId);
+      const targetStage = stages.find((s) => String(s.id) === targetStageId);
+      if (targetStage && isClosedStageName(targetStage.name)) {
+        openCloseIntent(
+          deal,
+          targetStage.name.trim().toLowerCase() === "lost" ? "lost" : "won"
+        );
+        return;
+      }
 
       const computed = computeNextBoardAfterDrag(
         dealsByStage,
@@ -913,45 +983,33 @@ export default function Board({
       const { next, mutation } = computed;
       setDealsByStage(next);
 
-      const { movedDealId, targetStageId } = mutation;
+      const { movedDealId, targetStageId: tgtId } = mutation;
 
       setDndLoading(true);
 
       try {
-        const targetStage = stages.find((s) => String(s.id) === targetStageId);
-        const stageNum = Number.parseInt(String(targetStageId), 10);
-        const patchBody =
-          targetStage != null
-            ? promptClosePatchBody(stageNum, targetStage.name)
-            : { stage: stageNum };
-        if (patchBody === null) {
-          setDealsByStage((prev) => rollbackSingleMovedDeal(prev, mutation));
-          return;
-        }
-        const raw = await patchDeal(companyId, movedDealId, patchBody);
+        const raw = await patchDeal(companyId, movedDealId, {
+          stage: Number.parseInt(String(tgtId), 10),
+        });
         const updatedDeal = readDealPatch(raw);
-        if (updatedDeal.closeTransition) {
-          setWonTransition(updatedDeal.closeTransition);
-        }
 
         setDealsByStage((prev) => {
-          const next: DealsByStage = {};
-          const resolvedStageId = String(updatedDeal.stage ?? targetStageId);
+          const nextBoard: DealsByStage = {};
+          const resolvedStageId = String(updatedDeal.stage ?? tgtId);
           for (const [stageId, deals] of Object.entries(prev)) {
-            next[stageId] = deals.map((deal) =>
-              String(deal.id) === movedDealId
+            nextBoard[stageId] = deals.map((d) =>
+              String(d.id) === movedDealId
                 ? {
-                    ...deal,
+                    ...d,
                     ...updatedDeal,
                     stage: resolvedStageId,
                     stageId: resolvedStageId,
-                    created_at:
-                      updatedDeal.created_at ?? deal.created_at,
+                    created_at: updatedDeal.created_at ?? d.created_at,
                   }
-                : deal
+                : d
             );
           }
-          return next;
+          return nextBoard;
         });
       } catch (err) {
         setDealsByStage((prev) => rollbackSingleMovedDeal(prev, mutation));
@@ -965,7 +1023,16 @@ export default function Board({
         setDndLoading(false);
       }
     },
-    [companyId, dealsByStage, dndLoading, findStageIdByDealId, setDealsByStage]
+    [
+      closeSubmitting,
+      companyId,
+      dealsByStage,
+      dndLoading,
+      findStageIdByDealId,
+      openCloseIntent,
+      setDealsByStage,
+      stages,
+    ]
   );
 
   const handleDragStart = useCallback(
@@ -1263,14 +1330,6 @@ export default function Board({
         </div>
       </div>
 
-      {wonTransition ? (
-        <div className="mb-4">
-          <DealWonConfirmation
-            transition={wonTransition}
-            onDismiss={() => setWonTransition(null)}
-          />
-        </div>
-      ) : null}
       <NotificationBar
         items={syncedNotificationItems}
         totalBadge={syncedNotificationTotal}
@@ -1431,6 +1490,11 @@ export default function Board({
               addingNoteDealId={addingNoteDealId}
             />
           ))}
+          <CloseDropZones
+            canClose={allowPipelineMutations}
+            hasWon={Boolean(wonStage)}
+            hasLost={Boolean(lostStage)}
+          />
         </div>
         <DragOverlay>
           {overlayDeal ? (
@@ -1453,6 +1517,33 @@ export default function Board({
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      <CloseDealWonModal
+        deal={pendingClose?.outcome === "won" ? pendingClose.deal : null}
+        open={pendingClose?.outcome === "won"}
+        submitting={closeSubmitting}
+        error={closeError}
+        onCancel={() => {
+          if (!closeSubmitting) {
+            setPendingClose(null);
+            setCloseError(null);
+          }
+        }}
+        onConfirm={handleConfirmCloseWon}
+      />
+      <CloseDealLostModal
+        deal={pendingClose?.outcome === "lost" ? pendingClose.deal : null}
+        open={pendingClose?.outcome === "lost"}
+        submitting={closeSubmitting}
+        error={closeError}
+        onCancel={() => {
+          if (!closeSubmitting) {
+            setPendingClose(null);
+            setCloseError(null);
+          }
+        }}
+        onConfirm={handleConfirmCloseLost}
+      />
 
       {modalOpen ? (
         <DealModal

@@ -23,6 +23,7 @@ export interface Deal {
   close_competitor?: string;
   close_notes?: string;
   is_operational?: boolean;
+  stage_name?: string | null;
   close_transition?: DealCloseTransition | null;
 }
 

@@ -19,7 +19,7 @@ import { DAY_MS, scaleMs } from "@/src/lib/timeConfig";
 import { Activity, Client, Deal } from "@/src/types";
 import DealQuickTaskMenu from "./DealQuickTaskMenu";
 
-export type StageFallbackPreset = "new" | "negotiation" | "won";
+export type StageFallbackPreset = "new" | "negotiation";
 export type SuggestedAction = "Call client" | "Send proposal" | "Follow up";
 export type DealHealth = "urgent" | "at_risk" | "cold";
 
@@ -458,7 +458,6 @@ export default function DealCard({
               </option>
               <option value="new">New</option>
               <option value="negotiation">Negotiation</option>
-              <option value="won">Won</option>
             </select>
           ) : null}
         </div>
