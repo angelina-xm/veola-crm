@@ -8,6 +8,41 @@ export interface Client {
   company?: string | number;
 }
 
+export type TimelineFilter = "all" | "deals" | "activities" | "tasks";
+
+export interface TimelineEvent {
+  id: string;
+  kind: "deal" | "activity" | "task";
+  event_type: string;
+  title: string;
+  subtitle: string;
+  body: string;
+  occurred_at: string;
+  importance: "normal" | "highlight" | "milestone";
+  filter_group: "deals" | "activities" | "tasks";
+  deal_id: number | null;
+  deal_title: string | null;
+  metadata: Record<string, unknown>;
+}
+
+export interface ClientTimelineSummary {
+  total_deals: number;
+  open_deals: number;
+  won_deals: number;
+  lost_deals: number;
+  total_won_revenue: number;
+  relationship_since: string | null;
+  timeline_events: number;
+}
+
+/** GET /clients/:id/timeline/ */
+export interface ClientTimeline {
+  client_id: number;
+  client_name: string;
+  summary: ClientTimelineSummary;
+  events: TimelineEvent[];
+}
+
 // Deal
 export interface Deal {
   id: string | number;

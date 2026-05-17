@@ -721,6 +721,22 @@ export async function getClients(companyId: number): Promise<Client[]> {
   }));
 }
 
+export async function getClientTimeline(
+  companyId: number,
+  clientId: string | number,
+  filter: import("@/src/types").TimelineFilter = "all"
+): Promise<import("@/src/types").ClientTimeline> {
+  const path =
+    filter === "all"
+      ? `/clients/${clientId}/timeline/`
+      : `/clients/${clientId}/timeline/?filter=${encodeURIComponent(filter)}`;
+  const res = await fetchWithAuth(path, {}, companyId);
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  return res.json();
+}
+
 export type CreateClientPayload = {
   name: string;
   email?: string;

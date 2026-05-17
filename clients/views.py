@@ -1,11 +1,13 @@
 from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from deals.models import Deal
 
 from .models import Client
-from .serializers import ClientSerializer
+from .serializers import ClientSerializer, ClientTimelineSerializer
+from .timeline import CustomerTimelineBuilder
 from .permissions import (
     HasCompany,
     CanCreateDeals,
@@ -24,7 +26,7 @@ class ClientViewSet(viewsets.ModelViewSet):
 
     #  ПРАВА
     def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
+        if self.action in ["list", "retrieve", "timeline"]:
             return [IsAuthenticated(), HasCompany()]
 
         elif self.action == 'create':
@@ -41,6 +43,20 @@ class ClientViewSet(viewsets.ModelViewSet):
     #  CREATE (привязка к компании)
     def perform_create(self, serializer):
         serializer.save(company=self.request.company)
+
+    @action(detail=True, methods=["get"], url_path="timeline")
+    def timeline(self, request, pk=None):
+        client = self.get_object()
+        raw_filter = (request.query_params.get("filter") or "all").lower()
+        if raw_filter not in ("all", "deals", "activities", "tasks"):
+            raw_filter = "all"
+        payload = CustomerTimelineBuilder(
+            client=client,
+            user=request.user,
+            company=request.company,
+            membership=getattr(request, "membership", None),
+        ).build(filter_group=raw_filter)
+        return Response(ClientTimelineSerializer(payload).data)
 
     def destroy(self, request, *args, **kwargs):
         client = self.get_object()
