@@ -18,13 +18,13 @@ from activities.automation_intents import (
     INTENT_SUGGEST_REORDER,
     AutomationCandidate,
 )
-from activities.automation_orchestrator import AutomationOrchestrator, last_meaningful_activity_at
+from activities.automation_orchestrator import AutomationOrchestrator
 from activities.models import Activity
 from companies.models import CompanySettings
+from deals.inactivity import InactivityEngine
 from deals.models import Deal
 from deals.visibility import get_operational_visible_deals
 
-STALE_HOURS = 48
 DORMANT_HOURS = 96
 NEW_DEAL_GRACE = timedelta(days=1)
 
@@ -36,13 +36,6 @@ def _pricing_count(deal: Deal) -> int:
         deal=deal,
         type=Activity.Type.NOTE,
     ).filter(Q(category__iexact="pricing")).count()
-
-
-def _deal_is_stale_for_followup(deal: Deal, now) -> bool:
-    reference = last_meaningful_activity_at(deal, now=now)
-    if deal.created_at and now - deal.created_at < NEW_DEAL_GRACE:
-        return False
-    return now - reference > timedelta(hours=STALE_HOURS)
 
 
 def _deal_is_dormant(deal: Deal, now) -> bool:
@@ -62,6 +55,7 @@ def reconcile_automation_tasks(
     cfg = settings
     if cfg is None:
         cfg = CompanySettings.objects.filter(company=company).first()
+    follow_up_on = False if cfg is None else cfg.auto_follow_up
     discount_on = True if cfg is None else cfg.auto_discount
     reorder_on = True if cfg is None else cfg.auto_reorder
 
@@ -83,7 +77,10 @@ def reconcile_automation_tasks(
         cid = deal.company_id
         candidates: list[AutomationCandidate] = []
 
-        if _deal_is_stale_for_followup(deal, now):
+        eval_result = InactivityEngine.refresh_signal(
+            deal, auto_follow_up=follow_up_on
+        )
+        if eval_result.create_follow_up_task:
             candidates.append(
                 AutomationCandidate(
                     intent=INTENT_REACH_OUT,
@@ -91,9 +88,11 @@ def reconcile_automation_tasks(
                     content="Follow up with client",
                     auto_type="follow_up",
                     due_date=now + timedelta(days=1),
-                    create_task=False,
+                    create_task=True,
                 )
             )
+        elif eval_result.is_active:
+            stats["signals_only"] += 1
 
         pricing_n = _pricing_count(deal)
         if discount_on and pricing_n >= 3:
@@ -125,9 +124,6 @@ def reconcile_automation_tasks(
                 deal=deal, author=user, candidates=[]
             )
             continue
-
-        if any(not c.create_task for c in candidates):
-            stats["signals_only"] += 1
 
         result = AutomationOrchestrator.reconcile_deal_heuristics(
             deal=deal,

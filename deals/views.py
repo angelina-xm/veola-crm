@@ -21,6 +21,8 @@ from .serializers import (
     PipelineStageSerializer,
     StaleDealSerializer,
 )
+from .inactivity_actions import apply_inactivity_action
+from .pipeline_health import compute_pipeline_health
 from .visibility import get_operational_visible_deals, get_visible_deals
 from clients.permissions import (
     HasCompany,
@@ -48,13 +50,19 @@ class DealViewSet(viewsets.ModelViewSet):
         return qs
 
     def get_permissions(self):
-        if self.action in ["list", "retrieve", "stale", "closed_summary"]:
+        if self.action in [
+            "list",
+            "retrieve",
+            "stale",
+            "closed_summary",
+            "pipeline_health",
+        ]:
             return [IsAuthenticated(), HasCompany()]
 
         elif self.action == "create":
             return [IsAuthenticated(), HasCompany(), CanCreateDeals()]
 
-        elif self.action in ["update", "partial_update"]:
+        elif self.action in ["update", "partial_update", "inactivity_action"]:
             return [IsAuthenticated(), HasCompany(), CanEditDealObject()]
 
         elif self.action == "destroy":
@@ -141,10 +149,38 @@ class DealViewSet(viewsets.ModelViewSet):
             return Response(data)
         return Response(serializer.data)
 
+    @action(detail=False, methods=["get"], url_path="pipeline-health")
+    def pipeline_health(self, request):
+        qs = get_operational_visible_deals(
+            user=request.user,
+            company=request.company,
+            membership=getattr(request, "membership", None),
+        )
+        return Response(
+            compute_pipeline_health(deals_qs=qs, company=request.company)
+        )
+
+    @action(detail=True, methods=["post"], url_path="inactivity-action")
+    def inactivity_action(self, request, pk=None):
+        deal = self.get_object()
+        action_name = (request.data.get("action") or "").strip()
+        if not action_name:
+            return Response({"detail": "action is required"}, status=400)
+        try:
+            result = apply_inactivity_action(
+                deal=deal,
+                user=request.user,
+                action=action_name,
+                payload=request.data,
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=400)
+        return Response(result)
+
     @action(detail=False, methods=["get"], url_path="stale")
     def stale(self, request):
         """Operational deals without recent activity (excludes Won/Lost)."""
-        stale_time = timezone.now() - timedelta(hours=48)
+        stale_time = timezone.now() - timedelta(hours=24)
         qs = (
             get_operational_visible_deals(
                 user=request.user,

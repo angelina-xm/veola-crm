@@ -12,6 +12,9 @@ from django.utils import timezone
 from activities.models import Activity
 from activities.task_state import is_task_overdue
 
+from companies.models import CompanySettings
+
+from .inactivity import InactivityEngine
 from .models import Deal, DealSignal
 from .operational import is_operational_deal
 
@@ -40,7 +43,9 @@ class SignalEngine:
             DealSignal.objects.filter(deal=deal, is_active=True).update(is_active=False)
             return
         with transaction.atomic():
-            cls._check_stale(deal)
+            cfg = CompanySettings.objects.filter(company_id=deal.company_id).first()
+            auto_follow_up = bool(cfg.auto_follow_up) if cfg else False
+            InactivityEngine.refresh_signal(deal, auto_follow_up=auto_follow_up)
             cls._check_closing_soon(deal)
             cls._check_no_contact(deal)
             cls._check_high_value_idle(deal)
@@ -77,23 +82,6 @@ class SignalEngine:
     def _last_activity_at(cls, deal: Deal):
         agg = Activity.objects.filter(deal=deal).aggregate(m=Max("created_at"))
         return agg["m"] or deal.created_at
-
-    @classmethod
-    def _check_stale(cls, deal: Deal) -> None:
-        last_activity = cls._last_activity_at(deal)
-        days_idle = (timezone.now() - last_activity).days
-        is_stale = days_idle >= cls.STALE_DAYS
-        cls._upsert_signal(
-            deal=deal,
-            signal_type=DealSignal.SignalType.STALE,
-            severity=(
-                DealSignal.Severity.CRITICAL
-                if days_idle >= 14
-                else DealSignal.Severity.WARNING
-            ),
-            metadata={"days_idle": days_idle},
-            is_active=is_stale,
-        )
 
     @classmethod
     def _check_closing_soon(cls, deal: Deal) -> None:

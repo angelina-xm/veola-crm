@@ -25,6 +25,35 @@ export interface Deal {
   is_operational?: boolean;
   stage_name?: string | null;
   close_transition?: DealCloseTransition | null;
+  waiting_on_client?: boolean;
+  waiting_reason?: string;
+  follow_up_on?: string | null;
+}
+
+/** GET /deals/pipeline-health/ */
+export interface PipelineHealth {
+  total_operational: number;
+  healthy: number;
+  attention_needed: number;
+  at_risk: number;
+  waiting_on_client: number;
+  summary_message: string;
+  tiers: { tier1_hours: number; tier2_days: number; tier3_days: number };
+}
+
+export interface DealSignal {
+  id: string;
+  signal_type: string;
+  severity: "info" | "warning" | "critical";
+  is_active: boolean;
+  deal: number;
+  deal_title?: string;
+  message?: string;
+  tier?: number | null;
+  suggested_actions?: string[];
+  metadata?: Record<string, unknown>;
+  first_seen_at?: string;
+  last_checked_at?: string;
 }
 
 /** PATCH /deals/:id/ when closing as Won */

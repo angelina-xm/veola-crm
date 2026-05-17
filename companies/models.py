@@ -132,7 +132,7 @@ class CompanySettings(models.Model):
         on_delete=models.CASCADE,
         related_name="settings",
     )
-    auto_follow_up = models.BooleanField(default=True)
+    auto_follow_up = models.BooleanField(default=False)
     auto_discount = models.BooleanField(default=True)
     auto_reorder = models.BooleanField(default=True)
 

@@ -8,6 +8,7 @@ import {
 } from "@/src/lib/dealDisplay";
 import { Client, Deal, PipelineStage, StaleDeal } from "@/src/types";
 import DealActivitiesTimeline from "./DealActivitiesTimeline";
+import DealInactivityPanel from "./DealInactivityPanel";
 
 export type DealModalMode = "create" | "edit";
 
@@ -136,20 +137,6 @@ export default function DealModal({
 
   const titleText =
     mode === "create" ? "Новая сделка" : "Редактировать сделку";
-
-  const staleInactiveDays =
-    mode === "edit" && deal && staleRow
-      ? (() => {
-          const ref = staleRow.last_activity ?? deal.created_at;
-          if (!ref) return 2;
-          return Math.max(
-            0,
-            Math.floor(
-              (Date.now() - new Date(ref).getTime()) / (24 * 60 * 60 * 1000)
-            )
-          );
-        })()
-      : 0;
 
   return (
     <div
@@ -348,38 +335,14 @@ export default function DealModal({
           </div>
         </form>
 
-        {mode === "edit" && deal && staleRow ? (
-          <div
-            className={`mb-4 rounded px-3 py-2 text-sm ${
-              staleInactiveDays > 0
-                ? "border border-red-200 bg-red-50 text-red-900"
-                : "border border-gray-200 bg-gray-50 text-gray-700"
-            }`}
-          >
-            <div className="flex flex-wrap items-center gap-2">
-              <span>
-                {staleInactiveDays > 0
-                  ? `🚨 No activity for ${staleInactiveDays} day${staleInactiveDays === 1 ? "" : "s"}`
-                  : "No activity yet"}
-              </span>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => {
-                  document
-                    .getElementById("deal-activities-section")
-                    ?.scrollIntoView({ behavior: "smooth", block: "start" });
-                }}
-                className={`rounded bg-white px-2 py-1 text-xs font-medium disabled:opacity-50 ${
-                  staleInactiveDays > 0
-                    ? "border border-red-300 hover:bg-red-100"
-                    : "border border-gray-300 hover:bg-gray-100"
-                }`}
-              >
-                + Add Activity
-              </button>
-            </div>
-          </div>
+        {mode === "edit" && deal ? (
+          <DealInactivityPanel
+            companyId={companyId}
+            deal={deal}
+            staleRow={staleRow}
+            disabled={busy}
+            onMutated={onActivitiesMutated}
+          />
         ) : null}
 
         {mode === "edit" && deal ? (

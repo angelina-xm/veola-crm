@@ -35,7 +35,7 @@ import { memberPermissionsFromMeResponse } from "@/src/lib/roles";
 export { AuthError } from "@/src/lib/auth";
 
 export const AUTOMATION_SETTINGS_FALLBACK: AutomationSettings = {
-  auto_follow_up: true,
+  auto_follow_up: false,
   auto_discount: true,
   auto_reorder: true,
 };
@@ -501,6 +501,50 @@ export async function getNotifications(
     }
   }
   return out;
+}
+
+export async function getPipelineHealth(
+  companyId: number
+): Promise<import("@/src/types").PipelineHealth> {
+  const res = await fetchWithAuth("/deals/pipeline-health/", {}, companyId);
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  return res.json();
+}
+
+export type InactivityAction =
+  | "add_follow_up"
+  | "log_call"
+  | "waiting_on_client"
+  | "clear_waiting"
+  | "snooze"
+  | "dismiss";
+
+export async function postDealInactivityAction(
+  companyId: number,
+  dealId: string | number,
+  body: {
+    action: InactivityAction;
+    waiting_reason?: string;
+    follow_up_on?: string;
+    content?: string;
+    days?: number;
+  }
+): Promise<Record<string, unknown>> {
+  const res = await fetchWithAuth(
+    `/deals/${dealId}/inactivity-action/`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    companyId
+  );
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  return res.json();
 }
 
 export async function getStaleDeals(companyId: number): Promise<StaleDeal[]> {
@@ -1174,6 +1218,9 @@ export type PatchDealPayload = {
   loss_reason?: string;
   close_competitor?: string;
   close_notes?: string;
+  waiting_on_client?: boolean;
+  waiting_reason?: string;
+  follow_up_on?: string | null;
 };
 
 export type PatchDealResponse = {

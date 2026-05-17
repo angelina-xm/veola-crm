@@ -16,8 +16,9 @@ type RuleRow = {
 const RULES: RuleRow[] = [
   {
     id: "auto_follow_up",
-    title: "Follow up when deal is inactive",
-    description: "Create task: Follow up with client",
+    title: "Follow up when deal is inactive (5+ days)",
+    description:
+      "When on, creates one follow-up task at tier 2. When off, calm signals only.",
   },
   {
     id: "auto_discount",

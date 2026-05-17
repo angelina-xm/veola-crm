@@ -174,6 +174,9 @@ class TaskSerializer(serializers.ModelSerializer):
 
 class DealSignalSerializer(serializers.ModelSerializer):
     deal_title = serializers.CharField(source="deal.title", read_only=True)
+    message = serializers.SerializerMethodField()
+    tier = serializers.SerializerMethodField()
+    suggested_actions = serializers.SerializerMethodField()
 
     class Meta:
         model = DealSignal
@@ -185,10 +188,37 @@ class DealSignalSerializer(serializers.ModelSerializer):
             "deal",
             "deal_title",
             "metadata",
+            "message",
+            "tier",
+            "suggested_actions",
             "first_seen_at",
             "last_checked_at",
         ]
         read_only_fields = fields
+
+    def _meta(self, obj: DealSignal) -> dict:
+        return obj.metadata if isinstance(obj.metadata, dict) else {}
+
+    def get_message(self, obj: DealSignal) -> str:
+        meta = self._meta(obj)
+        return str(meta.get("message") or "")
+
+    def get_tier(self, obj: DealSignal) -> int | None:
+        meta = self._meta(obj)
+        if obj.signal_type == DealSignal.SignalType.INACTIVE:
+            return int(meta.get("tier") or 0) or None
+        return None
+
+    def get_suggested_actions(self, obj: DealSignal) -> list:
+        meta = self._meta(obj)
+        actions = meta.get("suggested_actions")
+        if isinstance(actions, list):
+            return actions
+        if obj.signal_type == DealSignal.SignalType.INACTIVE:
+            from deals.inactivity import SUGGESTED_ACTIONS
+
+            return list(SUGGESTED_ACTIONS)
+        return []
 
 
 class WorkspaceHealthSerializer(serializers.Serializer):

@@ -50,10 +50,21 @@ class DealSerializer(serializers.ModelSerializer):
             "loss_reason",
             "close_competitor",
             "close_notes",
+            "waiting_on_client",
+            "waiting_reason",
+            "follow_up_on",
+            "inactivity_snoozed_until",
             "is_operational",
             "close_transition",
         ]
-        read_only_fields = ["company", "created_by", "closed_at", "is_operational", "close_transition"]
+        read_only_fields = [
+            "company",
+            "created_by",
+            "closed_at",
+            "is_operational",
+            "close_transition",
+            "inactivity_snoozed_until",
+        ]
 
     def get_is_operational(self, obj: Deal) -> bool:
         return obj.is_operational

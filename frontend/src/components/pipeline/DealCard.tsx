@@ -414,7 +414,7 @@ export default function DealCard({
           {needsAttention ? (
             <p className="mt-1 inline-flex animate-pulse items-center gap-1 text-xs font-semibold text-amber-900">
               <span aria-hidden>⚠️</span>
-              <span>Needs attention</span>
+              <span>Quiet lately</span>
             </p>
           ) : null}
         </div>

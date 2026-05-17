@@ -31,6 +31,7 @@ import {
   getAnalyticsV1Overview,
   getCompanyNotes,
   getCompanyOpenTasks,
+  getPipelineHealth,
   getStaleDeals,
   patchActivity,
   patchDeal,
@@ -86,6 +87,8 @@ import {
   StaleDeal,
 } from "@/src/types";
 import PipelineAnalyticsCompact from "@/src/components/analytics/PipelineAnalyticsCompact";
+import PipelineHealthBanner from "@/src/components/pipeline/PipelineHealthBanner";
+import type { PipelineHealth } from "@/src/types";
 
 type PendingClose = {
   deal: Deal;
@@ -378,6 +381,10 @@ export default function Board({
   const [modalError, setModalError] = useState<string | null>(null);
   const [deletingDealId, setDeletingDealId] = useState<string | null>(null);
   const [staleDeals, setStaleDeals] = useState<StaleDeal[]>([]);
+  const [pipelineHealth, setPipelineHealth] = useState<PipelineHealth | null>(
+    null
+  );
+  const [pipelineHealthLoading, setPipelineHealthLoading] = useState(true);
   const [openCompanyTasks, setOpenCompanyTasks] = useState<Activity[]>([]);
   const [notesByDealId, setNotesByDealId] = useState<Record<string, Activity[]>>(
     {}
@@ -822,24 +829,33 @@ export default function Board({
     return m;
   }, [staleDeals]);
 
+  const refreshInactivityData = useCallback(async () => {
+    setPipelineHealthLoading(true);
+    try {
+      const [list, health] = await Promise.all([
+        getStaleDeals(companyId),
+        getPipelineHealth(companyId),
+      ]);
+      setStaleDeals(
+        list.filter((deal) =>
+          isDealStale({
+            createdAt: deal.created_at,
+            lastActivityAt: deal.last_activity,
+          })
+        )
+      );
+      setPipelineHealth(health);
+    } catch {
+      setStaleDeals([]);
+      setPipelineHealth(null);
+    } finally {
+      setPipelineHealthLoading(false);
+    }
+  }, [companyId]);
+
   useEffect(() => {
-    const run = async () => {
-      try {
-        const list = await getStaleDeals(companyId);
-        setStaleDeals(
-          list.filter((deal) =>
-            isDealStale({
-              createdAt: deal.created_at,
-              lastActivityAt: deal.last_activity,
-            })
-          )
-        );
-      } catch {
-        setStaleDeals([]);
-      }
-    };
-    void run();
-  }, [companyId, modalOpen]);
+    void refreshInactivityData();
+  }, [refreshInactivityData, modalOpen]);
 
   useEffect(() => {
     const run = async () => {
@@ -1352,13 +1368,18 @@ export default function Board({
         </div>
       ) : null}
 
+      <PipelineHealthBanner
+        health={pipelineHealth}
+        loading={pipelineHealthLoading}
+      />
+
       {attentionDeals.length > 0 ? (
-        <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-          <p className="font-semibold">
-            ⚠️ {attentionDeals.length}{" "}
+        <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
+          <p className="font-medium">
+            {attentionDeals.length}{" "}
             {attentionDeals.length === 1
-              ? "deal requires follow-up"
-              : "deals require follow-up"}
+              ? "deal could use a check-in"
+              : "deals could use a check-in"}
           </p>
           <ul className="mt-2 max-h-40 space-y-2 overflow-y-auto">
             {attentionDeals.map((s) => {
@@ -1378,7 +1399,7 @@ export default function Board({
               return (
               <li
                 key={s.id}
-                className="rounded border border-amber-200 bg-white px-2 py-1.5"
+                className="rounded border border-slate-200 bg-white px-2 py-1.5"
               >
                 <button
                   type="button"
@@ -1428,16 +1449,6 @@ export default function Board({
           error={analyticsError}
           onRetry={() => void loadAnalyticsOverview()}
         />
-      ) : null}
-      {attentionCount > 0 ? (
-        <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          <p className="font-semibold">
-            ⚠️ {attentionCount}{" "}
-            {attentionCount === 1
-              ? "deal needs attention"
-              : "deals need attention"}
-          </p>
-        </div>
       ) : null}
 
       <DndContext
@@ -1570,7 +1581,10 @@ export default function Board({
               ? staleById.get(String(dealInModal.id)) ?? null
               : null
           }
-          onActivitiesMutated={refreshOpenTasksAndNotifications}
+          onActivitiesMutated={async () => {
+            await refreshOpenTasksAndNotifications();
+            await refreshInactivityData();
+          }}
         />
       ) : null}
     </>

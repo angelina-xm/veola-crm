@@ -67,6 +67,10 @@ class Deal(models.Model):
     loss_reason = models.CharField(max_length=255, blank=True, default="")
     close_competitor = models.CharField(max_length=255, blank=True, default="")
     close_notes = models.TextField(blank=True, default="")
+    waiting_on_client = models.BooleanField(default=False)
+    waiting_reason = models.CharField(max_length=100, blank=True, default="")
+    follow_up_on = models.DateTimeField(null=True, blank=True)
+    inactivity_snoozed_until = models.DateTimeField(null=True, blank=True)
 
     objects = DealQuerySet.as_manager()
 
@@ -87,7 +91,8 @@ class DealSignal(models.Model):
     """
 
     class SignalType(models.TextChoices):
-        STALE = "stale", "No recent activity"
+        STALE = "stale", "No recent activity (legacy)"
+        INACTIVE = "inactive", "Deal inactivity guidance"
         CLOSING_SOON = "closing_soon", "Close date approaching"
         NO_CONTACT = "no_contact", "Client missing contact details"
         HIGH_VALUE_IDLE = "high_value_idle", "High-value deal needs attention"
