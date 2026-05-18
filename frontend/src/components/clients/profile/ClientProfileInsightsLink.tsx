@@ -16,7 +16,7 @@ export default function ClientProfileInsightsLink({
     <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[var(--vx-shadow-card)]">
       <h2 className="text-sm font-semibold text-zinc-900">Commercial snapshot</h2>
       <p className="mt-0.5 text-xs text-zinc-500">
-        Account-level rollup — full intelligence lives in commercial insights.
+        Account-level rollup — see full intelligence in Client analytics.
       </p>
       <dl className="mt-4 grid grid-cols-2 gap-3">
         <div className="rounded-lg bg-zinc-50/80 px-3 py-2">
@@ -40,7 +40,7 @@ export default function ClientProfileInsightsLink({
         href={`${ROUTES.clientsAnalytics}?highlight=${clientId}`}
         className="mt-4 inline-flex text-sm font-medium text-[var(--vx-accent)] hover:underline"
       >
-        Open commercial insights →
+        Open client analytics →
       </Link>
     </section>
   );

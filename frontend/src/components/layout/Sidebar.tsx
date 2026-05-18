@@ -11,6 +11,7 @@ import {
   canManageTeam,
   canViewAnalytics,
 } from "@/src/lib/roles";
+import ClientsSidebarSection from "@/src/components/layout/ClientsSidebarSection";
 
 type NavItem = {
   href: string;
@@ -65,19 +66,6 @@ function IconCatalog() {
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function IconClients() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M16 11a4 4 0 10-8 0M4 20a8 8 0 0116 0"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
       />
     </svg>
   );
@@ -210,7 +198,9 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const userEmail = membership?.user_email ?? "";
   const userInitials = initialsFromLabel(userName);
 
-  const mainNav: NavItem[] = [
+  const analyticsAllowed = canViewAnalytics(membership);
+
+  const menuTop: NavItem[] = [
     {
       href: ROUTES.dashboard,
       label: NAV_LABELS.dashboard,
@@ -223,20 +213,16 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       icon: <IconDeals />,
       match: (p) => p === ROUTES.deals || p === ROUTES.pipeline,
     },
-    { href: ROUTES.clients, label: NAV_LABELS.clients, icon: <IconClients /> },
-    {
-      href: ROUTES.clientsAnalytics,
-      label: NAV_LABELS.clientAnalytics,
-      icon: <IconChart />,
-      muted: !canViewAnalytics(membership),
-    },
+  ];
+
+  const menuBottom: NavItem[] = [
     { href: ROUTES.products, label: NAV_LABELS.catalog, icon: <IconCatalog /> },
     { href: ROUTES.tasks, label: NAV_LABELS.tasks, icon: <IconTasks /> },
     {
       href: ROUTES.analytics,
       label: NAV_LABELS.analytics,
       icon: <IconChart />,
-      muted: !canViewAnalytics(membership),
+      muted: !analyticsAllowed,
     },
   ];
 
@@ -276,7 +262,29 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         <WorkspaceSwitcher companyName={companyName} />
       </div>
       <nav className="flex-1 overflow-y-auto px-0.5">
-        {section("Menu", mainNav.filter((i) => !i.muted || i.label === "Analytics"))}
+        <div className="mt-5 first:mt-0">
+          <p className="mb-2 px-2.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+            Menu
+          </p>
+          <div className="space-y-0.5" onClick={onNavigate}>
+            {menuTop.map((item) => (
+              <NavLink key={item.href} item={item} pathname={pathname} />
+            ))}
+            <ClientsSidebarSection
+              analyticsAllowed={analyticsAllowed}
+              onNavigate={onNavigate}
+            />
+            {menuBottom
+              .filter((i) => !i.muted || i.label === "Analytics")
+              .map((item) =>
+                item.muted ? (
+                  <NavLink key={item.label} item={item} pathname={pathname} />
+                ) : (
+                  <NavLink key={item.href} item={item} pathname={pathname} />
+                )
+              )}
+          </div>
+        </div>
         {section("System", systemNav)}
       </nav>
 

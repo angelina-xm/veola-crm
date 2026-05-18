@@ -1,32 +1,18 @@
 "use client";
 
-import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState } from "react";
 import Link from "next/link";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
 import ClientSectionNav from "@/src/components/clients/ClientSectionNav";
-import ClientAnalyticsView from "@/src/components/clients/analytics/ClientAnalyticsView";
+import ClientLeaderboardsView from "@/src/components/clients/analytics/ClientLeaderboardsView";
 import PageHeader from "@/src/components/ui/PageHeader";
 import { useClientCommercialAnalytics } from "@/src/hooks/useClientCommercialAnalytics";
 import { NAV_LABELS, ROUTES } from "@/src/lib/product";
 
-export default function ClientAnalyticsPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="py-16 text-center text-sm text-zinc-500">Loading…</div>
-      }
-    >
-      <ClientAnalyticsPageContent />
-    </Suspense>
-  );
-}
-
-function ClientAnalyticsPageContent() {
-  const searchParams = useSearchParams();
-  const highlightClientId = searchParams.get("highlight");
+export default function ClientLeaderboardsPage() {
+  const [productFilter, setProductFilter] = useState("");
   const { data, loading, error, load, allowed, membershipLoading } =
-    useClientCommercialAnalytics("");
+    useClientCommercialAnalytics(productFilter);
 
   return (
     <ProtectedRoute>
@@ -34,15 +20,15 @@ function ClientAnalyticsPageContent() {
         <ClientSectionNav />
         <PageHeader
           eyebrow="Client intelligence"
-          title={NAV_LABELS.clientAnalytics}
-          description="Revenue trends, commercial metrics, and relationship health across your client base."
+          title={NAV_LABELS.clientLeaderboards}
+          description="Top buyers, growth leaders, and product-specific rankings — operational CRM leaderboards."
         />
 
         {!allowed && !membershipLoading ? (
           <div className="rounded-2xl border border-zinc-200/80 bg-white p-8 shadow-[var(--vx-shadow-card)]">
             <h2 className="text-lg font-semibold text-zinc-900">Access restricted</h2>
             <p className="mt-2 text-sm text-zinc-600">
-              Enable &quot;View analytics&quot; on the Team page to open client analytics.
+              Enable &quot;View analytics&quot; on the Team page to open leaderboards.
             </p>
             <Link
               href={ROUTES.clients}
@@ -52,11 +38,13 @@ function ClientAnalyticsPageContent() {
             </Link>
           </div>
         ) : (
-          <ClientAnalyticsView
+          <ClientLeaderboardsView
             data={data}
             loading={loading}
             error={error}
-            highlightClientId={highlightClientId}
+            productFilter={productFilter}
+            onProductFilter={setProductFilter}
+            onClearFilters={() => setProductFilter("")}
             onRetry={() => void load()}
           />
         )}
