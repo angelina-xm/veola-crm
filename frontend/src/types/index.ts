@@ -479,3 +479,87 @@ export interface AnalyticsV1Overview {
   team_performance: AnalyticsV1TeamRow[];
   recent_activity: AnalyticsV1FeedItem[];
 }
+
+/** GET /analytics/v1/clients/ — commercial intelligence */
+export interface ClientCommercialSummary {
+  total_clients: number;
+  clients_with_revenue: number;
+  total_revenue: string;
+  avg_revenue_per_client: string;
+  total_won_deals: number;
+  total_lost_deals: number;
+  active_product_links: number;
+}
+
+export interface ClientCommercialLeaderboardRow {
+  client_id: number;
+  client_name: string;
+  total_revenue: string;
+  won_deals: number;
+  win_rate_pct: number;
+  activity_count: number;
+  revenue_growth_pct: number;
+  relationship_health: string;
+}
+
+export interface ClientCommercialComparisonRow {
+  client_id: number;
+  client_name: string;
+  relationship_status: string;
+  total_revenue: string;
+  average_deal_size: string;
+  won_deals: number;
+  lost_deals: number;
+  active_deals: number;
+  total_deals: number;
+  win_rate_pct: number;
+  product_links: number;
+  categories: string[];
+  last_activity_at: string | null;
+  relationship_health: string;
+  revenue_growth_pct: number;
+  activity_count: number;
+}
+
+export interface ClientCommercialTopProduct {
+  product_id: number;
+  product_name: string;
+  category: string;
+  deal_count: number;
+  revenue: string;
+  unique_clients: number;
+}
+
+export interface ClientCommercialTopCategory {
+  category: string;
+  revenue: string;
+  unique_clients: number;
+  deal_lines: number;
+}
+
+export interface ClientCommercialProductBuyer {
+  client_id: number;
+  client_name: string;
+  total_revenue: string;
+  won_deals: number;
+  last_activity_at: string | null;
+  relationship_health: string;
+}
+
+export interface ClientCommercialAnalytics {
+  generated_at: string;
+  filters: { product_id: number | null; category: string };
+  summary: ClientCommercialSummary;
+  revenue_trend: AnalyticsV1TrendPoint[];
+  leaderboards: {
+    most_profitable: ClientCommercialLeaderboardRow[];
+    most_active: ClientCommercialLeaderboardRow[];
+    fastest_growing: ClientCommercialLeaderboardRow[];
+  };
+  top_products: ClientCommercialTopProduct[];
+  top_categories: ClientCommercialTopCategory[];
+  client_comparison: ClientCommercialComparisonRow[];
+  product_buyers: ClientCommercialProductBuyer[];
+  at_risk_buyers: ClientCommercialProductBuyer[];
+  catalog_filter_options: { id: number; name: string; category: string }[];
+}

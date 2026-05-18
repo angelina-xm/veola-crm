@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import Link from "next/link";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
 import { useAuth } from "@/src/components/auth/AuthProvider";
+import ClientSectionNav from "@/src/components/clients/ClientSectionNav";
 import PageHeader from "@/src/components/ui/PageHeader";
 import ClientModal from "@/src/components/pipeline/ClientModal";
 import { createClient, deleteClient, getClients } from "@/src/lib/api";
@@ -105,6 +106,7 @@ export default function ClientsPage() {
   return (
     <ProtectedRoute>
       <>
+        <ClientSectionNav />
         <PageHeader
           eyebrow="Relationships"
           title="Clients"

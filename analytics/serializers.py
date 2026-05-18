@@ -9,3 +9,8 @@ class AnalyticsV1OverviewQuerySerializer(serializers.Serializer):
         default="week",
         required=False,
     )
+
+
+class ClientCommercialAnalyticsQuerySerializer(serializers.Serializer):
+    product_id = serializers.IntegerField(required=False, allow_null=True)
+    category = serializers.CharField(required=False, allow_blank=True, max_length=120)

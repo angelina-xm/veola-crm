@@ -8,6 +8,7 @@ import type {
   ActivityType,
   AnalyticsFeedKind,
   AnalyticsV1Overview,
+  ClientCommercialAnalytics,
   Client,
   CrmTask,
   Deal,
@@ -606,6 +607,196 @@ export async function getAnalyticsV1Overview(
   }
   const raw = (await res.json()) as Record<string, unknown>;
   return parseAnalyticsV1Overview(raw);
+}
+
+export async function getClientCommercialAnalytics(
+  companyId: number,
+  options?: { productId?: number; category?: string }
+): Promise<ClientCommercialAnalytics> {
+  const params = new URLSearchParams();
+  if (options?.productId != null) {
+    params.set("product_id", String(options.productId));
+  }
+  if (options?.category?.trim()) {
+    params.set("category", options.category.trim());
+  }
+  const qs = params.toString();
+  const res = await fetchWithAuth(
+    `/analytics/v1/clients/${qs ? `?${qs}` : ""}`,
+    {},
+    companyId
+  );
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  return parseClientCommercialAnalytics(
+    (await res.json()) as Record<string, unknown>
+  );
+}
+
+function parseClientCommercialAnalytics(
+  raw: Record<string, unknown>
+): ClientCommercialAnalytics {
+  const summaryRaw =
+    raw.summary && typeof raw.summary === "object"
+      ? (raw.summary as Record<string, unknown>)
+      : {};
+  const leaderRaw =
+    raw.leaderboards && typeof raw.leaderboards === "object"
+      ? (raw.leaderboards as Record<string, unknown>)
+      : {};
+
+  const parseBoard = (arr: unknown) => {
+    if (!Array.isArray(arr)) return [];
+    return arr.map((row) => {
+      const o = row as Record<string, unknown>;
+      return {
+        client_id: Number(o.client_id),
+        client_name: String(o.client_name ?? ""),
+        total_revenue: String(o.total_revenue ?? "0"),
+        won_deals: Number(o.won_deals ?? 0),
+        win_rate_pct: Number(o.win_rate_pct ?? 0),
+        activity_count: Number(o.activity_count ?? 0),
+        revenue_growth_pct: Number(o.revenue_growth_pct ?? 0),
+        relationship_health: String(o.relationship_health ?? "unknown"),
+      };
+    });
+  };
+
+  const comparisonIn = Array.isArray(raw.client_comparison)
+    ? raw.client_comparison
+    : [];
+  const client_comparison = comparisonIn.map((row) => {
+    const o = row as Record<string, unknown>;
+    return {
+      client_id: Number(o.client_id),
+      client_name: String(o.client_name ?? ""),
+      relationship_status: String(o.relationship_status ?? ""),
+      total_revenue: String(o.total_revenue ?? "0"),
+      average_deal_size: String(o.average_deal_size ?? "0"),
+      won_deals: Number(o.won_deals ?? 0),
+      lost_deals: Number(o.lost_deals ?? 0),
+      active_deals: Number(o.active_deals ?? 0),
+      total_deals: Number(o.total_deals ?? 0),
+      win_rate_pct: Number(o.win_rate_pct ?? 0),
+      product_links: Number(o.product_links ?? 0),
+      categories: Array.isArray(o.categories)
+        ? o.categories.map((c) => String(c))
+        : [],
+      last_activity_at:
+        o.last_activity_at == null ? null : String(o.last_activity_at),
+      relationship_health: String(o.relationship_health ?? "unknown"),
+      revenue_growth_pct: Number(o.revenue_growth_pct ?? 0),
+      activity_count: Number(o.activity_count ?? 0),
+    };
+  });
+
+  const parseProducts = (arr: unknown) => {
+    if (!Array.isArray(arr)) return [];
+    return arr.map((row) => {
+      const o = row as Record<string, unknown>;
+      return {
+        product_id: Number(o.product_id),
+        product_name: String(o.product_name ?? ""),
+        category: String(o.category ?? ""),
+        deal_count: Number(o.deal_count ?? 0),
+        revenue: String(o.revenue ?? "0"),
+        unique_clients: Number(o.unique_clients ?? 0),
+      };
+    });
+  };
+
+  const filtersRaw =
+    raw.filters && typeof raw.filters === "object"
+      ? (raw.filters as Record<string, unknown>)
+      : {};
+
+  return {
+    generated_at: String(raw.generated_at ?? ""),
+    filters: {
+      product_id:
+        filtersRaw.product_id == null ? null : Number(filtersRaw.product_id),
+      category: String(filtersRaw.category ?? ""),
+    },
+    summary: {
+      total_clients: Number(summaryRaw.total_clients ?? 0),
+      clients_with_revenue: Number(summaryRaw.clients_with_revenue ?? 0),
+      total_revenue: String(summaryRaw.total_revenue ?? "0"),
+      avg_revenue_per_client: String(summaryRaw.avg_revenue_per_client ?? "0"),
+      total_won_deals: Number(summaryRaw.total_won_deals ?? 0),
+      total_lost_deals: Number(summaryRaw.total_lost_deals ?? 0),
+      active_product_links: Number(summaryRaw.active_product_links ?? 0),
+    },
+    revenue_trend: (Array.isArray(raw.revenue_trend) ? raw.revenue_trend : []).map(
+      (row) => {
+        const o = row as Record<string, unknown>;
+        return {
+          period_start: String(o.period_start ?? ""),
+          revenue: String(o.revenue ?? "0"),
+        };
+      }
+    ),
+    leaderboards: {
+      most_profitable: parseBoard(leaderRaw.most_profitable),
+      most_active: parseBoard(leaderRaw.most_active),
+      fastest_growing: parseBoard(leaderRaw.fastest_growing),
+    },
+    top_products: parseProducts(raw.top_products),
+    top_categories: (Array.isArray(raw.top_categories)
+      ? raw.top_categories
+      : []
+    ).map((row) => {
+      const o = row as Record<string, unknown>;
+      return {
+        category: String(o.category ?? ""),
+        revenue: String(o.revenue ?? "0"),
+        unique_clients: Number(o.unique_clients ?? 0),
+        deal_lines: Number(o.deal_lines ?? 0),
+      };
+    }),
+    client_comparison,
+    product_buyers: (Array.isArray(raw.product_buyers)
+      ? raw.product_buyers
+      : []
+    ).map((row) => {
+      const o = row as Record<string, unknown>;
+      return {
+        client_id: Number(o.client_id),
+        client_name: String(o.client_name ?? ""),
+        total_revenue: String(o.total_revenue ?? "0"),
+        won_deals: Number(o.won_deals ?? 0),
+        last_activity_at:
+          o.last_activity_at == null ? null : String(o.last_activity_at),
+        relationship_health: String(o.relationship_health ?? "unknown"),
+      };
+    }),
+    at_risk_buyers: (Array.isArray(raw.at_risk_buyers)
+      ? raw.at_risk_buyers
+      : []
+    ).map((row) => {
+      const o = row as Record<string, unknown>;
+      return {
+        client_id: Number(o.client_id),
+        client_name: String(o.client_name ?? ""),
+        total_revenue: String(o.total_revenue ?? "0"),
+        won_deals: Number(o.won_deals ?? 0),
+        last_activity_at:
+          o.last_activity_at == null ? null : String(o.last_activity_at),
+        relationship_health: String(o.relationship_health ?? "unknown"),
+      };
+    }),
+    catalog_filter_options: (Array.isArray(raw.catalog_filter_options)
+      ? raw.catalog_filter_options
+      : []
+    ).map((row) => {
+      const o = row as Record<string, unknown>;
+      return {
+        id: Number(o.id),
+        name: String(o.name ?? ""),
+        category: String(o.category ?? ""),
+      };
+    }),
+  };
 }
 
 function parseAnalyticsV1Overview(raw: Record<string, unknown>): AnalyticsV1Overview {

@@ -6,7 +6,8 @@ import { useParams } from "next/navigation";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
 import { useAuth } from "@/src/components/auth/AuthProvider";
 import CustomerTimeline from "@/src/components/clients/CustomerTimeline";
-import ClientAnalyticsPro from "@/src/components/clients/profile/ClientAnalyticsPro";
+import ClientInteractionMemoryCard from "@/src/components/clients/profile/ClientInteractionMemoryCard";
+import ClientProfileInsightsLink from "@/src/components/clients/profile/ClientProfileInsightsLink";
 import ClientBusinessContextPanel from "@/src/components/clients/profile/ClientBusinessContext";
 import ClientContactsSection from "@/src/components/clients/profile/ClientContactsSection";
 import ClientCurrentState from "@/src/components/clients/profile/ClientCurrentState";
@@ -236,12 +237,16 @@ export default function ClientProfilePage() {
                   deals={profile.operational.active_deals}
                   tasks={profile.operational.open_tasks}
                 />
-                <ClientInteractionHub
-                  open={interactionOpen}
-                  onOpenChange={setInteractionOpen}
-                  busy={actionBusy}
-                  onSubmit={submitInteraction}
-                />
+                {interactionOpen ? (
+                  <ClientInteractionHub
+                    open
+                    onOpenChange={setInteractionOpen}
+                    busy={actionBusy}
+                    onSubmit={submitInteraction}
+                  />
+                ) : (
+                  <ClientInteractionMemoryCard memory={profile.relationship_memory} />
+                )}
                 <ClientProductsSection
                   links={profile.products}
                   catalog={catalog}
@@ -282,7 +287,10 @@ export default function ClientProfilePage() {
                   memory={profile.relationship_memory}
                   onSave={saveMemory}
                 />
-                <ClientAnalyticsPro metrics={profile.metrics} />
+                <ClientProfileInsightsLink
+                  clientId={clientId}
+                  metrics={profile.metrics}
+                />
               </div>
             </div>
           </>

@@ -116,8 +116,7 @@ export default function ClientRelationshipMemoryBlock({
 
       {!hasSummary ? (
         <p className="mt-4 text-sm leading-relaxed text-zinc-500">
-          Use <span className="font-medium text-zinc-700">Add interaction</span> to
-          capture calls and meetings — this summary updates automatically.
+          Log an interaction from the action bar — this summary updates automatically.
         </p>
       ) : (
         <div className="mt-4 space-y-3 text-sm">

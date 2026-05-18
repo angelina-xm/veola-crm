@@ -224,6 +224,12 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       match: (p) => p === ROUTES.deals || p === ROUTES.pipeline,
     },
     { href: ROUTES.clients, label: NAV_LABELS.clients, icon: <IconClients /> },
+    {
+      href: ROUTES.clientsAnalytics,
+      label: NAV_LABELS.clientAnalytics,
+      icon: <IconChart />,
+      muted: !canViewAnalytics(membership),
+    },
     { href: ROUTES.products, label: NAV_LABELS.catalog, icon: <IconCatalog /> },
     { href: ROUTES.tasks, label: NAV_LABELS.tasks, icon: <IconTasks /> },
     {

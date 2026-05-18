@@ -76,21 +76,7 @@ export default function ClientInteractionHub({
   };
 
   if (!open) {
-    return (
-      <section className="rounded-2xl border border-dashed border-zinc-200/90 bg-zinc-50/30 px-5 py-4">
-        <p className="text-sm text-zinc-600">
-          Log calls, meetings, and notes in one place — timeline and relationship memory
-          stay in sync.
-        </p>
-        <button
-          type="button"
-          onClick={() => onOpenChange(true)}
-          className="mt-3 rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
-        >
-          Add interaction
-        </button>
-      </section>
-    );
+    return null;
   }
 
   return (
