@@ -1,8 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
 import { useAuth } from "@/src/components/auth/AuthProvider";
 import { useMembership } from "@/src/context/MembershipContext";
@@ -12,6 +19,8 @@ import {
   getClients,
   getDeals,
   getTasksBucket,
+  getTeamMembers,
+  type TeamMember,
   normalizeApiList,
   patchCrmTask,
 } from "@/src/lib/api";
@@ -20,6 +29,18 @@ import { normalizeDealPayload } from "@/src/lib/dealGrouping";
 import { queueOpenDeal } from "@/src/lib/openDealBridge";
 import { ROUTES } from "@/src/lib/product";
 import { canCreateDeals } from "@/src/lib/roles";
+import { defaultDueDatetimeLocal } from "@/src/lib/taskSemantics";
+import TaskAssigneeSelect, {
+  resolveAssigneeUserId,
+  type AssigneeChoice,
+} from "@/src/components/tasks/TaskAssigneeSelect";
+import {
+  priorityBadgeClass,
+  priorityLabel,
+  taskDueChip,
+  taskStatusBadgeClass,
+  taskStatusLabel,
+} from "@/src/lib/taskSemantics";
 import type { Client, CrmTask, Deal, TaskBucketQuery, TaskPriority } from "@/src/types";
 
 type TaskScope = "my" | "team";
@@ -78,7 +99,20 @@ function cardShellClass(task: CrmTask, section: TaskBucketQuery): string {
 }
 
 export default function TasksPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="py-16 text-center text-sm text-zinc-500">Loading tasks…</div>
+      }
+    >
+      <TasksPageContent />
+    </Suspense>
+  );
+}
+
+function TasksPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { isReady, isAuthenticated } = useAuth();
   const { membership, loading: membershipLoading } = useMembership();
   const [companyId, setCompanyId] = useState<number | null>(null);
@@ -102,8 +136,42 @@ export default function TasksPage() {
   const [newContent, setNewContent] = useState("");
   const [newDue, setNewDue] = useState("");
   const [newPriority, setNewPriority] = useState<TaskPriority>("medium");
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [assigneeChoice, setAssigneeChoice] = useState<AssigneeChoice>({
+    type: "me",
+  });
 
   const allowCreate = useMemo(() => canCreateDeals(membership), [membership]);
+
+  const selectedDeal = useMemo(
+    () => deals.find((d) => String(d.id) === newDealId),
+    [deals, newDealId]
+  );
+
+  useEffect(() => {
+    if (searchParams.get("create") === "1") {
+      setCreateOpen(true);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (createOpen && !newDue) {
+      setNewDue(defaultDueDatetimeLocal());
+    }
+  }, [createOpen, newDue]);
+
+  useEffect(() => {
+    if (companyId === null) return;
+    void getTeamMembers(companyId)
+      .then((p) => setTeamMembers(p.members))
+      .catch(() => setTeamMembers([]));
+  }, [companyId]);
+
+  useEffect(() => {
+    if (newDealId && selectedDeal?.assigned_to) {
+      setAssigneeChoice({ type: "deal_owner" });
+    }
+  }, [newDealId, selectedDeal?.assigned_to]);
 
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
@@ -245,6 +313,16 @@ export default function TasksPage() {
     }
     setCreateLoading(true);
     try {
+      if (!membership?.user_id) {
+        window.alert("Session not ready. Try again.");
+        return;
+      }
+      const assigned_to = resolveAssigneeUserId(
+        assigneeChoice,
+        membership.user_id,
+        selectedDeal?.assigned_to ?? null
+      );
+
       await createCrmTask(companyId, {
         content: newContent.trim(),
         deal: Number.isFinite(dealNum) ? dealNum : undefined,
@@ -254,12 +332,15 @@ export default function TasksPage() {
             : clientNum,
         due_date: newDue ? new Date(newDue).toISOString() : undefined,
         priority: newPriority,
+        assigned_to,
       });
       setNewContent("");
       setNewDue("");
       setNewDealId("");
       setNewClientId("");
       setNewPriority("medium");
+      setAssigneeChoice({ type: "me" });
+      setNewDue(defaultDueDatetimeLocal());
       setCreateOpen(false);
       await loadBuckets();
     } catch (e) {
@@ -329,6 +410,11 @@ export default function TasksPage() {
             newDue,
             newPriority,
             createLoading,
+            teamMembers,
+            membershipUserId: membership?.user_id ?? 0,
+            selectedDealOwnerId: selectedDeal?.assigned_to ?? null,
+            assigneeChoice,
+            setAssigneeChoice,
             setNewClientId,
             setNewContent,
             setNewDealId,
@@ -410,6 +496,11 @@ function membershipBlock(
     newDue: string;
     newPriority: TaskPriority;
     createLoading: boolean;
+    teamMembers: TeamMember[];
+    membershipUserId: number;
+    selectedDealOwnerId: number | null;
+    assigneeChoice: AssigneeChoice;
+    setAssigneeChoice: (v: AssigneeChoice) => void;
     setNewClientId: (v: string) => void;
     setNewContent: (v: string) => void;
     setNewDealId: (v: string) => void;
@@ -436,7 +527,8 @@ function membershipBlock(
         <div className="mb-8 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
           <h3 className="text-sm font-semibold text-zinc-900">New follow-up</h3>
           <p className="mt-1 text-xs text-zinc-500">
-            Pick a deal (preferred) or a client-only task. Due date is optional.
+            Link to a deal when you can. Due today by default — adjust who owns
+            the follow-up.
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <label className="block text-xs font-medium text-zinc-600">
@@ -514,6 +606,16 @@ function membershipBlock(
                 <option value="urgent">Urgent</option>
               </select>
             </label>
+            <div className="col-span-full">
+              <TaskAssigneeSelect
+                members={form.teamMembers}
+                currentUserId={form.membershipUserId}
+                dealOwnerUserId={form.selectedDealOwnerId}
+                value={form.assigneeChoice}
+                onChange={form.setAssigneeChoice}
+                disabled={form.createLoading}
+              />
+            </div>
           </div>
           <div className="mt-4 flex justify-end gap-2">
             <button
@@ -563,16 +665,26 @@ function TaskRow(props: {
     <div className={cardShellClass(task, section)}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
             <span
-              className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${priorityChipClass(task.priority)}`}
+              className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${taskStatusBadgeClass(task)}`}
             >
-              {task.priority}
+              {taskStatusLabel(task)}
+            </span>
+            {taskDueChip(task) ? (
+              <span
+                className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${taskDueChip(task)!.className}`}
+              >
+                {taskDueChip(task)!.label}
+              </span>
+            ) : null}
+            <span
+              className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${priorityBadgeClass(task.priority)}`}
+            >
+              {priorityLabel(task.priority)}
             </span>
             {task.state === "backlog" && !task.is_completed ? (
-              <span className="text-[10px] font-medium uppercase text-zinc-400">
-                Backlog
-              </span>
+              <span className="text-[10px] font-medium text-zinc-400">No due date</span>
             ) : null}
           </div>
           <p className="text-sm font-medium text-zinc-900">{task.content || "—"}</p>

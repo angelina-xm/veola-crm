@@ -53,12 +53,13 @@ class ActivityQuerySet(models.QuerySet):
         return self.operational().filter(is_completed=False)
 
     def today(self, *, now=None):
+        """Open tasks due later today (calendar day, excluding already-overdue)."""
         now = now or timezone.now()
         from .task_state import local_today_window
 
         day_start, day_end = local_today_window(now=now)
         return self.open_tasks().filter(
-            due_date__gte=max(day_start, now),
+            due_date__gte=now,
             due_date__lt=day_end,
         )
 

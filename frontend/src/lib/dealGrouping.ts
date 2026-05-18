@@ -8,6 +8,8 @@ export function normalizeDealPayload(deal: {
   amount?: string | number;
   client?: string | number | null;
   created_at?: string;
+  assigned_to?: string | number | null;
+  assigned_to_email?: string | null;
 }): Deal {
   const stageVal = deal.stage != null ? String(deal.stage) : "";
   const rawAmount = deal.amount;
@@ -29,6 +31,13 @@ export function normalizeDealPayload(deal: {
   const created = deal.created_at;
   if (created != null && String(created).trim() !== "") {
     out.created_at = String(created);
+  }
+  if (deal.assigned_to != null && deal.assigned_to !== "") {
+    const aid = Number(deal.assigned_to);
+    if (Number.isFinite(aid)) out.assigned_to = aid;
+  }
+  if (deal.assigned_to_email) {
+    out.assigned_to_email = String(deal.assigned_to_email);
   }
   return out;
 }

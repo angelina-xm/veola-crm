@@ -1,6 +1,5 @@
-import { createActivity } from "@/src/lib/api";
+import { createCrmTask } from "@/src/lib/api";
 import { getStoredCompanyId } from "@/src/lib/auth";
-import type { Activity } from "@/src/types";
 
 /** Следующий календарный день, полдень локально → ISO для due_date. */
 export function tomorrowDueDateIso(): string {
@@ -36,14 +35,15 @@ function parseDealId(dealId: string | number): number {
 }
 
 /**
- * Создаёт задачу по пресету (tenant: LS → явный companyId).
+ * Создаёт задачу по пресету на сделке (POST /tasks/).
  */
 export async function createTaskFromPreset(
   companyId: number,
   dealId: string | number,
   preset: TaskPreset,
-  customContent?: string
-): Promise<Activity> {
+  customContent?: string,
+  opts?: { assignedToUserId?: number }
+): Promise<void> {
   const tenantId = getStoredCompanyId() ?? companyId;
   const dealNum = parseDealId(dealId);
 
@@ -74,10 +74,11 @@ export async function createTaskFromPreset(
     }
   }
 
-  return createActivity(tenantId, {
+  await createCrmTask(tenantId, {
     deal: dealNum,
-    type: "task",
     content,
     due_date,
+    priority: "medium",
+    assigned_to: opts?.assignedToUserId,
   });
 }

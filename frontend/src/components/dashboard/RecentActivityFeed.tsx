@@ -4,6 +4,7 @@ import Link from "next/link";
 import { cn } from "@/src/lib/cn";
 import { formatRelative } from "@/src/lib/formatRelative";
 import { COPY, ROUTES } from "@/src/lib/product";
+import { activityFeedBadge } from "@/src/lib/taskSemantics";
 import type { AnalyticsV1FeedItem } from "@/src/types";
 
 function feedTitle(item: AnalyticsV1FeedItem): string {
@@ -29,28 +30,6 @@ function feedDescription(item: AnalyticsV1FeedItem): string {
     default:
       return "Activity logged";
   }
-}
-
-function statusBadge(item: AnalyticsV1FeedItem): {
-  label: string;
-  className: string;
-} {
-  if (item.kind === "deal_won" || item.is_completed) {
-    return {
-      label: "completed",
-      className: "bg-emerald-50 text-emerald-700",
-    };
-  }
-  if (item.kind === "task_open") {
-    return {
-      label: "pending",
-      className: "bg-amber-50 text-amber-800",
-    };
-  }
-  return {
-    label: "update",
-    className: "bg-zinc-100 text-zinc-600",
-  };
 }
 
 export default function RecentActivityFeed({
@@ -92,7 +71,7 @@ export default function RecentActivityFeed({
       ) : (
         <ul className="divide-y divide-zinc-100">
           {items.slice(0, 8).map((item) => {
-            const badge = statusBadge(item);
+            const badge = activityFeedBadge(item);
             return (
               <li
                 key={item.id}
@@ -114,9 +93,9 @@ export default function RecentActivityFeed({
                 {item.deal_id ? (
                   <Link
                     href={ROUTES.deals}
-                    className="hidden text-sm font-medium text-zinc-900 sm:block"
+                    className="hidden text-sm font-medium text-[var(--vx-accent)] sm:block"
                   >
-                    Open
+                    View deal
                   </Link>
                 ) : null}
                 <span

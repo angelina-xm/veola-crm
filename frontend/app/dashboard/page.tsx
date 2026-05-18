@@ -15,6 +15,7 @@ import {
 } from "@/src/lib/api";
 import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
 import { COPY, ROUTES } from "@/src/lib/product";
+import { mergeOperationalSnapshot } from "@/src/lib/taskSemantics";
 import type { AnalyticsV1Overview, CrmTask, PipelineHealth } from "@/src/types";
 
 export default function DashboardPage() {
@@ -23,8 +24,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [overview, setOverview] = useState<AnalyticsV1Overview | null>(null);
   const [health, setHealth] = useState<PipelineHealth | null>(null);
-  const [tasksToday, setTasksToday] = useState<CrmTask[]>([]);
-  const [tasksCompleted, setTasksCompleted] = useState<CrmTask[]>([]);
+  const [operationalTasks, setOperationalTasks] = useState<CrmTask[]>([]);
+  const [completedTodayCount, setCompletedTodayCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   useLayoutEffect(() => {
@@ -47,16 +48,18 @@ export default function DashboardPage() {
         setError(null);
         const tenantId = getStoredCompanyId() ?? companyId;
 
-        const [analytics, pipelineHealth, today, completed] = await Promise.all([
-          getAnalyticsV1Overview(tenantId, "week"),
-          getPipelineHealth(tenantId),
-          getTasksBucket(tenantId, "today"),
-          getTasksBucket(tenantId, "completed"),
-        ]);
+        const [analytics, pipelineHealth, overdue, today, completed] =
+          await Promise.all([
+            getAnalyticsV1Overview(tenantId, "week"),
+            getPipelineHealth(tenantId),
+            getTasksBucket(tenantId, "overdue", { scope: "my" }),
+            getTasksBucket(tenantId, "today", { scope: "my" }),
+            getTasksBucket(tenantId, "completed", { scope: "my" }),
+          ]);
 
         setOverview(analytics);
         setHealth(pipelineHealth);
-        setTasksToday(today);
+        setOperationalTasks(mergeOperationalSnapshot(overdue, today));
         const completedToday = completed.filter((t) => {
           if (!t.completed_at) return false;
           const d = new Date(t.completed_at);
@@ -67,7 +70,7 @@ export default function DashboardPage() {
             d.getDate() === now.getDate()
           );
         });
-        setTasksCompleted(completedToday);
+        setCompletedTodayCount(completedToday.length);
       } catch (err) {
         if (err instanceof AuthError) {
           logout(err.reason);
@@ -87,11 +90,7 @@ export default function DashboardPage() {
     return health.attention_needed + health.at_risk;
   }, [health]);
 
-  const taskRows = useMemo(() => {
-    const open = tasksToday.filter((t) => !t.is_completed);
-    const done = tasksToday.filter((t) => t.is_completed);
-    return [...open, ...done].slice(0, 10);
-  }, [tasksToday]);
+  const openTaskCount = operationalTasks.length;
 
   return (
     <ProtectedRoute>
@@ -108,8 +107,8 @@ export default function DashboardPage() {
           loading={loading}
           revenue={overview?.kpis.won_this_month_revenue ?? "0"}
           activeDeals={overview?.kpis.active_deals ?? 0}
-          tasksToday={tasksToday.filter((t) => !t.is_completed).length}
-          tasksCompletedToday={tasksCompleted.length}
+          tasksToday={openTaskCount}
+          tasksCompletedToday={completedTodayCount}
           needsAttention={needsAttention}
         />
 
@@ -120,7 +119,11 @@ export default function DashboardPage() {
               items={overview?.recent_activity ?? []}
             />
           </div>
-          <TasksTodayPanel loading={loading} tasks={taskRows} />
+          <TasksTodayPanel
+            loading={loading}
+            tasks={operationalTasks}
+            completedTodayCount={completedTodayCount}
+          />
         </div>
 
         <div className="flex flex-wrap gap-3">

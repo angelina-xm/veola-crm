@@ -63,6 +63,8 @@ export interface Deal {
   waiting_on_client?: boolean;
   waiting_reason?: string;
   follow_up_on?: string | null;
+  assigned_to?: number | null;
+  assigned_to_email?: string | null;
 }
 
 /** GET /deals/pipeline-health/ */

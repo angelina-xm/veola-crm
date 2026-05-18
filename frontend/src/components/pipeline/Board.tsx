@@ -568,7 +568,7 @@ export default function Board({
         setMovingStageDealId(null);
       }
     },
-    [companyId, dealsByStage, setDealsByStage, stages]
+    [companyId, dealsByStage, membership?.user_id, refreshOpenTasksAndNotifications]
   );
 
   const handleQuickAddTask = useCallback(
@@ -579,7 +579,13 @@ export default function Board({
     ) => {
       setQuickAddingTaskDealId(dealId);
       try {
-        await createTaskFromPreset(companyId, dealId, preset, customContent);
+        const dealRow = Object.values(dealsByStage)
+          .flat()
+          .find((d) => String(d.id) === String(dealId));
+        await createTaskFromPreset(companyId, dealId, preset, customContent, {
+          assignedToUserId:
+            dealRow?.assigned_to ?? membership?.user_id ?? undefined,
+        });
         await refreshOpenTasksAndNotifications();
       } catch (err) {
         if (typeof window !== "undefined") {
