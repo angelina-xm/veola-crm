@@ -21,7 +21,14 @@ class ClientContactAdmin(admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ("name", "category", "company", "default_price", "is_active")
+    list_display = (
+        "name",
+        "product_type",
+        "category",
+        "company",
+        "default_price",
+        "is_active",
+    )
 
 
 @admin.register(ClientProductLink)

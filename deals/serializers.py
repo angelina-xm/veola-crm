@@ -137,6 +137,14 @@ class DealSerializer(serializers.ModelSerializer):
         self._save_line_items(deal, line_items_data)
         return deal
 
+    def update(self, instance, validated_data):
+        line_items_data = validated_data.pop("line_items_write", None)
+        deal = super().update(instance, validated_data)
+        if line_items_data is not None:
+            deal.line_items.all().delete()
+            self._save_line_items(deal, line_items_data)
+        return deal
+
     def _save_line_items(self, deal: Deal, items_data: list) -> None:
         from clients.models import Product
         from decimal import Decimal

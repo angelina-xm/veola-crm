@@ -924,35 +924,80 @@ export async function postClientInteraction(
   }>;
 }
 
-export async function getProducts(
-  companyId: number
-): Promise<import("@/src/types").CatalogProduct[]> {
-  const res = await fetchWithAuth("/products/", {}, companyId);
-  if (!res.ok) {
-    throw new Error(await parseErrorBody(res));
-  }
-  const data: unknown = await res.json();
-  const list = normalizeApiList(data as ListResponse<Record<string, unknown>>);
-  return list.map((row) => ({
+function normalizeCatalogProduct(
+  row: Record<string, unknown>
+): import("@/src/types").CatalogProduct {
+  const typeRaw = String(row.product_type ?? "physical").toLowerCase();
+  const tags = Array.isArray(row.tags)
+    ? row.tags.map((t) => String(t)).filter(Boolean)
+    : [];
+  return {
     id: Number(row.id),
     name: String(row.name ?? ""),
+    product_type: typeRaw === "service" ? "service" : "physical",
     category: String(row.category ?? ""),
     default_price:
       row.default_price == null ? null : String(row.default_price),
     description: String(row.description ?? ""),
     sku: String(row.sku ?? ""),
+    tags,
     is_active: row.is_active !== false,
-  }));
+    created_at:
+      row.created_at == null ? undefined : String(row.created_at),
+    updated_at:
+      row.updated_at == null ? undefined : String(row.updated_at),
+  };
+}
+
+export async function getProducts(
+  companyId: number,
+  options?: { includeInactive?: boolean }
+): Promise<import("@/src/types").CatalogProduct[]> {
+  const path = options?.includeInactive
+    ? "/products/?include_inactive=1"
+    : "/products/";
+  const res = await fetchWithAuth(path, {}, companyId);
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const data: unknown = await res.json();
+  const list = normalizeApiList(data as ListResponse<Record<string, unknown>>);
+  return list.map((row) =>
+    normalizeCatalogProduct(row as Record<string, unknown>)
+  );
+}
+
+export async function getProductProfile(
+  companyId: number,
+  productId: string | number
+): Promise<import("@/src/types").ProductProfile> {
+  const res = await fetchWithAuth(
+    `/products/${productId}/profile/`,
+    {},
+    companyId
+  );
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const raw = (await res.json()) as import("@/src/types").ProductProfile;
+  return {
+    ...raw,
+    product: normalizeCatalogProduct(
+      raw.product as unknown as Record<string, unknown>
+    ),
+  };
 }
 
 export async function createProduct(
   companyId: number,
   payload: {
     name: string;
+    product_type?: "physical" | "service";
     category?: string;
     default_price?: number | null;
     description?: string;
     sku?: string;
+    tags?: string[];
   }
 ): Promise<import("@/src/types").CatalogProduct> {
   const res = await fetchWithAuth(
@@ -968,13 +1013,51 @@ export async function createProduct(
     throw new Error(await parseErrorBody(res));
   }
   const row = (await res.json()) as Record<string, unknown>;
-  return {
-    id: Number(row.id),
-    name: String(row.name ?? ""),
-    category: String(row.category ?? ""),
-    default_price:
-      row.default_price == null ? null : String(row.default_price),
-  };
+  return normalizeCatalogProduct(row);
+}
+
+export async function patchProduct(
+  companyId: number,
+  productId: string | number,
+  payload: Partial<{
+    name: string;
+    product_type: "physical" | "service";
+    category: string;
+    default_price: number | null;
+    description: string;
+    sku: string;
+    tags: string[];
+    is_active: boolean;
+  }>
+): Promise<import("@/src/types").CatalogProduct> {
+  const res = await fetchWithAuth(
+    `/products/${productId}/`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    companyId
+  );
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const row = (await res.json()) as Record<string, unknown>;
+  return normalizeCatalogProduct(row);
+}
+
+export async function archiveProduct(
+  companyId: number,
+  productId: string | number
+): Promise<void> {
+  const res = await fetchWithAuth(
+    `/products/${productId}/`,
+    { method: "DELETE" },
+    companyId
+  );
+  if (!res.ok && res.status !== 204) {
+    throw new Error(await parseErrorBody(res));
+  }
 }
 
 export async function linkClientProduct(
@@ -1543,6 +1626,7 @@ export type PatchDealPayload = {
   title?: string;
   amount?: number;
   stage?: number;
+  line_items_write?: import("@/src/types").DealLineItemWrite[];
   win_reason?: string;
   loss_reason?: string;
   close_competitor?: string;

@@ -2,7 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { getProducts } from "@/src/lib/api";
-import type { CatalogProduct, DealLineItemWrite } from "@/src/types";
+import type {
+  CatalogProduct,
+  DealLineItem,
+  DealLineItemWrite,
+} from "@/src/types";
 import {
   clientNameById,
   formatCreatedRelative,
@@ -35,6 +39,7 @@ export interface DealModalProps {
     title: string;
     amount: number;
     stageId: string;
+    lineItems?: DealLineItemWrite[];
   }) => void | Promise<void>;
   onDelete?: () => void | Promise<void>;
   onCreateClient?: () => void;
@@ -42,6 +47,21 @@ export interface DealModalProps {
   staleRow?: StaleDeal | null;
   /** После изменения задач в timeline — обновить карточки/уведомления на доске */
   onActivitiesMutated?: () => void | Promise<void>;
+}
+
+function lineItemToWrite(li: DealLineItem): DealLineItemWrite {
+  const price =
+    li.unit_price == null
+      ? null
+      : typeof li.unit_price === "string"
+        ? Number.parseFloat(li.unit_price)
+        : li.unit_price;
+  return {
+    product_id: li.product_id,
+    label: li.label,
+    unit_price: Number.isFinite(price as number) ? (price as number) : null,
+    quantity: li.quantity,
+  };
 }
 
 export default function DealModal({
@@ -88,11 +108,20 @@ export default function DealModal({
   const [lineItems, setLineItems] = useState<DealLineItemWrite[]>([]);
 
   useEffect(() => {
-    if (mode !== "create") return;
     void getProducts(companyId)
       .then(setCatalog)
       .catch(() => setCatalog([]));
-  }, [mode, companyId]);
+  }, [companyId]);
+
+  useEffect(() => {
+    if (mode === "edit" && deal?.line_items) {
+      setLineItems(deal.line_items.map(lineItemToWrite));
+      return;
+    }
+    if (mode === "create") {
+      setLineItems([]);
+    }
+  }, [mode, deal]);
 
   useEffect(() => {
     if (mode === "edit" && deal) {
@@ -134,10 +163,15 @@ export default function DealModal({
         lineItems: lineItems.length > 0 ? lineItems : undefined,
       });
     } else if (deal) {
+      const syncLineItems =
+        deal.line_items !== undefined ||
+        lineItems.length > 0 ||
+        catalog.length > 0;
       await onEdit({
         title: title.trim(),
         amount: amountNum,
         stageId,
+        ...(syncLineItems ? { lineItems } : {}),
       });
     }
   };
@@ -305,108 +339,131 @@ export default function DealModal({
                   </button>
                 </div>
               ) : null}
-              {catalog.length > 0 ? (
-                <div className="mt-3 rounded border border-gray-200 bg-gray-50/80 p-3">
-                  <p className="text-xs font-medium text-gray-700">
-                    Products (optional)
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-gray-500">
-                    Link catalog items — deal amount can stay empty if prices are set
-                  </p>
-                  <div className="mt-2 flex gap-2">
-                    <select
-                      value={pickedProductId}
-                      onChange={(e) => setPickedProductId(e.target.value)}
-                      className="min-w-0 flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm"
-                      disabled={busy}
+            </div>
+          ) : null}
+
+          {catalog.length > 0 || lineItems.length > 0 ? (
+            <div className="rounded border border-gray-200 bg-gray-50/80 p-3">
+              <p className="text-xs font-medium text-gray-700">
+                Products (optional)
+              </p>
+              <p className="mt-0.5 text-[11px] text-gray-500">
+                Sales context from catalog — not invoicing
+              </p>
+              <div className="mt-2 flex gap-2">
+                <select
+                  value={pickedProductId}
+                  onChange={(e) => setPickedProductId(e.target.value)}
+                  className="min-w-0 flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm"
+                  disabled={busy}
+                >
+                  <option value="">Add product…</option>
+                  {catalog
+                    .filter(
+                      (p) => !lineItems.some((li) => li.product_id === p.id)
+                    )
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                </select>
+                <button
+                  type="button"
+                  disabled={busy || !pickedProductId}
+                  onClick={() => {
+                    const p = catalog.find(
+                      (x) => String(x.id) === pickedProductId
+                    );
+                    if (!p) return;
+                    setLineItems((prev) => [
+                      ...prev,
+                      {
+                        product_id: p.id,
+                        label: p.name,
+                        unit_price: p.default_price
+                          ? Number(p.default_price)
+                          : null,
+                        quantity: 1,
+                      },
+                    ]);
+                    setPickedProductId("");
+                  }}
+                  className="rounded border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium"
+                >
+                  Add
+                </button>
+              </div>
+              {lineItems.length > 0 ? (
+                <ul className="mt-2 space-y-1">
+                  {lineItems.map((li, idx) => (
+                    <li
+                      key={`${li.product_id}-${idx}`}
+                      className="flex items-center gap-2 text-xs"
                     >
-                      <option value="">Add product…</option>
-                      {catalog
-                        .filter(
-                          (p) =>
-                            !lineItems.some((li) => li.product_id === p.id)
-                        )
-                        .map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name}
-                          </option>
-                        ))}
-                    </select>
-                    <button
-                      type="button"
-                      disabled={busy || !pickedProductId}
-                      onClick={() => {
-                        const p = catalog.find(
-                          (x) => String(x.id) === pickedProductId
-                        );
-                        if (!p) return;
-                        setLineItems((prev) => [
-                          ...prev,
-                          {
-                            product_id: p.id,
-                            label: p.name,
-                            unit_price: p.default_price
-                              ? Number(p.default_price)
-                              : null,
-                            quantity: 1,
-                          },
-                        ]);
-                        setPickedProductId("");
-                      }}
-                      className="rounded border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium"
-                    >
-                      Add
-                    </button>
-                  </div>
-                  {lineItems.length > 0 ? (
-                    <ul className="mt-2 space-y-1">
-                      {lineItems.map((li, idx) => (
-                        <li
-                          key={`${li.product_id}-${idx}`}
-                          className="flex items-center gap-2 text-xs"
-                        >
-                          <span className="flex-1 font-medium text-gray-800">
-                            {li.label}
-                          </span>
-                          <input
-                            type="number"
-                            placeholder="Price"
-                            className="w-24 rounded border border-gray-300 px-1.5 py-1"
-                            value={
-                              li.unit_price == null ? "" : String(li.unit_price)
-                            }
-                            onChange={(e) => {
-                              const v = e.target.value;
-                              setLineItems((prev) =>
-                                prev.map((row, i) =>
-                                  i === idx
-                                    ? {
-                                        ...row,
-                                        unit_price: v
-                                          ? Number.parseFloat(v)
-                                          : null,
-                                      }
-                                    : row
-                                )
-                              );
-                            }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setLineItems((prev) =>
-                                prev.filter((_, i) => i !== idx)
-                              )
-                            }
-                            className="text-gray-400 hover:text-red-600"
-                          >
-                            ×
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </div>
+                      <span className="flex-1 font-medium text-gray-800">
+                        {li.label}
+                      </span>
+                      <input
+                        type="number"
+                        min={1}
+                        placeholder="Qty"
+                        className="w-14 rounded border border-gray-300 px-1.5 py-1"
+                        value={li.quantity ?? 1}
+                        onChange={(e) => {
+                          const qty = Number.parseInt(e.target.value, 10);
+                          setLineItems((prev) =>
+                            prev.map((row, i) =>
+                              i === idx
+                                ? {
+                                    ...row,
+                                    quantity:
+                                      Number.isFinite(qty) && qty > 0
+                                        ? qty
+                                        : 1,
+                                  }
+                                : row
+                            )
+                          );
+                        }}
+                      />
+                      <input
+                        type="number"
+                        placeholder="Price"
+                        className="w-24 rounded border border-gray-300 px-1.5 py-1"
+                        value={
+                          li.unit_price == null ? "" : String(li.unit_price)
+                        }
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setLineItems((prev) =>
+                            prev.map((row, i) =>
+                              i === idx
+                                ? {
+                                    ...row,
+                                    unit_price: v
+                                      ? Number.parseFloat(v)
+                                      : null,
+                                  }
+                                : row
+                            )
+                          );
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setLineItems((prev) =>
+                            prev.filter((_, i) => i !== idx)
+                          )
+                        }
+                        className="text-gray-400 hover:text-red-600"
+                      >
+                        ×
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               ) : null}
             </div>
           ) : null}

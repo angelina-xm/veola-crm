@@ -57,6 +57,19 @@ function IconTasks() {
   );
 }
 
+function IconCatalog() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M4 7h7v7H4V7zM13 7h7v4h-7V7zM13 13h7v4h-7v-4zM4 16h7v2H4v-2z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function IconClients() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -211,6 +224,7 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       match: (p) => p === ROUTES.deals || p === ROUTES.pipeline,
     },
     { href: ROUTES.clients, label: NAV_LABELS.clients, icon: <IconClients /> },
+    { href: ROUTES.products, label: NAV_LABELS.catalog, icon: <IconCatalog /> },
     { href: ROUTES.tasks, label: NAV_LABELS.tasks, icon: <IconTasks /> },
     {
       href: ROUTES.analytics,

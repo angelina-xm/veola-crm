@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { relationshipLabel } from "./ClientBusinessContext";
 import { formatMoney } from "@/src/lib/formatRelative";
@@ -11,9 +12,10 @@ import type {
 
 const REL_OPTIONS: { value: ClientProductRelationship; label: string }[] = [
   { value: "preferred", label: "Preferred" },
-  { value: "frequent", label: "Frequently purchased" },
-  { value: "recent", label: "Recent" },
+  { value: "frequent", label: "Frequently buys" },
+  { value: "recent", label: "Recently ordered" },
   { value: "interested", label: "Interested in" },
+  { value: "stopped", label: "Stopped ordering" },
 ];
 
 export default function ClientProductsSection({
@@ -74,9 +76,14 @@ export default function ClientProductsSection({
     <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[var(--vx-shadow-card)]">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <h2 className="text-sm font-semibold text-zinc-900">Products & interest</h2>
+          <h2 className="text-sm font-semibold text-zinc-900">
+            Preferred & typical products
+          </h2>
           <p className="mt-0.5 text-xs text-zinc-500">
-            What this client buys or cares about — lightweight catalog, not inventory
+            What they buy, want, or stopped ordering — from your{" "}
+            <a href="/products" className="font-medium text-[var(--vx-accent)] hover:underline">
+              catalog
+            </a>
           </p>
         </div>
         <button
@@ -100,9 +107,12 @@ export default function ClientProductsSection({
               className="group flex max-w-full items-center gap-2 rounded-xl border border-zinc-200/80 bg-zinc-50/50 px-3 py-2"
             >
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-zinc-900">
+                <Link
+                  href={`/products/${link.product.id}`}
+                  className="truncate text-sm font-medium text-zinc-900 hover:text-[var(--vx-accent)]"
+                >
                   {link.product.name}
-                </p>
+                </Link>
                 <p className="text-[10px] text-zinc-500">
                   {relationshipLabel(link.relationship)}
                   {link.product.category ? ` · ${link.product.category}` : ""}

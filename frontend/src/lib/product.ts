@@ -8,6 +8,7 @@ export const ROUTES = {
   deals: "/deals",
   dealsClosed: "/deals/closed",
   clients: "/clients",
+  products: "/products",
   tasks: "/tasks",
   analytics: "/analytics",
   team: "/team",
@@ -20,6 +21,7 @@ export const NAV_LABELS = {
   dashboard: "Dashboard",
   deals: "Deals",
   clients: "Clients",
+  catalog: "Catalog",
   tasks: "Tasks",
   analytics: "Analytics",
   team: "Team",
@@ -63,6 +65,7 @@ export function pageTitleForPath(pathname: string): string {
     return NAV_LABELS.deals;
   if (pathname.startsWith(ROUTES.tasks)) return NAV_LABELS.tasks;
   if (pathname.startsWith(ROUTES.clients)) return NAV_LABELS.clients;
+  if (pathname.startsWith(ROUTES.products)) return NAV_LABELS.catalog;
   if (pathname.startsWith(ROUTES.dealsClosed)) return NAV_LABELS.closedDeals;
   if (pathname.startsWith(ROUTES.analytics)) return NAV_LABELS.analytics;
   if (pathname.startsWith(ROUTES.team)) return NAV_LABELS.team;

@@ -133,11 +133,13 @@ class ClientProfileBuilder:
             "product": {
                 "id": p.id,
                 "name": p.name,
+                "product_type": p.product_type,
                 "category": p.category,
                 "default_price": (
                     str(p.default_price) if p.default_price is not None else None
                 ),
                 "sku": p.sku,
+                "tags": p.tags if isinstance(p.tags, list) else [],
             },
         }
 

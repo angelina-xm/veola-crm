@@ -308,6 +308,7 @@ function readDealPatch(raw: unknown): Deal {
     amount?: string | number;
     client?: string | number | null;
     created_at?: string;
+    line_items?: unknown;
   };
   return normalizeDealPayload(o);
 }
@@ -1269,6 +1270,7 @@ export default function Board({
       title: string;
       amount: number;
       stageId: string;
+      lineItems?: import("@/src/types").DealLineItemWrite[];
     }) => {
       if (!dealInModal) return;
 
@@ -1293,6 +1295,9 @@ export default function Board({
           title: values.title,
           amount: values.amount,
           stage: Number.parseInt(values.stageId, 10),
+          ...(values.lineItems !== undefined
+            ? { line_items_write: values.lineItems }
+            : {}),
         });
         const normalized = readDealPatch(raw);
 

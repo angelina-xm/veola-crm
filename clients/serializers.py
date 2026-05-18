@@ -124,15 +124,31 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
+            "product_type",
             "category",
             "default_price",
             "description",
             "sku",
+            "tags",
             "is_active",
             "created_at",
             "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
+
+    def validate_tags(self, value):
+        if value is None:
+            return []
+        if not isinstance(value, list):
+            raise serializers.ValidationError("Tags must be a list of strings.")
+        return [str(t).strip() for t in value if str(t).strip()][:20]
+
+
+class ProductProfileSerializer(serializers.Serializer):
+    product = serializers.DictField()
+    stats = serializers.DictField()
+    clients_by_relationship = serializers.DictField()
+    recent_deals = serializers.ListField()
 
 
 class ClientProductLinkSerializer(serializers.ModelSerializer):

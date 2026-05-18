@@ -5,9 +5,10 @@ import type { ClientBusinessContext as BusinessContext } from "@/src/types";
 
 const RELATIONSHIP_LABEL: Record<string, string> = {
   preferred: "Preferred",
-  frequent: "Frequent",
-  recent: "Recent",
-  interested: "Interested",
+  frequent: "Frequently buys",
+  recent: "Recently ordered",
+  interested: "Interested in",
+  stopped: "Stopped ordering",
 };
 
 export function relationshipLabel(key: string): string {

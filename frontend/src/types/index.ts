@@ -91,16 +91,50 @@ export type ClientProductRelationship =
   | "preferred"
   | "frequent"
   | "recent"
-  | "interested";
+  | "interested"
+  | "stopped";
+
+export type CatalogProductType = "physical" | "service";
 
 export interface CatalogProduct {
   id: number;
   name: string;
+  product_type?: CatalogProductType;
   category: string;
   default_price: string | null;
   description?: string;
   sku?: string;
+  tags?: string[];
   is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ProductProfileStats {
+  linked_clients: number;
+  deals_with_product: number;
+  recent_won_revenue: number;
+}
+
+export interface ProductProfileDeal {
+  id: number;
+  title: string;
+  amount: string;
+  client_id: number;
+  client_name: string;
+  stage_name: string;
+  created_at: string;
+  is_won: boolean;
+}
+
+export interface ProductProfile {
+  product: CatalogProduct;
+  stats: ProductProfileStats;
+  clients_by_relationship: Record<
+    string,
+    { client_id: number; client_name: string; note: string; link_id: number }[]
+  >;
+  recent_deals: ProductProfileDeal[];
 }
 
 export interface ClientProductLink {
@@ -147,6 +181,14 @@ export type DealLineItemWrite = {
   unit_price?: number | null;
   quantity?: number;
 };
+
+export interface DealLineItem {
+  id: number;
+  product_id: number | null;
+  label: string;
+  unit_price: string | number | null;
+  quantity: number;
+}
 
 export type TimelineFilter =
   | "all"
@@ -213,6 +255,7 @@ export interface Deal {
   follow_up_on?: string | null;
   assigned_to?: number | null;
   assigned_to_email?: string | null;
+  line_items?: DealLineItem[];
 }
 
 /** GET /deals/pipeline-health/ */

@@ -101,7 +101,11 @@ class ClientContact(models.Model):
 
 
 class Product(models.Model):
-    """Lightweight company sales catalog — not inventory/ERP."""
+    """Lightweight company sales catalog — CRM product intelligence, not inventory."""
+
+    class ProductType(models.TextChoices):
+        PHYSICAL = "physical", "Physical product"
+        SERVICE = "service", "Service"
 
     company = models.ForeignKey(
         Company,
@@ -109,15 +113,22 @@ class Product(models.Model):
         related_name="products",
     )
     name = models.CharField(max_length=255)
+    product_type = models.CharField(
+        max_length=20,
+        choices=ProductType.choices,
+        default=ProductType.PHYSICAL,
+    )
     category = models.CharField(max_length=120, blank=True, default="")
     default_price = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         null=True,
         blank=True,
+        help_text="Reference price only — deals may override.",
     )
     description = models.TextField(blank=True, default="")
     sku = models.CharField(max_length=80, blank=True, default="")
+    tags = models.JSONField(default=list, blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -136,6 +147,7 @@ class ClientProductLink(models.Model):
         FREQUENT = "frequent", "Frequently purchased"
         RECENT = "recent", "Recent purchase"
         INTERESTED = "interested", "Interested in"
+        STOPPED = "stopped", "Stopped ordering"
 
     client = models.ForeignKey(
         Client,
