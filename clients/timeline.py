@@ -23,7 +23,7 @@ from deals.visibility import get_visible_deals
 
 TimelineKind = Literal["deal", "activity", "task"]
 TimelineImportance = Literal["normal", "highlight", "milestone"]
-TimelineFilter = Literal["all", "deals", "activities", "tasks"]
+TimelineFilter = Literal["all", "deals", "activities", "tasks", "calls", "notes"]
 
 MILESTONE_AUTO_TYPES = frozenset({"deal_won", "deal_closed", "stage_move"})
 NOISE_TASK_CATEGORIES = frozenset({"cancelled", "archived_stale", "system"})
@@ -161,8 +161,7 @@ class CustomerTimelineBuilder:
 
         events.sort(key=lambda e: e.occurred_at, reverse=True)
 
-        if filter_group != "all":
-            events = [e for e in events if e.filter_group == filter_group]
+        events = self._apply_timeline_filter(events, filter_group)
 
         return {
             "client_id": self.client.id,
@@ -170,6 +169,33 @@ class CustomerTimelineBuilder:
             "summary": self._summary(deals, events),
             "events": [e.to_dict() for e in events],
         }
+
+    def _apply_timeline_filter(
+        self, events: list[TimelineEvent], filter_group: TimelineFilter
+    ) -> list[TimelineEvent]:
+        if filter_group == "all":
+            return events
+        if filter_group == "deals":
+            return [e for e in events if e.filter_group == "deals"]
+        if filter_group == "tasks":
+            return [e for e in events if e.filter_group == "tasks"]
+        if filter_group == "activities":
+            return [e for e in events if e.filter_group == "activities"]
+        if filter_group == "calls":
+            return [
+                e
+                for e in events
+                if e.event_type in ("call", "meeting")
+                or (e.kind == "activity" and e.event_type in ("call", "meeting"))
+            ]
+        if filter_group == "notes":
+            return [
+                e
+                for e in events
+                if e.event_type == "note"
+                or (e.kind == "activity" and e.event_type == "note")
+            ]
+        return events
 
     def _summary(self, deals: list[Deal], events: list[TimelineEvent]) -> dict:
         won = [d for d in deals if closed_stage_kind(d.stage) == "won"]
@@ -179,6 +205,8 @@ class CustomerTimelineBuilder:
         first_touch = None
         if deals:
             first_touch = min(d.created_at for d in deals if d.created_at)
+        avg_size = revenue / len(won) if won else 0.0
+        last_activity = events[0].occurred_at if events else first_touch
         return {
             "total_deals": len(deals),
             "open_deals": len(open_deals),
@@ -187,6 +215,8 @@ class CustomerTimelineBuilder:
             "total_won_revenue": revenue,
             "relationship_since": first_touch,
             "timeline_events": len(events),
+            "last_activity_at": last_activity,
+            "average_deal_size": avg_size,
         }
 
     def _events_from_deal(self, deal: Deal) -> list[TimelineEvent]:

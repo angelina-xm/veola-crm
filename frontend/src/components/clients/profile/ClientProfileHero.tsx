@@ -1,0 +1,96 @@
+"use client";
+
+import { cn } from "@/src/lib/cn";
+import { initialsFromLabel } from "@/src/lib/nav";
+import type { Client, ClientContact } from "@/src/types";
+
+const STATUS_CLASS: Record<string, string> = {
+  active: "bg-emerald-50 text-emerald-700",
+  prospect: "bg-blue-50 text-blue-700",
+  dormant: "bg-amber-50 text-amber-800",
+  churned: "bg-zinc-100 text-zinc-600",
+};
+
+export default function ClientProfileHero({
+  client,
+  primaryContact,
+}: {
+  client: Client;
+  primaryContact: ClientContact | null;
+}) {
+  const isBusiness = (client.client_type ?? "business") === "business";
+  const initials = initialsFromLabel(client.name);
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-[var(--vx-shadow-card)]">
+      <div className="bg-gradient-to-br from-zinc-50 via-white to-blue-50/30 px-6 py-6 sm:px-8 sm:py-8">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
+          <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[var(--vx-accent)] text-xl font-bold text-white shadow-[var(--vx-shadow-accent)]">
+            {initials}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={cn(
+                  "rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                  isBusiness ? "bg-zinc-100 text-zinc-700" : "bg-violet-50 text-violet-700"
+                )}
+              >
+                {isBusiness ? "Business" : "Individual"}
+              </span>
+              <span
+                className={cn(
+                  "rounded-full px-2.5 py-0.5 text-[10px] font-semibold capitalize",
+                  STATUS_CLASS[client.relationship_status ?? "active"] ??
+                    STATUS_CLASS.active
+                )}
+              >
+                {client.relationship_status ?? "active"}
+              </span>
+            </div>
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 sm:text-3xl">
+              {client.name}
+            </h1>
+            {client.description ? (
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-600">
+                {client.description}
+              </p>
+            ) : null}
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-zinc-500">
+              {client.website ? (
+                <a
+                  href={
+                    client.website.startsWith("http")
+                      ? client.website
+                      : `https://${client.website}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-[var(--vx-accent)] hover:underline"
+                >
+                  {client.website.replace(/^https?:\/\//, "")}
+                </a>
+              ) : null}
+              {client.industry ? <span>{client.industry}</span> : null}
+              {client.email ? <span>{client.email}</span> : null}
+              {client.phone ? <span>{client.phone}</span> : null}
+            </div>
+            {primaryContact ? (
+              <p className="mt-2 text-xs text-zinc-500">
+                Primary contact:{" "}
+                <span className="font-medium text-zinc-700">
+                  {primaryContact.full_name}
+                  {primaryContact.role_title
+                    ? ` · ${primaryContact.role_title}`
+                    : ""}
+                </span>
+              </p>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+

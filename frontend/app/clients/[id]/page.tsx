@@ -1,70 +1,90 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
 import { useAuth } from "@/src/components/auth/AuthProvider";
 import CustomerTimeline from "@/src/components/clients/CustomerTimeline";
+import ClientAnalyticsPro from "@/src/components/clients/profile/ClientAnalyticsPro";
+import ClientContactsSection from "@/src/components/clients/profile/ClientContactsSection";
+import ClientCurrentState from "@/src/components/clients/profile/ClientCurrentState";
+import ClientMetricsSnapshot from "@/src/components/clients/profile/ClientMetricsSnapshot";
+import ClientProfileHero from "@/src/components/clients/profile/ClientProfileHero";
+import ClientQuickActions from "@/src/components/clients/profile/ClientQuickActions";
+import ClientRelationshipMemoryBlock from "@/src/components/clients/profile/ClientRelationshipMemory";
 import {
   createActivity,
+  createClientContact,
+  createCrmTask,
+  deleteClientContact,
+  getClientProfile,
   getClientTimeline,
-  getClients,
+  patchClient,
+  patchClientContact,
 } from "@/src/lib/api";
 import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
 import { ROUTES } from "@/src/lib/product";
-import type { Client, ClientTimeline, TimelineFilter } from "@/src/types";
+import { defaultDueDatetimeLocal } from "@/src/lib/taskSemantics";
+import type {
+  ClientContact,
+  ClientProfile,
+  ClientRelationshipMemory,
+  TimelineFilter,
+} from "@/src/types";
 
-const CATEGORY_OPTIONS = [
-  "Pricing",
-  "Interest",
-  "Objection",
-  "Follow up",
-  "Other",
-] as const;
+const NOTE_CATEGORIES = ["Pricing", "Interest", "Objection", "Follow up", "Other"];
 
 export default function ClientProfilePage() {
   const { isReady, isAuthenticated } = useAuth();
-  const router = useRouter();
   const params = useParams<{ id: string }>();
   const clientId = String(params?.id ?? "");
   const [companyId, setCompanyId] = useState<number | null>(null);
+  const [profile, setProfile] = useState<ClientProfile | null>(null);
+  const [timeline, setTimeline] = useState<
+    Awaited<ReturnType<typeof getClientTimeline>> | null
+  >(null);
   const [loading, setLoading] = useState(true);
   const [timelineLoading, setTimelineLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [timelineError, setTimelineError] = useState<string | null>(null);
-  const [client, setClient] = useState<Client | null>(null);
-  const [timeline, setTimeline] = useState<ClientTimeline | null>(null);
   const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>("all");
-  const [addingNote, setAddingNote] = useState(false);
-  const [addingCall, setAddingCall] = useState(false);
-  const [noteCategory, setNoteCategory] = useState<string>("Other");
-  const [callCategory, setCallCategory] = useState<string>("Other");
+  const noteRef = useRef<HTMLDivElement>(null);
+  const callRef = useRef<HTMLDivElement>(null);
   const [noteContent, setNoteContent] = useState("");
   const [callContent, setCallContent] = useState("");
+  const [noteCategory, setNoteCategory] = useState("Other");
+  const [actionBusy, setActionBusy] = useState(false);
 
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
     setCompanyId(getStoredCompanyId() ?? readEnvCompanyId());
   }, []);
 
-  useLayoutEffect(() => {
-    if (!isReady || !isAuthenticated) return;
-    setCompanyId(getStoredCompanyId() ?? readEnvCompanyId());
-  }, [isReady, isAuthenticated]);
+  const loadProfile = useCallback(async () => {
+    if (!companyId || !clientId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const tenantId = getStoredCompanyId() ?? companyId;
+      const data = await getClientProfile(tenantId, clientId);
+      setProfile(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load client");
+      setProfile(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [clientId, companyId]);
 
   const loadTimeline = useCallback(
     async (filter: TimelineFilter) => {
       if (!companyId || !clientId) return;
       setTimelineLoading(true);
-      setTimelineError(null);
       try {
         const tenantId = getStoredCompanyId() ?? companyId;
         const data = await getClientTimeline(tenantId, clientId, filter);
         setTimeline(data);
-      } catch (err) {
-        setTimelineError(
-          err instanceof Error ? err.message : "Could not load timeline."
-        );
+      } catch {
         setTimeline(null);
       } finally {
         setTimelineLoading(false);
@@ -73,215 +93,218 @@ export default function ClientProfilePage() {
     [clientId, companyId]
   );
 
-  const loadClient = useCallback(async () => {
-    if (!companyId || !clientId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const tenantId = getStoredCompanyId() ?? companyId;
-      const clientsRaw = await getClients(tenantId);
-      const found = clientsRaw.find((c) => String(c.id) === clientId) ?? null;
-      if (!found) {
-        setClient(null);
-        setTimeline(null);
-        setError("Client not found.");
-        return;
-      }
-      setClient(found);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load client.");
-      setClient(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [clientId, companyId]);
-
   useEffect(() => {
     if (!isReady || !isAuthenticated || companyId === null) return;
-    void loadClient();
-  }, [companyId, isAuthenticated, isReady, loadClient]);
+    void loadProfile();
+  }, [companyId, isAuthenticated, isReady, loadProfile]);
 
   useEffect(() => {
-    if (!client || companyId === null) return;
+    if (!profile) return;
     void loadTimeline(timelineFilter);
-  }, [timelineFilter, client, companyId, loadTimeline]);
+  }, [profile, timelineFilter, loadTimeline]);
 
-  const refreshAfterAction = useCallback(async () => {
+  const refresh = useCallback(async () => {
+    await loadProfile();
     await loadTimeline(timelineFilter);
-  }, [loadTimeline, timelineFilter]);
+  }, [loadProfile, loadTimeline, timelineFilter]);
 
-  const handleAddNote = useCallback(async () => {
+  const saveMemory = async (memory: ClientRelationshipMemory) => {
     if (!companyId) return;
-    const content = noteContent.trim();
-    if (!content) return;
-    setAddingNote(true);
+    const tenantId = getStoredCompanyId() ?? companyId;
+    await patchClient(tenantId, clientId, {
+      ...memory,
+      last_conversation_at: new Date().toISOString(),
+    });
+    await refresh();
+  };
+
+  const saveContact = async (
+    payload: Omit<ClientContact, "id"> & { id?: number }
+  ) => {
+    if (!companyId) return;
+    const tenantId = getStoredCompanyId() ?? companyId;
+    if (payload.id) {
+      await patchClientContact(tenantId, clientId, payload.id, payload);
+    } else {
+      await createClientContact(tenantId, clientId, payload);
+    }
+    await refresh();
+  };
+
+  const removeContact = async (id: number) => {
+    if (!companyId) return;
+    const tenantId = getStoredCompanyId() ?? companyId;
+    await deleteClientContact(tenantId, clientId, id);
+    await refresh();
+  };
+
+  const addNote = async () => {
+    if (!companyId || !noteContent.trim()) return;
+    setActionBusy(true);
     try {
       const tenantId = getStoredCompanyId() ?? companyId;
       await createActivity(tenantId, {
         client: Number.parseInt(clientId, 10),
         type: "note",
         category: noteCategory,
-        content,
+        content: noteContent.trim(),
       });
       setNoteContent("");
-      await refreshAfterAction();
-    } catch (err) {
-      window.alert(err instanceof Error ? err.message : "Could not add note");
+      await refresh();
     } finally {
-      setAddingNote(false);
+      setActionBusy(false);
     }
-  }, [clientId, companyId, noteCategory, noteContent, refreshAfterAction]);
+  };
 
-  const handleLogCall = useCallback(async () => {
-    if (!companyId) return;
-    const content = callContent.trim();
-    if (!content) return;
-    setAddingCall(true);
+  const logCall = async () => {
+    if (!companyId || !callContent.trim()) return;
+    setActionBusy(true);
     try {
       const tenantId = getStoredCompanyId() ?? companyId;
       await createActivity(tenantId, {
         client: Number.parseInt(clientId, 10),
         type: "call",
-        category: callCategory,
-        content,
+        category: "Follow up",
+        content: callContent.trim(),
       });
       setCallContent("");
-      await refreshAfterAction();
-    } catch (err) {
-      window.alert(err instanceof Error ? err.message : "Could not log call");
+      await refresh();
     } finally {
-      setAddingCall(false);
+      setActionBusy(false);
     }
-  }, [callCategory, callContent, clientId, companyId, refreshAfterAction]);
+  };
 
-  const relationshipSince = timeline?.summary.relationship_since
-    ? new Date(timeline.summary.relationship_since).toLocaleDateString(undefined, {
-        month: "long",
-        year: "numeric",
-      })
-    : null;
+  const addTask = async () => {
+    if (!companyId) return;
+    setActionBusy(true);
+    try {
+      const tenantId = getStoredCompanyId() ?? companyId;
+      await createCrmTask(tenantId, {
+        client: Number.parseInt(clientId, 10),
+        content: "Follow up with client",
+        due_date: new Date(defaultDueDatetimeLocal()).toISOString(),
+        priority: "medium",
+      });
+      await refresh();
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const noteForm = (
+    <div className="grid gap-4 md:grid-cols-2">
+      <div ref={noteRef}>
+        <p className="text-xs font-semibold text-zinc-700">Add note</p>
+        <select
+          value={noteCategory}
+          onChange={(e) => setNoteCategory(e.target.value)}
+          className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-sm"
+        >
+          {NOTE_CATEGORIES.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+        <textarea
+          value={noteContent}
+          onChange={(e) => setNoteContent(e.target.value)}
+          rows={2}
+          className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+          placeholder="What happened?"
+        />
+        <button
+          type="button"
+          disabled={actionBusy || !noteContent.trim()}
+          onClick={() => void addNote()}
+          className="mt-2 rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+        >
+          Save note
+        </button>
+      </div>
+      <div ref={callRef}>
+        <p className="text-xs font-semibold text-zinc-700">Log call</p>
+        <textarea
+          value={callContent}
+          onChange={(e) => setCallContent(e.target.value)}
+          rows={3}
+          className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+          placeholder="Conversation summary"
+        />
+        <button
+          type="button"
+          disabled={actionBusy || !callContent.trim()}
+          onClick={() => void logCall()}
+          className="mt-2 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-800 disabled:opacity-50"
+        >
+          Log call
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <ProtectedRoute>
-      <>
-        <header className="mb-8">
-          <p className="text-sm text-slate-500">Customer</p>
-          {loading ? (
-            <h1 className="mt-1 text-2xl font-semibold text-slate-400">Loading…</h1>
-          ) : client ? (
-            <>
-              <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">
-                {client.name}
-              </h1>
-              <div className="mt-2 flex flex-wrap gap-x-4 text-sm text-slate-600">
-                {client.email ? <span>{client.email}</span> : null}
-                {client.phone ? <span>{client.phone}</span> : null}
-                {relationshipSince ? (
-                  <span>Together since {relationshipSince}</span>
-                ) : null}
-              </div>
-            </>
-          ) : (
-            <h1 className="mt-1 text-2xl font-semibold text-slate-900">Client</h1>
-          )}
-        </header>
+      <div className="space-y-6 pb-10">
+        <Link
+          href={ROUTES.clients}
+          className="text-sm font-medium text-zinc-500 hover:text-zinc-800"
+        >
+          ← Clients
+        </Link>
 
         {error ? (
-          <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             {error}
-          </div>
+          </p>
         ) : null}
 
-        {client ? (
-          <div className="space-y-8">
-            <CustomerTimeline
-              timeline={timeline}
-              loading={timelineLoading || loading}
-              error={timelineError}
-              activeFilter={timelineFilter}
-              onFilterChange={setTimelineFilter}
+        {loading && !profile ? (
+          <div className="h-40 animate-pulse rounded-2xl bg-zinc-100" />
+        ) : profile ? (
+          <>
+            <ClientProfileHero
+              client={profile.client}
+              primaryContact={profile.primary_contact}
             />
-
-            <section className="rounded-xl border border-slate-200 bg-white p-5">
-              <h3 className="text-base font-semibold text-slate-900">Add to the story</h3>
-              <p className="mt-0.5 text-sm text-slate-500">
-                Notes and calls become part of this relationship history.
-              </p>
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <label className="block text-sm text-slate-700">
-                    Note
-                    <select
-                      value={noteCategory}
-                      onChange={(e) => setNoteCategory(e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
-                    >
-                      {CATEGORY_OPTIONS.map((opt) => (
-                        <option key={opt} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
-                    <textarea
-                      value={noteContent}
-                      onChange={(e) => setNoteContent(e.target.value)}
-                      rows={3}
-                      placeholder="What happened?"
-                      className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => void handleAddNote()}
-                    disabled={addingNote || !noteContent.trim()}
-                    className="rounded-lg bg-slate-800 px-3 py-2 text-sm text-white hover:bg-slate-900 disabled:opacity-50"
-                  >
-                    {addingNote ? "Saving…" : "Save note"}
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm text-slate-700">
-                    Call
-                    <select
-                      value={callCategory}
-                      onChange={(e) => setCallCategory(e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
-                    >
-                      {CATEGORY_OPTIONS.map((opt) => (
-                        <option key={opt} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
-                    <textarea
-                      value={callContent}
-                      onChange={(e) => setCallContent(e.target.value)}
-                      rows={3}
-                      placeholder="Summary of the conversation"
-                      className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => void handleLogCall()}
-                    disabled={addingCall || !callContent.trim()}
-                    className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 hover:bg-slate-50 disabled:opacity-50"
-                  >
-                    {addingCall ? "Saving…" : "Log call"}
-                  </button>
-                </div>
+            <ClientQuickActions
+              clientId={clientId}
+              hasPrimaryContact={profile.has_primary_contact}
+              onAddNote={() => noteRef.current?.scrollIntoView({ behavior: "smooth" })}
+              onLogCall={() => callRef.current?.scrollIntoView({ behavior: "smooth" })}
+              onAddTask={() => void addTask()}
+            />
+            <div className="grid gap-6 lg:grid-cols-3">
+              <div className="space-y-6 lg:col-span-2">
+                <ClientCurrentState
+                  deals={profile.operational.active_deals}
+                  tasks={profile.operational.open_tasks}
+                />
+                <ClientContactsSection
+                  contacts={profile.contacts}
+                  onSave={saveContact}
+                  onDelete={removeContact}
+                />
+                <CustomerTimeline
+                  timeline={timeline}
+                  loading={timelineLoading}
+                  activeFilter={timelineFilter}
+                  onFilterChange={setTimelineFilter}
+                  noteForm={noteForm}
+                />
               </div>
-              <button
-                type="button"
-                onClick={() => router.push(ROUTES.deals)}
-                className="mt-4 text-sm text-slate-600 underline hover:text-slate-900"
-              >
-                Open deals board to create a deal
-              </button>
-            </section>
-          </div>
+              <div className="space-y-6">
+                <ClientMetricsSnapshot metrics={profile.metrics} />
+                <ClientRelationshipMemoryBlock
+                  memory={profile.relationship_memory}
+                  onSave={saveMemory}
+                />
+                <ClientAnalyticsPro />
+              </div>
+            </div>
+          </>
         ) : null}
-      </>
+      </div>
     </ProtectedRoute>
   );
 }

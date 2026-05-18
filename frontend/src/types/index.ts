@@ -1,14 +1,101 @@
 // Client (CRM)
+export type ClientType = "business" | "individual";
+export type ClientRelationshipStatus =
+  | "active"
+  | "prospect"
+  | "dormant"
+  | "churned";
+
 export interface Client {
   id: string | number;
   name: string;
+  client_type?: ClientType;
+  relationship_status?: ClientRelationshipStatus;
   email?: string | null;
   phone?: string | null;
-  /** FK компании с API — для фильтрации на фронте при multi-tenant */
+  industry?: string;
+  description?: string;
+  products_services?: string;
+  website?: string;
+  company_size?: string;
+  last_conversation_topic?: string;
+  last_conversation_mood?: string;
+  last_conversation_outcome?: string;
+  next_step?: string;
+  last_conversation_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
   company?: string | number;
 }
 
-export type TimelineFilter = "all" | "deals" | "activities" | "tasks";
+export interface ClientContact {
+  id: number;
+  full_name: string;
+  role_title: string;
+  email: string;
+  phone: string;
+  preferred_contact_method: "email" | "phone" | "any";
+  notes: string;
+  is_primary: boolean;
+}
+
+export interface ClientRelationshipMemory {
+  last_conversation_topic: string;
+  last_conversation_mood: string;
+  last_conversation_outcome: string;
+  next_step: string;
+  last_conversation_at: string | null;
+}
+
+export interface ClientProfileMetrics {
+  customer_since: string | null;
+  total_revenue: number;
+  won_deals: number;
+  active_deals: number;
+  total_deals: number;
+  last_activity_at: string | null;
+  average_deal_size: number;
+}
+
+export interface ClientOperationalDeal {
+  id: number;
+  title: string;
+  amount: string;
+  stage_name: string;
+  created_at: string;
+}
+
+export interface ClientOperationalTask {
+  id: number;
+  content: string;
+  due_date: string | null;
+  priority: string;
+  deal_id: number | null;
+  deal_title: string | null;
+  assigned_to_email: string | null;
+}
+
+/** GET /clients/:id/profile/ */
+export interface ClientProfile {
+  client: Client;
+  contacts: ClientContact[];
+  has_primary_contact: boolean;
+  primary_contact: ClientContact | null;
+  relationship_memory: ClientRelationshipMemory;
+  metrics: ClientProfileMetrics;
+  operational: {
+    active_deals: ClientOperationalDeal[];
+    open_tasks: ClientOperationalTask[];
+  };
+}
+
+export type TimelineFilter =
+  | "all"
+  | "deals"
+  | "activities"
+  | "tasks"
+  | "calls"
+  | "notes";
 
 export interface TimelineEvent {
   id: string;
@@ -33,6 +120,8 @@ export interface ClientTimelineSummary {
   total_won_revenue: number;
   relationship_since: string | null;
   timeline_events: number;
+  last_activity_at?: string | null;
+  average_deal_size?: number;
 }
 
 /** GET /clients/:id/timeline/ */

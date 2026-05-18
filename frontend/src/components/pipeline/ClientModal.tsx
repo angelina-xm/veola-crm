@@ -7,7 +7,11 @@ type ClientModalProps = {
   submitting: boolean;
   error: string | null;
   onClose: () => void;
-  onSubmit: (values: { name: string; email: string }) => void | Promise<void>;
+  onSubmit: (values: {
+    name: string;
+    email: string;
+    client_type?: "business" | "individual";
+  }) => void | Promise<void>;
 };
 
 export default function ClientModal({
@@ -19,6 +23,7 @@ export default function ClientModal({
 }: ClientModalProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [clientType, setClientType] = useState<"business" | "individual">("business");
 
   if (!open) return null;
 
@@ -54,7 +59,11 @@ export default function ClientModal({
           onSubmit={(e) => {
             e.preventDefault();
             if (!name.trim()) return;
-            void onSubmit({ name: name.trim(), email: email.trim() });
+            void onSubmit({
+              name: name.trim(),
+              email: email.trim(),
+              client_type: clientType,
+            });
           }}
           className="space-y-3"
         >
@@ -80,6 +89,17 @@ export default function ClientModal({
             disabled={submitting}
             className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
           />
+          <select
+            value={clientType}
+            onChange={(e) =>
+              setClientType(e.target.value as "business" | "individual")
+            }
+            disabled={submitting}
+            className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+          >
+            <option value="business">Business</option>
+            <option value="individual">Individual</option>
+          </select>
           <div className="flex items-center gap-2 pt-1">
             <button
               type="submit"

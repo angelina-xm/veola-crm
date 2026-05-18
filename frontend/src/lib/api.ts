@@ -735,6 +735,162 @@ export async function getClients(companyId: number): Promise<Client[]> {
   }));
 }
 
+function normalizeClient(raw: Record<string, unknown>): Client {
+  return {
+    id: String(raw.id ?? ""),
+    name: String(raw.name ?? ""),
+    client_type:
+      raw.client_type === "individual" ? "individual" : "business",
+    relationship_status: (raw.relationship_status as Client["relationship_status"]) ?? "active",
+    email: raw.email == null ? null : String(raw.email),
+    phone: raw.phone == null ? null : String(raw.phone),
+    industry: String(raw.industry ?? ""),
+    description: String(raw.description ?? ""),
+    products_services: String(raw.products_services ?? ""),
+    website: String(raw.website ?? ""),
+    company_size: String(raw.company_size ?? ""),
+    last_conversation_topic: String(raw.last_conversation_topic ?? ""),
+    last_conversation_mood: String(raw.last_conversation_mood ?? ""),
+    last_conversation_outcome: String(raw.last_conversation_outcome ?? ""),
+    next_step: String(raw.next_step ?? ""),
+    last_conversation_at:
+      raw.last_conversation_at == null
+        ? null
+        : String(raw.last_conversation_at),
+    created_at: raw.created_at == null ? undefined : String(raw.created_at),
+    updated_at: raw.updated_at == null ? undefined : String(raw.updated_at),
+    company:
+      raw.company == null
+        ? undefined
+        : typeof raw.company === "object"
+          ? String((raw.company as { id?: unknown }).id ?? "")
+          : Number(raw.company) || String(raw.company),
+  };
+}
+
+export async function getClient(
+  companyId: number,
+  clientId: string | number
+): Promise<Client> {
+  const res = await fetchWithAuth(`/clients/${clientId}/`, {}, companyId);
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const raw = (await res.json()) as Record<string, unknown>;
+  return normalizeClient(raw);
+}
+
+export async function getClientProfile(
+  companyId: number,
+  clientId: string | number
+): Promise<import("@/src/types").ClientProfile> {
+  const res = await fetchWithAuth(
+    `/clients/${clientId}/profile/`,
+    {},
+    companyId
+  );
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const raw = (await res.json()) as import("@/src/types").ClientProfile;
+  return {
+    ...raw,
+    client: normalizeClient(raw.client as unknown as Record<string, unknown>),
+  };
+}
+
+export async function patchClient(
+  companyId: number,
+  clientId: string | number,
+  body: Partial<import("@/src/types").Client>
+): Promise<Client> {
+  const res = await fetchWithAuth(
+    `/clients/${clientId}/`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    companyId
+  );
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const raw = (await res.json()) as Record<string, unknown>;
+  return normalizeClient(raw);
+}
+
+export async function getClientContacts(
+  companyId: number,
+  clientId: string | number
+): Promise<import("@/src/types").ClientContact[]> {
+  const res = await fetchWithAuth(
+    `/clients/${clientId}/contacts/`,
+    {},
+    companyId
+  );
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  return res.json();
+}
+
+export async function createClientContact(
+  companyId: number,
+  clientId: string | number,
+  body: Omit<import("@/src/types").ClientContact, "id">
+): Promise<import("@/src/types").ClientContact> {
+  const res = await fetchWithAuth(
+    `/clients/${clientId}/contacts/`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    companyId
+  );
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  return res.json();
+}
+
+export async function patchClientContact(
+  companyId: number,
+  clientId: string | number,
+  contactId: number,
+  body: Partial<import("@/src/types").ClientContact>
+): Promise<import("@/src/types").ClientContact> {
+  const res = await fetchWithAuth(
+    `/clients/${clientId}/contacts/${contactId}/`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    companyId
+  );
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  return res.json();
+}
+
+export async function deleteClientContact(
+  companyId: number,
+  clientId: string | number,
+  contactId: number
+): Promise<void> {
+  const res = await fetchWithAuth(
+    `/clients/${clientId}/contacts/${contactId}/`,
+    { method: "DELETE" },
+    companyId
+  );
+  if (!res.ok && res.status !== 204) {
+    throw new Error(await parseErrorBody(res));
+  }
+}
+
 export async function getClientTimeline(
   companyId: number,
   clientId: string | number,
@@ -754,6 +910,8 @@ export async function getClientTimeline(
 export type CreateClientPayload = {
   name: string;
   email?: string;
+  phone?: string;
+  client_type?: "business" | "individual";
 };
 
 export async function createClient(

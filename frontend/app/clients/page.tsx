@@ -54,7 +54,11 @@ export default function ClientsPage() {
   }, [companyId, isAuthenticated, isReady, loadClients]);
 
   const handleCreateClient = useCallback(
-    async (values: { name: string; email: string }) => {
+    async (values: {
+      name: string;
+      email: string;
+      client_type?: "business" | "individual";
+    }) => {
       if (companyId === null) return;
       setClientSubmitting(true);
       setClientError(null);
@@ -63,6 +67,7 @@ export default function ClientsPage() {
         await createClient(tenantId, {
           name: values.name,
           email: values.email || undefined,
+          client_type: values.client_type,
         });
         await loadClients();
         setClientModalOpen(false);
