@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
+import ProBadge from "@/src/components/billing/ProBadge";
+import { useBilling } from "@/src/hooks/useBilling";
 import type {
   AnalyticsGranularity,
   AnalyticsV1FeedItem,
@@ -41,6 +43,22 @@ export default function AnalyticsWorkspace({
   onGranularityChange: (g: AnalyticsGranularity) => void;
   onRetry: () => void;
 }) {
+  const { entitlements, isLocked } = useBilling();
+  const exportLocked = isLocked("exportReports");
+
+  const handleExport = useCallback(() => {
+    if (!data || exportLocked) return;
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `vexora-analytics-${granularity}-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [data, exportLocked, granularity]);
+
   const feed = data?.recent_activity ?? [];
   const stageMoves = useMemo(() => filterByKind(feed, ["deal_moved"]), [feed]);
   const wonFeed = useMemo(() => filterByKind(feed, ["deal_won"]), [feed]);
@@ -110,11 +128,21 @@ export default function AnalyticsWorkspace({
           </div>
           <button
             type="button"
-            disabled
-            title="Coming in Pro"
-            className="rounded-lg border border-dashed border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-400"
+            disabled={exportLocked || !data}
+            title={
+              exportLocked
+                ? "Export is a Pro feature — enable PRO_FEATURES_ENABLED for dev"
+                : "Download analytics JSON snapshot"
+            }
+            onClick={handleExport}
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+              exportLocked
+                ? "cursor-not-allowed border-dashed border-zinc-200 bg-white text-zinc-400"
+                : "border-zinc-200/90 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50"
+            }`}
           >
             Export
+            <ProBadge devUnlock={entitlements.devUnlock} className="!px-1.5 !py-0 !text-[9px]" />
           </button>
         </div>
       </header>

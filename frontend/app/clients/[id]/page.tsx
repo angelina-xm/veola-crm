@@ -299,7 +299,7 @@ export default function ClientProfilePage() {
                   memory={profile.relationship_memory}
                   onSave={saveMemory}
                 />
-                <ClientAnalyticsPro />
+                <ClientAnalyticsPro metrics={profile.metrics} />
               </div>
             </div>
           </>

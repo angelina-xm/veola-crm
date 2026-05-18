@@ -461,10 +461,15 @@ export async function getCurrentMembership(
       ? raw.user_display_name.trim()
       : userEmail.split("@")[0] || "User";
 
+  const planRaw = String(raw.company_plan ?? "free").toLowerCase();
+  const company_plan =
+    planRaw === "pro" || planRaw === "business" ? planRaw : "free";
+
   return {
     user_id: raw.user_id as number,
     company_id: raw.company_id as number,
     company_name: companyName,
+    company_plan,
     user_email: userEmail,
     user_display_name: userDisplay,
     role: roleNorm,

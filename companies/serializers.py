@@ -89,6 +89,7 @@ class CompanyMemberSerializer(serializers.ModelSerializer):
     user_id = serializers.IntegerField(source="user.id", read_only=True)
     company_id = serializers.IntegerField(source="company.id", read_only=True)
     company_name = serializers.CharField(source="company.name", read_only=True)
+    company_plan = serializers.CharField(source="company.plan", read_only=True)
     user_email = serializers.EmailField(source="user.email", read_only=True)
     user_display_name = serializers.SerializerMethodField()
 
@@ -96,6 +97,7 @@ class CompanyMemberSerializer(serializers.ModelSerializer):
         model = CompanyMember
         fields = _COMPANY_MEMBER_READ_FIELDS + [
             "company_name",
+            "company_plan",
             "user_email",
             "user_display_name",
         ]

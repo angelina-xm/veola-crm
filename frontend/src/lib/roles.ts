@@ -15,6 +15,8 @@ export type MembershipProfile = {
   user_id: number;
   company_id: number;
   company_name: string;
+  /** Company subscription plan — future Stripe source of truth */
+  company_plan: "free" | "pro" | "business";
   user_email: string;
   user_display_name: string;
   role: CompanyRole;

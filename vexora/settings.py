@@ -37,6 +37,10 @@ def _env_bool(name: str, *, default: bool) -> bool:
 # DEBUG: из env; по умолчанию False (локально задайте DEBUG=1 или DEBUG=true)
 DEBUG = _env_bool("DEBUG", default=True)
 
+# PRO_FEATURES_ENABLED: temporary dev unlock for Pro-tier UI/API (not billing).
+# Set PRO_FEATURES_ENABLED=true locally; keep false in production until Stripe ships.
+PRO_FEATURES_ENABLED = _env_bool("PRO_FEATURES_ENABLED", default=False)
+
 # SECRET_KEY: в dev можно без env; в production — только из env
 if DEBUG:
     SECRET_KEY = os.environ.get("SECRET_KEY", "").strip() or "dev-secret-key"
