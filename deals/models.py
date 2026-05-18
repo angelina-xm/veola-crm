@@ -84,6 +84,37 @@ class Deal(models.Model):
         return is_operational_deal(self)
 
 
+class DealLineItem(models.Model):
+    """Products attached to a deal — optional price overrides."""
+
+    deal = models.ForeignKey(
+        Deal,
+        on_delete=models.CASCADE,
+        related_name="line_items",
+    )
+    product = models.ForeignKey(
+        "clients.Product",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="deal_lines",
+    )
+    label = models.CharField(max_length=255)
+    unit_price = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    quantity = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return self.label
+
+
 class DealSignal(models.Model):
     """
     Ephemeral attention signal for a deal — not an actionable task.

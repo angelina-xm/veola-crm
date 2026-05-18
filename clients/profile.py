@@ -10,7 +10,7 @@ from django.db.models import Avg
 
 from activities.models import Activity
 from activities.task_query import visible_tasks_queryset
-from clients.models import Client, ClientContact
+from clients.models import Client, ClientContact, ClientProductLink
 from deals.models import Deal
 from deals.operational import closed_stage_kind, is_operational_deal
 from deals.visibility import get_operational_visible_deals, get_visible_deals
@@ -63,10 +63,15 @@ class ClientProfileBuilder:
 
         contacts = list(self.client.contacts.all())
         primary = next((c for c in contacts if c.is_primary), None)
+        product_links = list(
+            self.client.product_links.select_related("product").all()
+        )
 
         return {
             "client": self._client_payload(),
+            "business_context": self._business_context_payload(),
             "contacts": [self._contact_payload(c) for c in contacts],
+            "products": [self._product_link_payload(link) for link in product_links],
             "has_primary_contact": primary is not None,
             "primary_contact": self._contact_payload(primary) if primary else None,
             "relationship_memory": self._memory_payload(),
@@ -97,12 +102,43 @@ class ClientProfileBuilder:
             "email": c.email,
             "phone": c.phone,
             "industry": c.industry,
+            "market_sector": c.market_sector,
             "description": c.description,
             "products_services": c.products_services,
+            "internal_context": c.internal_context,
             "website": c.website,
             "company_size": c.company_size,
             "created_at": c.created_at,
             "updated_at": c.updated_at,
+        }
+
+    def _business_context_payload(self) -> dict[str, Any]:
+        c = self.client
+        return {
+            "industry": c.industry,
+            "market_sector": c.market_sector,
+            "description": c.description,
+            "products_services": c.products_services,
+            "internal_context": c.internal_context,
+            "website": c.website,
+            "company_size": c.company_size,
+        }
+
+    def _product_link_payload(self, link: ClientProductLink) -> dict[str, Any]:
+        p = link.product
+        return {
+            "id": link.id,
+            "relationship": link.relationship,
+            "note": link.note,
+            "product": {
+                "id": p.id,
+                "name": p.name,
+                "category": p.category,
+                "default_price": (
+                    str(p.default_price) if p.default_price is not None else None
+                ),
+                "sku": p.sku,
+            },
         }
 
     def _memory_payload(self) -> dict[str, Any]:

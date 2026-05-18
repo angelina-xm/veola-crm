@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Client, ClientContact
+from .models import Client, ClientContact, ClientProductLink, Product
 
 
 class ClientContactInline(admin.TabularInline):
@@ -17,3 +17,13 @@ class ClientAdmin(admin.ModelAdmin):
 @admin.register(ClientContact)
 class ClientContactAdmin(admin.ModelAdmin):
     list_display = ("full_name", "client", "role_title", "is_primary")
+
+
+@admin.register(Product)
+class ProductAdmin(admin.ModelAdmin):
+    list_display = ("name", "category", "company", "default_price", "is_active")
+
+
+@admin.register(ClientProductLink)
+class ClientProductLinkAdmin(admin.ModelAdmin):
+    list_display = ("client", "product", "relationship")

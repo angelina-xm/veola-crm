@@ -750,8 +750,10 @@ function normalizeClient(raw: Record<string, unknown>): Client {
     email: raw.email == null ? null : String(raw.email),
     phone: raw.phone == null ? null : String(raw.phone),
     industry: String(raw.industry ?? ""),
+    market_sector: String(raw.market_sector ?? ""),
     description: String(raw.description ?? ""),
     products_services: String(raw.products_services ?? ""),
+    internal_context: String(raw.internal_context ?? ""),
     website: String(raw.website ?? ""),
     company_size: String(raw.company_size ?? ""),
     last_conversation_topic: String(raw.last_conversation_topic ?? ""),
@@ -798,9 +800,22 @@ export async function getClientProfile(
     throw new Error(await parseErrorBody(res));
   }
   const raw = (await res.json()) as import("@/src/types").ClientProfile;
+  const client = normalizeClient(
+    raw.client as unknown as Record<string, unknown>
+  );
   return {
     ...raw,
-    client: normalizeClient(raw.client as unknown as Record<string, unknown>),
+    client,
+    business_context: raw.business_context ?? {
+      industry: client.industry ?? "",
+      market_sector: client.market_sector ?? "",
+      description: client.description ?? "",
+      products_services: client.products_services ?? "",
+      internal_context: client.internal_context ?? "",
+      website: client.website ?? "",
+      company_size: client.company_size ?? "",
+    },
+    products: raw.products ?? [],
   };
 }
 
@@ -879,6 +894,126 @@ export async function patchClientContact(
     throw new Error(await parseErrorBody(res));
   }
   return res.json();
+}
+
+export async function postClientInteraction(
+  companyId: number,
+  clientId: string | number,
+  payload: import("@/src/types").ClientInteractionPayload
+): Promise<{
+  activity_id: number | null;
+  task_id: number | null;
+  relationship_memory: import("@/src/types").ClientRelationshipMemory;
+}> {
+  const res = await fetchWithAuth(
+    `/clients/${clientId}/interactions/`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    companyId
+  );
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  return res.json() as Promise<{
+    activity_id: number | null;
+    task_id: number | null;
+    relationship_memory: import("@/src/types").ClientRelationshipMemory;
+  }>;
+}
+
+export async function getProducts(
+  companyId: number
+): Promise<import("@/src/types").CatalogProduct[]> {
+  const res = await fetchWithAuth("/products/", {}, companyId);
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const data: unknown = await res.json();
+  const list = normalizeApiList(data as ListResponse<Record<string, unknown>>);
+  return list.map((row) => ({
+    id: Number(row.id),
+    name: String(row.name ?? ""),
+    category: String(row.category ?? ""),
+    default_price:
+      row.default_price == null ? null : String(row.default_price),
+    description: String(row.description ?? ""),
+    sku: String(row.sku ?? ""),
+    is_active: row.is_active !== false,
+  }));
+}
+
+export async function createProduct(
+  companyId: number,
+  payload: {
+    name: string;
+    category?: string;
+    default_price?: number | null;
+    description?: string;
+    sku?: string;
+  }
+): Promise<import("@/src/types").CatalogProduct> {
+  const res = await fetchWithAuth(
+    "/products/",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    companyId
+  );
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  const row = (await res.json()) as Record<string, unknown>;
+  return {
+    id: Number(row.id),
+    name: String(row.name ?? ""),
+    category: String(row.category ?? ""),
+    default_price:
+      row.default_price == null ? null : String(row.default_price),
+  };
+}
+
+export async function linkClientProduct(
+  companyId: number,
+  clientId: string | number,
+  payload: {
+    product_id: number;
+    relationship: import("@/src/types").ClientProductRelationship;
+    note?: string;
+  }
+): Promise<import("@/src/types").ClientProductLink> {
+  const res = await fetchWithAuth(
+    `/clients/${clientId}/product-links/`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    companyId
+  );
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  return res.json() as Promise<import("@/src/types").ClientProductLink>;
+}
+
+export async function unlinkClientProduct(
+  companyId: number,
+  clientId: string | number,
+  linkId: number
+): Promise<void> {
+  const res = await fetchWithAuth(
+    `/clients/${clientId}/product-links/${linkId}/`,
+    { method: "DELETE" },
+    companyId
+  );
+  if (!res.ok && res.status !== 204) {
+    throw new Error(await parseErrorBody(res));
+  }
 }
 
 export async function deleteClientContact(
@@ -1382,6 +1517,7 @@ export type CreateDealPayload = {
   amount: number;
   stage: number;
   client: number;
+  line_items_write?: import("@/src/types").DealLineItemWrite[];
 };
 
 export async function createDeal(

@@ -3,7 +3,7 @@ from rest_framework import serializers
 from companies.models import CompanyMember
 
 from .lifecycle import build_close_transition_payload
-from .models import Deal, PipelineStage
+from .models import Deal, DealLineItem, PipelineStage
 from .operational import closed_stage_kind, is_closed_stage
 
 
@@ -27,10 +27,31 @@ class StaleDealSerializer(serializers.ModelSerializer):
         )
 
 
+class DealLineItemWriteSerializer(serializers.Serializer):
+    product_id = serializers.IntegerField(required=False, allow_null=True)
+    label = serializers.CharField(required=False, allow_blank=True)
+    unit_price = serializers.DecimalField(
+        max_digits=12, decimal_places=2, required=False, allow_null=True
+    )
+    quantity = serializers.IntegerField(required=False, default=1, min_value=1)
+
+
+class DealLineItemSerializer(serializers.ModelSerializer):
+    product_id = serializers.IntegerField(source="product_id", read_only=True, allow_null=True)
+
+    class Meta:
+        model = DealLineItem
+        fields = ["id", "product_id", "label", "unit_price", "quantity"]
+
+
 class DealSerializer(serializers.ModelSerializer):
     is_operational = serializers.SerializerMethodField()
     stage_name = serializers.CharField(source="stage.name", read_only=True, allow_null=True)
     close_transition = serializers.SerializerMethodField()
+    line_items = DealLineItemSerializer(many=True, read_only=True)
+    line_items_write = DealLineItemWriteSerializer(
+        many=True, write_only=True, required=False
+    )
 
     class Meta:
         model = Deal
@@ -40,6 +61,8 @@ class DealSerializer(serializers.ModelSerializer):
             "client",
             "title",
             "amount",
+            "line_items",
+            "line_items_write",
             "stage",
             "stage_name",
             "created_by",
@@ -107,6 +130,48 @@ class DealSerializer(serializers.ModelSerializer):
                 )
 
         return attrs
+
+    def create(self, validated_data):
+        line_items_data = validated_data.pop("line_items_write", None) or []
+        deal = super().create(validated_data)
+        self._save_line_items(deal, line_items_data)
+        return deal
+
+    def _save_line_items(self, deal: Deal, items_data: list) -> None:
+        from clients.models import Product
+        from decimal import Decimal
+
+        if not items_data:
+            return
+        total = Decimal("0")
+        for row in items_data:
+            product = None
+            label = (row.get("label") or "").strip()
+            product_id = row.get("product_id")
+            if product_id:
+                product = Product.objects.filter(
+                    pk=product_id, company_id=deal.company_id
+                ).first()
+                if product and not label:
+                    label = product.name
+            if not label:
+                continue
+            unit_price = row.get("unit_price")
+            if unit_price is None and product and product.default_price is not None:
+                unit_price = product.default_price
+            qty = int(row.get("quantity") or 1)
+            DealLineItem.objects.create(
+                deal=deal,
+                product=product,
+                label=label,
+                unit_price=unit_price,
+                quantity=qty,
+            )
+            if unit_price is not None:
+                total += Decimal(str(unit_price)) * qty
+        if total > 0 and (deal.amount is None or deal.amount == 0):
+            deal.amount = total
+            deal.save(update_fields=["amount"])
 
 
 class PipelineStageSerializer(serializers.ModelSerializer):

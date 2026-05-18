@@ -1178,6 +1178,7 @@ export default function Board({
       amount: number;
       stageId: string;
       clientId: string;
+      lineItems?: import("@/src/types").DealLineItemWrite[];
     }) => {
       setModalError(null);
 
@@ -1237,6 +1238,7 @@ export default function Board({
           amount: values.amount,
           stage: Number.parseInt(values.stageId, 10),
           client: clientPk,
+          line_items_write: values.lineItems,
         });
         const normalized = readDealPatch(raw);
 

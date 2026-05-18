@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { getProducts } from "@/src/lib/api";
+import type { CatalogProduct, DealLineItemWrite } from "@/src/types";
 import {
   clientNameById,
   formatCreatedRelative,
@@ -27,6 +29,7 @@ export interface DealModalProps {
     amount: number;
     stageId: string;
     clientId: string;
+    lineItems?: DealLineItemWrite[];
   }) => void | Promise<void>;
   onEdit: (values: {
     title: string;
@@ -80,14 +83,16 @@ export default function DealModal({
       : firstStageId
   );
   const [clientId, setClientId] = useState("");
+  const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
+  const [pickedProductId, setPickedProductId] = useState("");
+  const [lineItems, setLineItems] = useState<DealLineItemWrite[]>([]);
 
   useEffect(() => {
-    console.log("stages", stages);
-  }, [stages]);
-
-  useEffect(() => {
-    console.log("selectedStage", stageId);
-  }, [stageId]);
+    if (mode !== "create") return;
+    void getProducts(companyId)
+      .then(setCatalog)
+      .catch(() => setCatalog([]));
+  }, [mode, companyId]);
 
   useEffect(() => {
     if (mode === "edit" && deal) {
@@ -114,7 +119,8 @@ export default function DealModal({
     e.preventDefault();
     const amountNum = Number.parseFloat(amount.replace(",", "."));
     if (!title.trim()) return;
-    if (!Number.isFinite(amountNum)) return;
+    const amountOk = Number.isFinite(amountNum);
+    if (!amountOk && lineItems.length === 0) return;
 
     if (mode === "create") {
       if (!stageId || !clientId) return;
@@ -122,9 +128,10 @@ export default function DealModal({
       if (!allowedIds.has(clientId)) return;
       await onCreate({
         title: title.trim(),
-        amount: amountNum,
+        amount: amountOk ? amountNum : 0,
         stageId,
         clientId,
+        lineItems: lineItems.length > 0 ? lineItems : undefined,
       });
     } else if (deal) {
       await onEdit({
@@ -296,6 +303,109 @@ export default function DealModal({
                   >
                     Create client
                   </button>
+                </div>
+              ) : null}
+              {catalog.length > 0 ? (
+                <div className="mt-3 rounded border border-gray-200 bg-gray-50/80 p-3">
+                  <p className="text-xs font-medium text-gray-700">
+                    Products (optional)
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-gray-500">
+                    Link catalog items — deal amount can stay empty if prices are set
+                  </p>
+                  <div className="mt-2 flex gap-2">
+                    <select
+                      value={pickedProductId}
+                      onChange={(e) => setPickedProductId(e.target.value)}
+                      className="min-w-0 flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm"
+                      disabled={busy}
+                    >
+                      <option value="">Add product…</option>
+                      {catalog
+                        .filter(
+                          (p) =>
+                            !lineItems.some((li) => li.product_id === p.id)
+                        )
+                        .map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                    </select>
+                    <button
+                      type="button"
+                      disabled={busy || !pickedProductId}
+                      onClick={() => {
+                        const p = catalog.find(
+                          (x) => String(x.id) === pickedProductId
+                        );
+                        if (!p) return;
+                        setLineItems((prev) => [
+                          ...prev,
+                          {
+                            product_id: p.id,
+                            label: p.name,
+                            unit_price: p.default_price
+                              ? Number(p.default_price)
+                              : null,
+                            quantity: 1,
+                          },
+                        ]);
+                        setPickedProductId("");
+                      }}
+                      className="rounded border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium"
+                    >
+                      Add
+                    </button>
+                  </div>
+                  {lineItems.length > 0 ? (
+                    <ul className="mt-2 space-y-1">
+                      {lineItems.map((li, idx) => (
+                        <li
+                          key={`${li.product_id}-${idx}`}
+                          className="flex items-center gap-2 text-xs"
+                        >
+                          <span className="flex-1 font-medium text-gray-800">
+                            {li.label}
+                          </span>
+                          <input
+                            type="number"
+                            placeholder="Price"
+                            className="w-24 rounded border border-gray-300 px-1.5 py-1"
+                            value={
+                              li.unit_price == null ? "" : String(li.unit_price)
+                            }
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setLineItems((prev) =>
+                                prev.map((row, i) =>
+                                  i === idx
+                                    ? {
+                                        ...row,
+                                        unit_price: v
+                                          ? Number.parseFloat(v)
+                                          : null,
+                                      }
+                                    : row
+                                )
+                              );
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setLineItems((prev) =>
+                                prev.filter((_, i) => i !== idx)
+                              )
+                            }
+                            className="text-gray-400 hover:text-red-600"
+                          >
+                            ×
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
                 </div>
               ) : null}
             </div>

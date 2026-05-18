@@ -14,8 +14,10 @@ export interface Client {
   email?: string | null;
   phone?: string | null;
   industry?: string;
+  market_sector?: string;
   description?: string;
   products_services?: string;
+  internal_context?: string;
   website?: string;
   company_size?: string;
   last_conversation_topic?: string;
@@ -75,19 +77,76 @@ export interface ClientOperationalTask {
   assigned_to_email: string | null;
 }
 
+export interface ClientBusinessContext {
+  industry: string;
+  market_sector: string;
+  description: string;
+  products_services: string;
+  internal_context: string;
+  website: string;
+  company_size: string;
+}
+
+export type ClientProductRelationship =
+  | "preferred"
+  | "frequent"
+  | "recent"
+  | "interested";
+
+export interface CatalogProduct {
+  id: number;
+  name: string;
+  category: string;
+  default_price: string | null;
+  description?: string;
+  sku?: string;
+  is_active?: boolean;
+}
+
+export interface ClientProductLink {
+  id: number;
+  relationship: ClientProductRelationship;
+  note: string;
+  product: CatalogProduct;
+}
+
+export type ClientInteractionType = "note" | "call" | "meeting" | "follow_up";
+
+export interface ClientInteractionPayload {
+  interaction_type: ClientInteractionType;
+  content?: string;
+  category?: string;
+  topic?: string;
+  mood?: string;
+  outcome?: string;
+  next_step?: string;
+  schedule_follow_up?: boolean;
+  follow_up_content?: string;
+  follow_up_due?: string | null;
+}
+
 /** GET /clients/:id/profile/ */
 export interface ClientProfile {
   client: Client;
+  business_context: ClientBusinessContext;
   contacts: ClientContact[];
   has_primary_contact: boolean;
   primary_contact: ClientContact | null;
   relationship_memory: ClientRelationshipMemory;
+  products: ClientProductLink[];
   metrics: ClientProfileMetrics;
   operational: {
     active_deals: ClientOperationalDeal[];
     open_tasks: ClientOperationalTask[];
   };
 }
+
+export type DealLineItemWrite = {
+  product_id?: number | null;
+  label?: string;
+  unit_price?: number | null;
+  quantity?: number;
+};
 
 export type TimelineFilter =
   | "all"

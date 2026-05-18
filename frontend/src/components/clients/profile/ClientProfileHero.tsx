@@ -14,18 +14,20 @@ const STATUS_CLASS: Record<string, string> = {
 export default function ClientProfileHero({
   client,
   primaryContact,
+  children,
 }: {
   client: Client;
   primaryContact: ClientContact | null;
+  children?: React.ReactNode;
 }) {
   const isBusiness = (client.client_type ?? "business") === "business";
   const initials = initialsFromLabel(client.name);
 
   return (
     <section className="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-[var(--vx-shadow-card)]">
-      <div className="bg-gradient-to-br from-zinc-50 via-white to-blue-50/30 px-6 py-6 sm:px-8 sm:py-8">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
-          <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[var(--vx-accent)] text-xl font-bold text-white shadow-[var(--vx-shadow-accent)]">
+      <div className="bg-gradient-to-br from-zinc-50 via-white to-blue-50/30 px-6 py-6 sm:px-8 sm:py-7">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[var(--vx-accent)] text-lg font-bold text-white shadow-[var(--vx-shadow-accent)]">
             {initials}
           </span>
           <div className="min-w-0 flex-1">
@@ -51,12 +53,7 @@ export default function ClientProfileHero({
             <h1 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 sm:text-3xl">
               {client.name}
             </h1>
-            {client.description ? (
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-600">
-                {client.description}
-              </p>
-            ) : null}
-            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-zinc-500">
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-zinc-500">
               {client.website ? (
                 <a
                   href={
@@ -71,13 +68,12 @@ export default function ClientProfileHero({
                   {client.website.replace(/^https?:\/\//, "")}
                 </a>
               ) : null}
-              {client.industry ? <span>{client.industry}</span> : null}
               {client.email ? <span>{client.email}</span> : null}
               {client.phone ? <span>{client.phone}</span> : null}
             </div>
             {primaryContact ? (
               <p className="mt-2 text-xs text-zinc-500">
-                Primary contact:{" "}
+                Primary:{" "}
                 <span className="font-medium text-zinc-700">
                   {primaryContact.full_name}
                   {primaryContact.role_title
@@ -89,8 +85,7 @@ export default function ClientProfileHero({
           </div>
         </div>
       </div>
+      {children}
     </section>
   );
 }
-
-

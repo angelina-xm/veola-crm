@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Client, ClientContact
+from .models import Client, ClientContact, ClientProductLink, Product
 
 
 class ClientContactSerializer(serializers.ModelSerializer):
@@ -35,8 +35,10 @@ class ClientSerializer(serializers.ModelSerializer):
             "email",
             "phone",
             "industry",
+            "market_sector",
             "description",
             "products_services",
+            "internal_context",
             "website",
             "company_size",
             "last_conversation_topic",
@@ -63,8 +65,10 @@ class ClientWriteSerializer(serializers.ModelSerializer):
             "email",
             "phone",
             "industry",
+            "market_sector",
             "description",
             "products_services",
+            "internal_context",
             "website",
             "company_size",
             "last_conversation_topic",
@@ -114,11 +118,64 @@ class ClientTimelineSerializer(serializers.Serializer):
     events = TimelineEventSerializer(many=True)
 
 
+class ProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = [
+            "id",
+            "name",
+            "category",
+            "default_price",
+            "description",
+            "sku",
+            "is_active",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+
+class ClientProductLinkSerializer(serializers.ModelSerializer):
+    product = ProductSerializer(read_only=True)
+    product_id = serializers.IntegerField(write_only=True)
+
+    class Meta:
+        model = ClientProductLink
+        fields = [
+            "id",
+            "product",
+            "product_id",
+            "relationship",
+            "note",
+            "created_at",
+        ]
+        read_only_fields = ["id", "created_at", "product"]
+
+
+class ClientInteractionSerializer(serializers.Serializer):
+    interaction_type = serializers.ChoiceField(
+        choices=["note", "call", "meeting", "follow_up"]
+    )
+    content = serializers.CharField(required=False, allow_blank=True, default="")
+    category = serializers.CharField(required=False, allow_blank=True, default="")
+    topic = serializers.CharField(required=False, allow_blank=True, default="")
+    mood = serializers.CharField(required=False, allow_blank=True, default="")
+    outcome = serializers.CharField(required=False, allow_blank=True, default="")
+    next_step = serializers.CharField(required=False, allow_blank=True, default="")
+    schedule_follow_up = serializers.BooleanField(required=False, default=False)
+    follow_up_content = serializers.CharField(
+        required=False, allow_blank=True, default=""
+    )
+    follow_up_due = serializers.DateTimeField(required=False, allow_null=True)
+
+
 class ClientProfileSerializer(serializers.Serializer):
     client = serializers.DictField()
+    business_context = serializers.DictField()
     contacts = serializers.ListField()
     has_primary_contact = serializers.BooleanField()
     primary_contact = serializers.DictField(allow_null=True)
     relationship_memory = serializers.DictField()
+    products = serializers.ListField()
     metrics = serializers.DictField()
     operational = serializers.DictField()
