@@ -6,7 +6,11 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/src/components/auth/AuthProvider";
 import { useMembership } from "@/src/context/MembershipContext";
 import { useNotifications } from "@/src/hooks/useNotifications";
-import { ThemeToggleIcon, ThemeToggleRow } from "@/src/components/theme/ThemeToggle";
+import {
+  ThemeSegmentedToggle,
+  ThemeToggleIcon,
+  ThemeToggleRow,
+} from "@/src/components/theme/ThemeToggle";
 import { cn } from "@/src/lib/cn";
 import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
 import { initialsFromLabel, pageTitleForPath } from "@/src/lib/nav";
@@ -113,7 +117,8 @@ export default function Topbar({
       </div>
 
       <div className="ml-auto flex items-center gap-1.5">
-        <ThemeToggleIcon className="hidden sm:flex" />
+        <ThemeSegmentedToggle />
+        <ThemeToggleIcon className="sm:hidden" />
 
         <div className="relative" ref={notifRef}>
           <button

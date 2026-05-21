@@ -72,6 +72,42 @@ export function ThemeToggleRow({ onSelect }: { onSelect?: () => void }) {
   );
 }
 
+/** Inline Light / Dark control (reference topbar) */
+export function ThemeSegmentedToggle({ className }: { className?: string }) {
+  const { mode, resolved, setMode } = useTheme();
+
+  const pick = (next: "light" | "dark") => {
+    setMode(next);
+  };
+
+  return (
+    <div
+      className={cn(
+        "hidden items-center rounded-lg border border-[var(--vx-border)] bg-[var(--vx-bg-subtle)] p-0.5 sm:flex",
+        className
+      )}
+      role="group"
+      aria-label="Theme"
+    >
+      {(["light", "dark"] as const).map((t) => (
+        <button
+          key={t}
+          type="button"
+          onClick={() => pick(t)}
+          className={cn(
+            "rounded-md px-2.5 py-1 text-[11px] font-medium capitalize transition-colors",
+            (mode === t || (mode === "system" && resolved === t))
+              ? "bg-[var(--vx-surface)] text-[var(--vx-text)] shadow-sm"
+              : "text-[var(--vx-text-muted)] hover:text-[var(--vx-text-secondary)]"
+          )}
+        >
+          {t}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function ThemeToggleIcon({
   className,
   onClick,

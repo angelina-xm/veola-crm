@@ -3,6 +3,9 @@
 import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
 import { useAuth } from "@/src/components/auth/AuthProvider";
+import DashboardPipelineHealthGrid from "@/src/components/dashboard/DashboardPipelineHealthGrid";
+import DashboardQuickActions from "@/src/components/dashboard/DashboardQuickActions";
+import DashboardSalesFunnel from "@/src/components/dashboard/DashboardSalesFunnel";
 import DashboardStatCards from "@/src/components/dashboard/DashboardStatCards";
 import DashboardSignalsPanel from "@/src/components/dashboard/DashboardSignalsPanel";
 import DashboardWelcome from "@/src/components/dashboard/DashboardWelcome";
@@ -112,21 +115,31 @@ export default function DashboardPage() {
           needsAttention={needsAttention}
         />
 
-        <div className="grid gap-3 lg:grid-cols-[1fr_1fr_20rem]">
-          <div className="lg:col-span-2">
-            <RecentActivityFeed
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_20rem]">
+          <DashboardSalesFunnel
+            loading={loading}
+            stages={overview?.funnel ?? []}
+          />
+          <RecentActivityFeed
+            loading={loading}
+            items={overview?.recent_activity ?? []}
+          />
+          <div className="flex flex-col gap-3">
+            <TasksTodayPanel
               loading={loading}
-              items={overview?.recent_activity ?? []}
+              tasks={operationalTasks}
+              completedTodayCount={completedTodayCount}
             />
+            <DashboardSignalsPanel health={health} loading={loading} />
           </div>
-          <DashboardSignalsPanel health={health} loading={loading} />
         </div>
 
-        <div className="max-w-md">
-          <TasksTodayPanel
+        <div className="grid gap-3 md:grid-cols-2">
+          <DashboardQuickActions />
+          <DashboardPipelineHealthGrid
             loading={loading}
-            tasks={operationalTasks}
-            completedTodayCount={completedTodayCount}
+            kpis={overview?.kpis ?? null}
+            health={health}
           />
         </div>
       </div>
