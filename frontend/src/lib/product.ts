@@ -23,13 +23,13 @@ export const NAV_LABELS = {
   dashboard: "Dashboard",
   deals: "Deals",
   clients: "Clients",
-  clientDirectory: "Directory",
+  clientDirectory: "All clients",
   clientAll: "All clients",
-  clientAnalytics: "Analytics",
+  clientAnalytics: "Client intelligence",
   clientLeaderboards: "Leaderboards",
-  catalog: "Catalog",
+  catalog: "Products",
   tasks: "Tasks",
-  analytics: "Analytics",
+  analytics: "Performance",
   team: "Team",
   automation: "Automation",
   closedDeals: "Closed deals",
@@ -44,8 +44,9 @@ export const COPY = {
   newDeal: "New deal",
   dealsBoardHint:
     "Active deals on your board. Drag to Won or Lost to close with confirmation.",
+  dashboardWelcome: "Here's what needs your attention today.",
   dashboardHint:
-    "Your operational cockpit — revenue, deal health, and what needs attention today.",
+    "Your operational cockpit — revenue, relationships, and today's follow-ups.",
   closedDealsHint:
     "Won and lost deals — relationship memory, not your active board.",
   analyticsHint:

@@ -7,42 +7,27 @@ type StatCard = {
   key: string;
   label: string;
   value: string;
-  hint?: string;
-  delta?: string;
-  deltaTone?: "up" | "down" | "neutral";
+  sub?: string;
+  tag?: string;
+  tagTone?: "neutral" | "success" | "warning" | "danger";
   primary?: boolean;
+  iconTone?: "purple" | "teal" | "amber" | "green";
   icon: React.ReactNode;
 };
 
-function DeltaPill({
-  delta,
-  tone,
-  inverted,
-}: {
-  delta: string;
-  tone: "up" | "down" | "neutral";
-  inverted?: boolean;
-}) {
-  const tones = {
-    up: inverted
-      ? "bg-white/20 text-white"
-      : "bg-emerald-50 text-emerald-700",
-    down: inverted ? "bg-white/20 text-white" : "bg-rose-50 text-rose-700",
-    neutral: inverted
-      ? "bg-white/15 text-white/90"
-      : "bg-zinc-100 text-zinc-600",
-  };
-  return (
-    <span
-      className={cn(
-        "rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide",
-        tones[tone]
-      )}
-    >
-      {delta}
-    </span>
-  );
-}
+const ICON_TONES: Record<string, string> = {
+  purple: "bg-[var(--vx-accent-muted)] text-[var(--vx-accent)]",
+  teal: "vx-badge-success",
+  amber: "vx-badge-warning",
+  green: "vx-badge-success",
+};
+
+const TAG_TONES: Record<string, string> = {
+  neutral: "vx-badge-neutral",
+  success: "vx-badge-success",
+  warning: "vx-badge-warning",
+  danger: "vx-badge-danger",
+};
 
 export default function DashboardStatCards({
   revenue,
@@ -64,11 +49,13 @@ export default function DashboardStatCards({
       key: "revenue",
       label: "Revenue",
       value: formatMoney(revenue),
-      delta: "this month",
-      deltaTone: "neutral",
+      sub: "Won this month",
+      tag: "Primary",
+      tagTone: "neutral",
       primary: true,
+      iconTone: "purple",
       icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden>
           <path
             d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"
             stroke="currentColor"
@@ -82,8 +69,12 @@ export default function DashboardStatCards({
       key: "deals",
       label: "Active deals",
       value: loading ? "—" : String(activeDeals),
+      sub: "On your board",
+      tagTone: "success",
+      tag: "Open",
+      iconTone: "teal",
       icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden>
           <path
             d="M4 7h6M14 7h6M4 12h4M10 12h10M4 17h8M14 17h6"
             stroke="currentColor"
@@ -97,15 +88,17 @@ export default function DashboardStatCards({
       key: "attention",
       label: "Needs attention",
       value: loading ? "—" : String(needsAttention),
-      deltaTone: needsAttention > 0 ? "down" : "up",
-      delta: needsAttention > 0 ? "follow up" : "healthy",
+      sub: needsAttention > 0 ? "Review follow-ups" : "Pipeline healthy",
+      tag: needsAttention > 0 ? "Action" : "Clear",
+      tagTone: needsAttention > 0 ? "danger" : "success",
+      iconTone: "amber",
       icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden>
           <path
-            d="M8 4h8l1 14H7L8 4zM10 9h4"
+            d="M12 9v4M12 17h.01M10.3 4.7l-7.5 13A2 2 0 004.5 21h15a2 2 0 001.7-3.3l-7.5-13a2 2 0 00-3.4 0z"
             stroke="currentColor"
             strokeWidth="1.5"
-            strokeLinecap="round"
+            strokeLinejoin="round"
           />
         </svg>
       ),
@@ -114,9 +107,15 @@ export default function DashboardStatCards({
       key: "tasks",
       label: "Tasks today",
       value: loading ? "—" : String(tasksToday),
-      hint: tasksCompletedToday > 0 ? `${tasksCompletedToday} completed` : undefined,
+      sub:
+        tasksCompletedToday > 0
+          ? `${tasksCompletedToday} completed today`
+          : "Overdue + due today",
+      tag: tasksToday > 0 ? `${tasksToday} open` : "Clear",
+      tagTone: tasksToday > 0 ? "warning" : "success",
+      iconTone: "green",
       icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden>
           <path
             d="M9 11l2 2 4-4M7 4h10a2 2 0 012 2v14l-4-2-4 2-4-2-4 2V6a2 2 0 012-2z"
             stroke="currentColor"
@@ -129,61 +128,69 @@ export default function DashboardStatCards({
   ];
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {cards.map((card) => (
         <div
           key={card.key}
           className={cn(
-            "relative overflow-hidden rounded-2xl p-5 transition-shadow",
-            card.primary
-              ? "bg-[var(--vx-accent)] text-white shadow-[var(--vx-shadow-accent)]"
-              : "border border-zinc-200/80 bg-white shadow-[var(--vx-shadow-card)]"
+            "relative overflow-hidden rounded-[14px] p-[18px]",
+            card.primary ? "vx-kpi-primary" : "vx-kpi-secondary"
           )}
         >
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start justify-between gap-2">
             <span
               className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-xl",
+                "flex h-[34px] w-[34px] items-center justify-center rounded-[9px]",
                 card.primary
                   ? "bg-white/15 text-white"
-                  : "bg-blue-50 text-[var(--vx-accent)]"
+                  : ICON_TONES[card.iconTone ?? "purple"]
               )}
             >
               {card.icon}
             </span>
-            {card.delta ? (
-              <DeltaPill
-                delta={card.delta}
-                tone={card.deltaTone ?? "neutral"}
-                inverted={card.primary}
-              />
+            {card.tag ? (
+              <span
+                className={cn(
+                  "rounded-md px-2 py-0.5 text-[10px] font-bold tracking-wide",
+                  card.primary
+                    ? "bg-white/20 text-white"
+                    : TAG_TONES[card.tagTone ?? "neutral"]
+                )}
+              >
+                {card.tag}
+              </span>
             ) : null}
           </div>
           <p
             className={cn(
-              "mt-4 text-xs font-medium",
-              card.primary ? "text-white/80" : "text-zinc-500"
+              "mt-3.5 text-[11px] font-medium tracking-wide",
+              card.primary ? "text-white/75" : "text-[var(--vx-text-muted)]"
             )}
           >
             {card.label}
           </p>
           <p
             className={cn(
-              "mt-1 text-2xl font-semibold tracking-tight vx-tabular",
-              card.primary ? "text-white" : "text-zinc-900"
+              "mt-0.5 text-[28px] font-bold leading-none tracking-tight vx-tabular",
+              card.primary ? "text-white" : "text-[var(--vx-text)]"
             )}
           >
-            {loading && !card.primary ? "…" : card.value}
+            {card.value}
           </p>
-          {card.hint ? (
+          {card.sub ? (
             <p
               className={cn(
-                "mt-1 text-xs",
-                card.primary ? "text-white/70" : "text-zinc-500"
+                "mt-1 text-[11px]",
+                card.primary ? "text-white/65" : "text-[var(--vx-text-muted)]"
               )}
             >
-              {card.hint}
+              {card.sub}
             </p>
+          ) : null}
+          {card.primary ? (
+            <div className="mt-3 h-[3px] overflow-hidden rounded-full bg-white/20">
+              <div className="h-full w-2/3 rounded-full bg-white/90" />
+            </div>
           ) : null}
         </div>
       ))}

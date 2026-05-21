@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
 import { useAuth } from "@/src/components/auth/AuthProvider";
 import DashboardStatCards from "@/src/components/dashboard/DashboardStatCards";
+import DashboardSignalsPanel from "@/src/components/dashboard/DashboardSignalsPanel";
+import DashboardWelcome from "@/src/components/dashboard/DashboardWelcome";
 import RecentActivityFeed from "@/src/components/dashboard/RecentActivityFeed";
 import TasksTodayPanel from "@/src/components/dashboard/TasksTodayPanel";
 import {
@@ -14,7 +15,6 @@ import {
   getTasksBucket,
 } from "@/src/lib/api";
 import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
-import { COPY, ROUTES } from "@/src/lib/product";
 import { mergeOperationalSnapshot } from "@/src/lib/taskSemantics";
 import type { AnalyticsV1Overview, CrmTask, PipelineHealth } from "@/src/types";
 
@@ -94,11 +94,11 @@ export default function DashboardPage() {
 
   return (
     <ProtectedRoute>
-      <div className="space-y-6">
-        <p className="text-sm text-zinc-500">{COPY.dashboardHint}</p>
+      <div className="space-y-5">
+        <DashboardWelcome />
 
         {error ? (
-          <p className="rounded-xl border border-amber-200/80 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
             {error}
           </p>
         ) : null}
@@ -112,33 +112,22 @@ export default function DashboardPage() {
           needsAttention={needsAttention}
         />
 
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-3 lg:grid-cols-[1fr_1fr_20rem]">
           <div className="lg:col-span-2">
             <RecentActivityFeed
               loading={loading}
               items={overview?.recent_activity ?? []}
             />
           </div>
+          <DashboardSignalsPanel health={health} loading={loading} />
+        </div>
+
+        <div className="max-w-md">
           <TasksTodayPanel
             loading={loading}
             tasks={operationalTasks}
             completedTodayCount={completedTodayCount}
           />
-        </div>
-
-        <div className="flex flex-wrap gap-3">
-          <Link
-            href={ROUTES.deals}
-            className="rounded-xl border border-zinc-200/80 bg-white px-4 py-2.5 text-sm font-medium text-zinc-800 shadow-sm transition-colors hover:border-zinc-300 hover:bg-zinc-50"
-          >
-            {COPY.openDeals} →
-          </Link>
-          <Link
-            href="/tasks"
-            className="rounded-xl border border-zinc-200/80 bg-white px-4 py-2.5 text-sm font-medium text-zinc-800 shadow-sm transition-colors hover:border-zinc-300 hover:bg-zinc-50"
-          >
-            View all tasks →
-          </Link>
         </div>
       </div>
     </ProtectedRoute>

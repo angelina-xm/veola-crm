@@ -32,6 +32,17 @@ function feedDescription(item: AnalyticsV1FeedItem): string {
   }
 }
 
+const AVATAR_TONES = [
+  "bg-[var(--vx-accent-muted)] text-[var(--vx-accent)]",
+  "vx-badge-success",
+  "vx-badge-warning",
+  "vx-badge-neutral",
+];
+
+function avatarTone(id: number) {
+  return AVATAR_TONES[id % AVATAR_TONES.length];
+}
+
 export default function RecentActivityFeed({
   items,
   loading,
@@ -40,12 +51,14 @@ export default function RecentActivityFeed({
   loading?: boolean;
 }) {
   return (
-    <section className="rounded-2xl border border-zinc-200/80 bg-white shadow-[var(--vx-shadow-card)]">
-      <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
+    <section className="vx-card">
+      <div className="vx-card-head">
         <div>
-          <h2 className="text-sm font-semibold text-zinc-900">Recent activity</h2>
-          <p className="mt-0.5 text-xs text-zinc-500">
-            Latest updates across deals and tasks
+          <h2 className="text-[13px] font-semibold text-[var(--vx-text)]">
+            Recent activity
+          </h2>
+          <p className="mt-0.5 text-[11px] text-[var(--vx-text-muted)]">
+            Latest across deals and follow-ups
           </p>
         </div>
         <Link
@@ -56,51 +69,52 @@ export default function RecentActivityFeed({
         </Link>
       </div>
       {loading ? (
-        <div className="space-y-0 divide-y divide-zinc-100 px-5 py-8">
+        <div className="space-y-2 px-4 py-6">
           {[1, 2, 3, 4].map((i) => (
             <div
               key={i}
-              className="h-14 animate-pulse rounded-lg bg-zinc-50"
+              className="h-12 animate-pulse rounded-lg bg-[var(--vx-bg-subtle)]"
             />
           ))}
         </div>
       ) : items.length === 0 ? (
-        <p className="px-5 py-10 text-center text-sm text-zinc-500">
+        <p className="px-4 py-10 text-center text-sm text-[var(--vx-text-muted)]">
           No recent activity yet. Log a call or move a deal to see updates here.
         </p>
       ) : (
-        <ul className="divide-y divide-zinc-100">
+        <ul>
           {items.slice(0, 8).map((item) => {
             const badge = activityFeedBadge(item);
+            const initial = feedTitle(item).charAt(0).toUpperCase();
             return (
               <li
                 key={item.id}
-                className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4 transition-colors hover:bg-zinc-50/80 sm:flex-nowrap"
+                className="flex items-center gap-3 border-t border-[var(--vx-border-subtle)] px-4 py-2.5 transition-colors first:border-t-0 hover:bg-[var(--vx-bg-subtle)]"
               >
+                <span
+                  className={cn(
+                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold",
+                    avatarTone(item.id)
+                  )}
+                >
+                  {initial}
+                </span>
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                    <span className="text-sm font-semibold text-zinc-900">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="truncate text-[13px] font-semibold text-[var(--vx-text)]">
                       {feedTitle(item)}
                     </span>
-                    <span className="text-xs text-zinc-400">
+                    <span className="shrink-0 text-[11px] text-[var(--vx-text-muted)]">
                       {formatRelative(item.created_at)}
                     </span>
                   </div>
-                  <p className="mt-0.5 truncate text-sm text-zinc-600">
+                  <p className="truncate text-[11px] text-[var(--vx-text-secondary)]">
                     {feedDescription(item)}
                   </p>
                 </div>
-                {item.deal_id ? (
-                  <Link
-                    href={ROUTES.deals}
-                    className="hidden text-sm font-medium text-[var(--vx-accent)] sm:block"
-                  >
-                    View deal
-                  </Link>
-                ) : null}
                 <span
                   className={cn(
-                    "rounded-full px-2.5 py-0.5 text-[10px] font-semibold capitalize",
+                    "shrink-0 rounded-md px-2 py-0.5 text-[10px] font-bold capitalize",
                     badge.className
                   )}
                 >

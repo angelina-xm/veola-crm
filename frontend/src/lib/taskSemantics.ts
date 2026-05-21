@@ -8,9 +8,12 @@ export function taskStatusLabel(task: CrmTask): TaskStatusLabel {
 }
 
 export function taskStatusBadgeClass(task: CrmTask): string {
-  return task.is_completed
-    ? "bg-emerald-50 text-emerald-700"
-    : "bg-zinc-100 text-zinc-700";
+  return task.is_completed ? "vx-badge-success" : "vx-badge-neutral";
+}
+
+export function taskAssigneeLabel(task: CrmTask): string | null {
+  const email = task.assigned_to_email?.split("@")[0]?.trim();
+  return email || null;
 }
 
 /** Due-window chip (overdue / due today) — separate from status. */
@@ -19,10 +22,10 @@ export function taskDueChip(
 ): { label: string; className: string } | null {
   if (task.is_completed) return null;
   if (task.state === "overdue") {
-    return { label: "Overdue", className: "bg-rose-50 text-rose-700" };
+    return { label: "Overdue", className: "vx-badge-danger" };
   }
   if (task.state === "today") {
-    return { label: "Due today", className: "bg-amber-50 text-amber-800" };
+    return { label: "Due today", className: "vx-badge-warning" };
   }
   return null;
 }
@@ -35,10 +38,10 @@ const PRIORITY_ORDER: Record<TaskPriority, number> = {
 };
 
 const PRIORITY_CLASS: Record<TaskPriority, string> = {
-  urgent: "bg-rose-50 text-rose-700",
-  high: "bg-rose-50/90 text-rose-600",
-  medium: "bg-blue-50 text-blue-700",
-  low: "bg-zinc-100 text-zinc-600",
+  urgent: "vx-badge-danger",
+  high: "vx-badge-danger",
+  medium: "vx-badge-warning",
+  low: "vx-badge-neutral",
 };
 
 export function priorityBadgeClass(priority: TaskPriority): string {
@@ -100,16 +103,16 @@ export function activityFeedBadge(item: AnalyticsV1FeedItem): {
 } {
   switch (item.kind as AnalyticsFeedKind) {
     case "deal_won":
-      return { label: "Won", className: "bg-emerald-50 text-emerald-700" };
+      return { label: "Won", className: "vx-badge-success" };
     case "deal_moved":
-      return { label: "Moved", className: "bg-blue-50 text-blue-700" };
+      return { label: "Moved", className: "vx-badge-neutral" };
     case "task_completed":
-      return { label: "Task done", className: "bg-emerald-50 text-emerald-700" };
+      return { label: "Task done", className: "vx-badge-success" };
     case "task_open":
-      return { label: "New task", className: "bg-violet-50 text-violet-700" };
+      return { label: "New task", className: "vx-badge-warning" };
     case "note_added":
-      return { label: "Note", className: "bg-zinc-100 text-zinc-600" };
+      return { label: "Note", className: "vx-badge-neutral" };
     default:
-      return { label: "Activity", className: "bg-zinc-100 text-zinc-600" };
+      return { label: "Activity", className: "vx-badge-neutral" };
   }
 }

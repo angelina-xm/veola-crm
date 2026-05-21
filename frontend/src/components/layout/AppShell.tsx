@@ -21,7 +21,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {mobileNav ? (
         <button
           type="button"
-          className="fixed inset-0 z-30 bg-zinc-900/20 backdrop-blur-[1px] lg:hidden"
+          className="fixed inset-0 z-30 bg-black/40 backdrop-blur-[1px] lg:hidden"
           aria-label="Close menu"
           onClick={() => setMobileNav(false)}
         />
@@ -32,7 +32,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           menuOpen={mobileNav}
           onMenuToggle={() => setMobileNav((v) => !v)}
         />
-        <main className="vx-container flex-1 py-6 pb-10 vx-animate-in">{children}</main>
+        <main className="vx-container flex-1 py-5 pb-10 vx-animate-in">{children}</main>
       </div>
     </div>
   );

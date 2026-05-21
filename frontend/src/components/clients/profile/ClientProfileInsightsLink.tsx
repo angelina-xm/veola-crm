@@ -14,7 +14,7 @@ export default function ClientProfileInsightsLink({
 }) {
   return (
     <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[var(--vx-shadow-card)]">
-      <h2 className="text-sm font-semibold text-zinc-900">Commercial snapshot</h2>
+      <h2 className="text-sm font-semibold text-[var(--vx-text)]">Relationship snapshot</h2>
       <p className="mt-0.5 text-xs text-zinc-500">
         Account-level rollup — see full intelligence in Client analytics.
       </p>

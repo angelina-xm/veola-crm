@@ -90,9 +90,9 @@ export default function ClientRelationshipMemoryCard({
 
   if (editing && onSave) {
     return (
-      <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[var(--vx-shadow-card)]">
-        <h2 className="text-sm font-semibold text-zinc-900">Relationship memory</h2>
-        <p className="mt-0.5 text-xs text-zinc-500">
+      <section className="vx-card p-5">
+        <h2 className="text-sm font-semibold text-[var(--vx-text)]">Relationship memory</h2>
+        <p className="mt-0.5 text-xs text-[var(--vx-text-muted)]">
           Structured fields — synced when you log interactions
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -185,7 +185,7 @@ export default function ClientRelationshipMemoryCard({
   }
 
   return (
-    <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[var(--vx-shadow-card)]">
+    <section className="vx-card p-5">
       <div className="flex items-start justify-between gap-2">
         <div>
           <h2 className="text-sm font-semibold text-zinc-900">Relationship memory</h2>

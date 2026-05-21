@@ -1,30 +1,77 @@
 @import "tailwindcss";
 
-:root {
-  --vx-bg: #f8fafc;
-  --vx-bg-subtle: #fafafa;
-  --vx-surface: #ffffff;
+/* Light — warm premium neutrals */
+:root,
+[data-theme="light"] {
+  --vx-bg: #f5f4f1;
+  --vx-bg-subtle: #eeede8;
+  --vx-surface: #faf9f7;
   --vx-surface-raised: #ffffff;
-  --vx-border: #e4e4e7;
-  --vx-border-subtle: #f4f4f5;
-  --vx-text: #18181b;
-  --vx-text-secondary: #52525b;
-  --vx-text-muted: #71717a;
-  --vx-accent: #2563eb;
-  --vx-accent-muted: #eff6ff;
-  --vx-accent-hover: #1d4ed8;
-  --vx-sidebar-width: 16.5rem;
-  --vx-topbar-height: 4rem;
+  --vx-border: #e4e2dc;
+  --vx-border-subtle: #eceae4;
+  --vx-text: #1c1917;
+  --vx-text-secondary: #57534e;
+  --vx-text-muted: #78716c;
+  --vx-accent: #4f46e5;
+  --vx-accent-muted: #eef2ff;
+  --vx-accent-hover: #4338ca;
+  --vx-accent-soft: rgba(79, 70, 229, 0.12);
+  --vx-sidebar-width: 15rem;
+  --vx-topbar-height: 3.5rem;
   --vx-radius-sm: 0.375rem;
-  --vx-radius: 0.625rem;
+  --vx-radius: 0.5rem;
   --vx-radius-lg: 0.75rem;
-  --vx-radius-xl: 1rem;
-  --vx-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.04);
-  --vx-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04);
-  --vx-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.04);
-  --vx-shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 16px rgb(15 23 42 / 0.04);
-  --vx-shadow-sidebar: 1px 0 0 rgb(0 0 0 / 0.04), 4px 0 24px rgb(15 23 42 / 0.03);
-  --vx-shadow-accent: 0 4px 14px rgb(37 99 235 / 0.35);
+  --vx-radius-xl: 0.875rem;
+  --vx-shadow-sm: 0 1px 2px 0 rgb(28 25 23 / 0.04);
+  --vx-shadow: 0 1px 3px 0 rgb(28 25 23 / 0.06);
+  --vx-shadow-card: 0 1px 2px rgb(28 25 23 / 0.04), 0 4px 20px rgb(28 25 23 / 0.05);
+  --vx-shadow-sidebar: 1px 0 0 rgb(28 25 23 / 0.06);
+  --vx-shadow-accent: 0 4px 16px rgb(79 70 229 / 0.28);
+  --vx-nav-active-bg: #ebeae6;
+  --vx-kpi-accent-bg: linear-gradient(145deg, #4f46e5 0%, #6366f1 100%);
+  --vx-kpi-accent-border: #4338ca;
+  --vx-badge-success-bg: #ecfdf5;
+  --vx-badge-success-text: #047857;
+  --vx-badge-warning-bg: #fffbeb;
+  --vx-badge-warning-text: #b45309;
+  --vx-badge-danger-bg: #fef2f2;
+  --vx-badge-danger-text: #b91c1c;
+  --vx-badge-neutral-bg: #f5f5f4;
+  --vx-badge-neutral-text: #57534e;
+}
+
+/* Dark — primary identity (reference-inspired) */
+.dark,
+[data-theme="dark"] {
+  --vx-bg: #0f1117;
+  --vx-bg-subtle: #141820;
+  --vx-surface: #161b2e;
+  --vx-surface-raised: #1a1f35;
+  --vx-border: #1e2130;
+  --vx-border-subtle: #252a3d;
+  --vx-text: #e8eaf0;
+  --vx-text-secondary: #9ca3af;
+  --vx-text-muted: #6b7280;
+  --vx-accent: #6366f1;
+  --vx-accent-muted: #2e2560;
+  --vx-accent-hover: #818cf8;
+  --vx-accent-soft: rgba(99, 102, 241, 0.15);
+  --vx-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+  --vx-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.25);
+  --vx-shadow-card: 0 0 0 1px rgb(30 33 48 / 0.8);
+  --vx-shadow-sidebar: 1px 0 0 #1e2130;
+  --vx-shadow-accent: 0 4px 20px rgb(99 102 241 / 0.35);
+  --vx-nav-active-bg: #1e2130;
+  --vx-kpi-accent-bg: linear-gradient(145deg, #4338ca 0%, #6366f1 100%);
+  --vx-kpi-accent-border: #4f46e5;
+  --vx-badge-success-bg: #0e2a1a;
+  --vx-badge-success-text: #4ade80;
+  --vx-badge-warning-bg: #2d1f0a;
+  --vx-badge-warning-text: #fbbf24;
+  --vx-badge-danger-bg: #2d1212;
+  --vx-badge-danger-text: #f87171;
+  --vx-badge-neutral-bg: #1e2130;
+  --vx-badge-neutral-text: #9ca3af;
 }
 
 @theme inline {
@@ -52,8 +99,8 @@ body {
 
 @media (min-width: 1024px) {
   .vx-container {
-    padding-left: 1.75rem;
-    padding-right: 1.75rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
   }
 }
 
@@ -62,6 +109,14 @@ body {
   border: 1px solid var(--vx-border);
   border-radius: var(--vx-radius-xl);
   box-shadow: var(--vx-shadow-card);
+}
+
+.vx-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1.125rem;
+  border-bottom: 1px solid var(--vx-border-subtle);
 }
 
 .vx-label {
@@ -74,6 +129,61 @@ body {
 
 .vx-tabular {
   font-variant-numeric: tabular-nums;
+}
+
+.vx-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  border-radius: var(--vx-radius-lg);
+  padding: 0.4375rem 0.625rem;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--vx-text-secondary);
+  transition: background 0.15s, color 0.15s;
+}
+
+.vx-nav-link:hover {
+  background: var(--vx-bg-subtle);
+  color: var(--vx-text);
+}
+
+.vx-nav-link[data-active="true"] {
+  background: var(--vx-nav-active-bg);
+  color: var(--vx-text);
+  font-weight: 600;
+}
+
+.vx-nav-link[data-active="true"] .vx-nav-icon {
+  color: var(--vx-accent);
+}
+
+.vx-nav-icon {
+  color: var(--vx-text-muted);
+  flex-shrink: 0;
+}
+
+.vx-input {
+  height: 2.25rem;
+  width: 100%;
+  border-radius: var(--vx-radius-lg);
+  border: 1px solid var(--vx-border);
+  background: var(--vx-bg-subtle);
+  padding: 0 0.75rem;
+  font-size: 13px;
+  color: var(--vx-text);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.vx-input::placeholder {
+  color: var(--vx-text-muted);
+}
+
+.vx-input:focus {
+  outline: none;
+  border-color: var(--vx-accent);
+  background: var(--vx-surface);
+  box-shadow: 0 0 0 3px var(--vx-accent-soft);
 }
 
 @keyframes vx-fade-in {
@@ -104,4 +214,34 @@ body {
 
 .vx-modal-surface {
   animation: vx-modal-in 0.18s ease-out;
+}
+
+.vx-kpi-primary {
+  background: var(--vx-kpi-accent-bg);
+  border: 1px solid var(--vx-kpi-accent-border);
+  color: #fff;
+  box-shadow: var(--vx-shadow-accent);
+}
+
+.vx-kpi-secondary {
+  background: var(--vx-surface);
+  border: 1px solid var(--vx-border);
+  box-shadow: var(--vx-shadow-card);
+}
+
+.vx-badge-success {
+  background: var(--vx-badge-success-bg);
+  color: var(--vx-badge-success-text);
+}
+.vx-badge-warning {
+  background: var(--vx-badge-warning-bg);
+  color: var(--vx-badge-warning-text);
+}
+.vx-badge-danger {
+  background: var(--vx-badge-danger-bg);
+  color: var(--vx-badge-danger-text);
+}
+.vx-badge-neutral {
+  background: var(--vx-badge-neutral-bg);
+  color: var(--vx-badge-neutral-text);
 }

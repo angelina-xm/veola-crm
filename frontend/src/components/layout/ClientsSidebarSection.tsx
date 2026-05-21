@@ -40,7 +40,7 @@ const CHILDREN: ChildItem[] = [
 
 function IconClients() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path
         d="M16 11a4 4 0 10-8 0M4 20a8 8 0 0116 0"
         stroke="currentColor"
@@ -54,13 +54,13 @@ function IconClients() {
 function IconChevron({ open }: { open: boolean }) {
   return (
     <svg
-      width="14"
-      height="14"
+      width="12"
+      height="12"
       viewBox="0 0 24 24"
       fill="none"
       aria-hidden
       className={cn(
-        "shrink-0 text-zinc-400 transition-transform duration-200",
+        "shrink-0 text-[var(--vx-text-muted)] transition-transform duration-200",
         open && "rotate-90"
       )}
     >
@@ -120,29 +120,18 @@ export default function ClientsSidebarSection({
   const parentActive = inClientsSection;
 
   return (
-    <div className="space-y-0.5">
+    <div>
       <button
         type="button"
         onClick={() => persistExpanded(!expanded)}
-        className={cn(
-          "group flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[13px] font-medium transition-all duration-150",
-          parentActive
-            ? "bg-zinc-100/90 text-zinc-900"
-            : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
-        )}
+        className="vx-nav-link w-full"
+        data-active={parentActive ? "true" : "false"}
         aria-expanded={expanded}
       >
-        <span
-          className={cn(
-            "flex shrink-0",
-            parentActive
-              ? "text-[var(--vx-accent)]"
-              : "text-zinc-400 group-hover:text-zinc-600"
-          )}
-        >
+        <span className="vx-nav-icon">
           <IconClients />
         </span>
-        <span className={cn("min-w-0 flex-1", parentActive && "font-semibold")}>
+        <span className="min-w-0 flex-1 truncate text-left">
           {NAV_LABELS.clients}
         </span>
         <IconChevron open={expanded} />
@@ -155,7 +144,7 @@ export default function ClientsSidebarSection({
         )}
       >
         <div className="overflow-hidden" onClick={onNavigate}>
-          <ul className="ml-3 space-y-0.5 border-l border-zinc-200/80 py-0.5 pl-2">
+          <ul className="ml-[1.35rem] space-y-0.5 border-l border-[var(--vx-border)] py-0.5 pl-2">
             {CHILDREN.map((child) => {
               const active = child.match(pathname);
               const locked = Boolean(child.premium && intelligenceLocked);
