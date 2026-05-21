@@ -2,13 +2,13 @@
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
+import ClientIntelligenceGate from "@/src/components/clients/ClientIntelligenceGate";
 import ClientSectionNav from "@/src/components/clients/ClientSectionNav";
 import ClientAnalyticsView from "@/src/components/clients/analytics/ClientAnalyticsView";
 import PageHeader from "@/src/components/ui/PageHeader";
 import { useClientCommercialAnalytics } from "@/src/hooks/useClientCommercialAnalytics";
-import { NAV_LABELS, ROUTES } from "@/src/lib/product";
+import { NAV_LABELS } from "@/src/lib/product";
 
 export default function ClientAnalyticsPage() {
   return (
@@ -25,8 +25,7 @@ export default function ClientAnalyticsPage() {
 function ClientAnalyticsPageContent() {
   const searchParams = useSearchParams();
   const highlightClientId = searchParams.get("highlight");
-  const { data, loading, error, load, allowed, membershipLoading } =
-    useClientCommercialAnalytics("");
+  const { data, loading, error, load } = useClientCommercialAnalytics("");
 
   return (
     <ProtectedRoute>
@@ -38,20 +37,10 @@ function ClientAnalyticsPageContent() {
           description="Revenue trends, commercial metrics, and relationship health across your client base."
         />
 
-        {!allowed && !membershipLoading ? (
-          <div className="rounded-2xl border border-zinc-200/80 bg-white p-8 shadow-[var(--vx-shadow-card)]">
-            <h2 className="text-lg font-semibold text-zinc-900">Access restricted</h2>
-            <p className="mt-2 text-sm text-zinc-600">
-              Enable &quot;View analytics&quot; on the Team page to open client analytics.
-            </p>
-            <Link
-              href={ROUTES.clients}
-              className="mt-4 inline-block text-sm font-medium text-[var(--vx-accent)] hover:underline"
-            >
-              ← Directory
-            </Link>
-          </div>
-        ) : (
+        <ClientIntelligenceGate
+          title={NAV_LABELS.clientAnalytics}
+          description="Portfolio-level client intelligence"
+        >
           <ClientAnalyticsView
             data={data}
             loading={loading}
@@ -59,7 +48,7 @@ function ClientAnalyticsPageContent() {
             highlightClientId={highlightClientId}
             onRetry={() => void load()}
           />
-        )}
+        </ClientIntelligenceGate>
       </div>
     </ProtectedRoute>
   );

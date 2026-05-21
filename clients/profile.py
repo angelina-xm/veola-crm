@@ -16,6 +16,19 @@ from deals.operational import closed_stage_kind, is_operational_deal
 from deals.visibility import get_operational_visible_deals, get_visible_deals
 
 
+def relationship_memory_payload(client: Client) -> dict[str, Any]:
+    return {
+        "last_conversation_topic": client.last_conversation_topic,
+        "last_conversation_mood": client.last_conversation_mood,
+        "last_conversation_outcome": client.last_conversation_outcome,
+        "next_step": client.next_step,
+        "relationship_concerns": client.relationship_concerns,
+        "relationship_context": client.relationship_context,
+        "follow_up_on": client.follow_up_on,
+        "last_conversation_at": client.last_conversation_at,
+    }
+
+
 class ClientProfileBuilder:
     def __init__(self, *, client: Client, user, company, membership):
         self.client = client
@@ -74,7 +87,7 @@ class ClientProfileBuilder:
             "products": [self._product_link_payload(link) for link in product_links],
             "has_primary_contact": primary is not None,
             "primary_contact": self._contact_payload(primary) if primary else None,
-            "relationship_memory": self._memory_payload(),
+            "relationship_memory": relationship_memory_payload(self.client),
             "metrics": {
                 "customer_since": deals_qs.order_by("created_at")
                 .values_list("created_at", flat=True)
@@ -141,16 +154,6 @@ class ClientProfileBuilder:
                 "sku": p.sku,
                 "tags": p.tags if isinstance(p.tags, list) else [],
             },
-        }
-
-    def _memory_payload(self) -> dict[str, Any]:
-        c = self.client
-        return {
-            "last_conversation_topic": c.last_conversation_topic,
-            "last_conversation_mood": c.last_conversation_mood,
-            "last_conversation_outcome": c.last_conversation_outcome,
-            "next_step": c.next_step,
-            "last_conversation_at": c.last_conversation_at,
         }
 
     def _contact_payload(self, contact: ClientContact | None) -> dict[str, Any] | None:

@@ -270,10 +270,7 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             {menuTop.map((item) => (
               <NavLink key={item.href} item={item} pathname={pathname} />
             ))}
-            <ClientsSidebarSection
-              analyticsAllowed={analyticsAllowed}
-              onNavigate={onNavigate}
-            />
+            <ClientsSidebarSection onNavigate={onNavigate} />
             {menuBottom
               .filter((i) => !i.muted || i.label === "Analytics")
               .map((item) =>

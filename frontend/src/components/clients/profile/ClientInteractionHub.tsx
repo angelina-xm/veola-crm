@@ -31,6 +31,9 @@ export default function ClientInteractionHub({
     mood: string;
     outcome: string;
     next_step: string;
+    concerns: string;
+    relationship_context: string;
+    follow_up_on: string | null;
     schedule_follow_up: boolean;
     follow_up_due: string | null;
   }) => Promise<void>;
@@ -41,14 +44,20 @@ export default function ClientInteractionHub({
   const [topic, setTopic] = useState("");
   const [mood, setMood] = useState("");
   const [outcome, setOutcome] = useState("");
+  const [concerns, setConcerns] = useState("");
   const [nextStep, setNextStep] = useState("");
+  const [relationshipContext, setRelationshipContext] = useState("");
+  const [followUpOn, setFollowUpOn] = useState("");
   const [scheduleFollowUp, setScheduleFollowUp] = useState(false);
 
   const reset = () => {
     setContent("");
     setTopic("");
     setOutcome("");
+    setConcerns("");
     setNextStep("");
+    setRelationshipContext("");
+    setFollowUpOn("");
     setScheduleFollowUp(false);
   };
 
@@ -66,6 +75,9 @@ export default function ClientInteractionHub({
       mood,
       outcome,
       next_step: nextStep,
+      concerns,
+      relationship_context: relationshipContext,
+      follow_up_on: followUpOn || null,
       schedule_follow_up: scheduleFollowUp || type === "follow_up",
       follow_up_due: scheduleFollowUp
         ? new Date(defaultDueDatetimeLocal()).toISOString()
@@ -75,17 +87,15 @@ export default function ClientInteractionHub({
     onOpenChange(false);
   };
 
-  if (!open) {
-    return null;
-  }
+  if (!open) return null;
 
   return (
     <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[var(--vx-shadow-card)]">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <h2 className="text-sm font-semibold text-zinc-900">Add interaction</h2>
+          <h2 className="text-sm font-semibold text-zinc-900">Log interaction</h2>
           <p className="mt-0.5 text-xs text-zinc-500">
-            Updates timeline and last conversation memory
+            One object → timeline, memory, and optional follow-up task
           </p>
         </div>
         <button
@@ -120,13 +130,13 @@ export default function ClientInteractionHub({
         {type !== "follow_up" ? (
           <>
             <label className="block text-xs font-medium text-zinc-600">
-              What happened
+              Summary
               <textarea
                 rows={3}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
-                placeholder="Conversation summary, key points…"
+                placeholder="What happened — feeds timeline"
               />
             </label>
             {type === "note" ? (
@@ -150,16 +160,15 @@ export default function ClientInteractionHub({
 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block text-xs font-medium text-zinc-600">
-            Topic (memory)
+            Discussed topics
             <input
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
-              placeholder="What you discussed"
             />
           </label>
           <label className="block text-xs font-medium text-zinc-600">
-            Client mood
+            Mood
             <select
               value={mood}
               onChange={(e) => setMood(e.target.value)}
@@ -174,21 +183,47 @@ export default function ClientInteractionHub({
           </label>
         </div>
         <label className="block text-xs font-medium text-zinc-600">
-          How it ended
-          <textarea
-            rows={2}
+          Concerns / objections
+          <input
+            value={concerns}
+            onChange={(e) => setConcerns(e.target.value)}
+            className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="block text-xs font-medium text-zinc-600">
+          Outcome
+          <input
             value={outcome}
             onChange={(e) => setOutcome(e.target.value)}
             className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
           />
         </label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block text-xs font-medium text-zinc-600">
+            Next step
+            <input
+              value={nextStep}
+              onChange={(e) => setNextStep(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="block text-xs font-medium text-zinc-600">
+            Follow-up date
+            <input
+              type="date"
+              value={followUpOn}
+              onChange={(e) => setFollowUpOn(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+            />
+          </label>
+        </div>
         <label className="block text-xs font-medium text-zinc-600">
-          Next step
+          Relationship context
           <input
-            value={nextStep}
-            onChange={(e) => setNextStep(e.target.value)}
+            value={relationshipContext}
+            onChange={(e) => setRelationshipContext(e.target.value)}
+            placeholder="Ongoing priorities for this account"
             className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
-            placeholder="Send proposal, book demo…"
           />
         </label>
         <label className="flex items-center gap-2 text-xs text-zinc-600">

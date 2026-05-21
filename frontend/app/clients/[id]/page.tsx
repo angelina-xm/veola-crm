@@ -6,7 +6,8 @@ import { useParams } from "next/navigation";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
 import { useAuth } from "@/src/components/auth/AuthProvider";
 import CustomerTimeline from "@/src/components/clients/CustomerTimeline";
-import ClientInteractionMemoryCard from "@/src/components/clients/profile/ClientInteractionMemoryCard";
+import ClientRelationshipMemoryCard from "@/src/components/clients/profile/ClientRelationshipMemoryCard";
+import ClientRelationshipStatusSelect from "@/src/components/clients/profile/ClientRelationshipStatusSelect";
 import ClientProfileInsightsLink from "@/src/components/clients/profile/ClientProfileInsightsLink";
 import ClientBusinessContextPanel from "@/src/components/clients/profile/ClientBusinessContext";
 import ClientContactsSection from "@/src/components/clients/profile/ClientContactsSection";
@@ -16,7 +17,6 @@ import ClientMetricsStrip from "@/src/components/clients/profile/ClientMetricsSt
 import ClientProductsSection from "@/src/components/clients/profile/ClientProductsSection";
 import ClientProfileHero from "@/src/components/clients/profile/ClientProfileHero";
 import ClientQuickActions from "@/src/components/clients/profile/ClientQuickActions";
-import ClientRelationshipMemoryBlock from "@/src/components/clients/profile/ClientRelationshipMemory";
 import {
   createClientContact,
   createCrmTask,
@@ -42,6 +42,7 @@ import type {
   ClientProductRelationship,
   ClientProfile,
   ClientRelationshipMemory,
+  ClientRelationshipStatus,
   TimelineFilter,
 } from "@/src/types";
 
@@ -161,6 +162,9 @@ export default function ClientProfilePage() {
     mood: string;
     outcome: string;
     next_step: string;
+    concerns: string;
+    relationship_context: string;
+    follow_up_on: string | null;
     schedule_follow_up: boolean;
     follow_up_due: string | null;
   }) => {
@@ -244,9 +248,12 @@ export default function ClientProfilePage() {
                     busy={actionBusy}
                     onSubmit={submitInteraction}
                   />
-                ) : (
-                  <ClientInteractionMemoryCard memory={profile.relationship_memory} />
-                )}
+                ) : null}
+                <ClientRelationshipMemoryCard
+                  memory={profile.relationship_memory}
+                  onSave={saveMemory}
+                  interactionFormOpen={interactionOpen}
+                />
                 <ClientProductsSection
                   links={profile.products}
                   catalog={catalog}
@@ -283,9 +290,16 @@ export default function ClientProfilePage() {
                 />
               </div>
               <div className="space-y-6">
-                <ClientRelationshipMemoryBlock
-                  memory={profile.relationship_memory}
-                  onSave={saveMemory}
+                <ClientRelationshipStatusSelect
+                  value={
+                    (profile.client.relationship_status ??
+                      "active") as ClientRelationshipStatus
+                  }
+                  onChange={async (relationship_status) => {
+                    if (!tenantId) return;
+                    await patchClient(tenantId, clientId, { relationship_status });
+                    await refresh();
+                  }}
                 />
                 <ClientProfileInsightsLink
                   clientId={clientId}

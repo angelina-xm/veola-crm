@@ -11,9 +11,10 @@ class Client(models.Model):
 
     class RelationshipStatus(models.TextChoices):
         ACTIVE = "active", "Active"
-        PROSPECT = "prospect", "Prospect"
+        VIP = "vip", "VIP"
+        AT_RISK = "at_risk", "At risk"
         DORMANT = "dormant", "Dormant"
-        CHURNED = "churned", "Churned"
+        RETURNING = "returning", "Returning"
 
     company = models.ForeignKey(
         Company,
@@ -52,6 +53,13 @@ class Client(models.Model):
     last_conversation_mood = models.CharField(max_length=40, blank=True, default="")
     last_conversation_outcome = models.TextField(blank=True, default="")
     next_step = models.TextField(blank=True, default="")
+    relationship_concerns = models.TextField(blank=True, default="")
+    relationship_context = models.TextField(
+        blank=True,
+        default="",
+        help_text="Short relationship context — priorities, sensitivities.",
+    )
+    follow_up_on = models.DateField(null=True, blank=True)
     last_conversation_at = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)

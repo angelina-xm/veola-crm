@@ -45,6 +45,9 @@ class ClientSerializer(serializers.ModelSerializer):
             "last_conversation_mood",
             "last_conversation_outcome",
             "next_step",
+            "relationship_concerns",
+            "relationship_context",
+            "follow_up_on",
             "last_conversation_at",
             "created_at",
             "updated_at",
@@ -75,6 +78,9 @@ class ClientWriteSerializer(serializers.ModelSerializer):
             "last_conversation_mood",
             "last_conversation_outcome",
             "next_step",
+            "relationship_concerns",
+            "relationship_context",
+            "follow_up_on",
             "last_conversation_at",
         ]
         extra_kwargs = {
@@ -183,6 +189,11 @@ class ClientInteractionSerializer(serializers.Serializer):
         required=False, allow_blank=True, default=""
     )
     follow_up_due = serializers.DateTimeField(required=False, allow_null=True)
+    concerns = serializers.CharField(required=False, allow_blank=True, default="")
+    relationship_context = serializers.CharField(
+        required=False, allow_blank=True, default=""
+    )
+    follow_up_on = serializers.DateField(required=False, allow_null=True)
 
 
 class ClientProfileSerializer(serializers.Serializer):

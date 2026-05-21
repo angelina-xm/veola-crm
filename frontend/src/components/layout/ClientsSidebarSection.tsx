@@ -1,9 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { cn } from "@/src/lib/cn";
+import { useBilling } from "@/src/hooks/useBilling";
+import { useMembership } from "@/src/context/MembershipContext";
+import { canViewAnalytics } from "@/src/lib/roles";
+import PremiumNavChild from "@/src/components/clients/PremiumNavChild";
 import { NAV_LABELS, ROUTES } from "@/src/lib/product";
 
 const STORAGE_KEY = "vexora:sidebar:clients-expanded";
@@ -12,26 +15,26 @@ type ChildItem = {
   href: string;
   label: string;
   match: (path: string) => boolean;
-  requiresAnalytics?: boolean;
+  premium?: boolean;
 };
 
 const CHILDREN: ChildItem[] = [
   {
     href: ROUTES.clients,
-    label: NAV_LABELS.clientDirectory,
+    label: NAV_LABELS.clientAll,
     match: (p) => p === ROUTES.clients,
   },
   {
     href: ROUTES.clientsAnalytics,
     label: NAV_LABELS.clientAnalytics,
     match: (p) => p.startsWith(ROUTES.clientsAnalytics),
-    requiresAnalytics: true,
+    premium: true,
   },
   {
     href: ROUTES.clientsLeaderboards,
     label: NAV_LABELS.clientLeaderboards,
     match: (p) => p.startsWith(ROUTES.clientsLeaderboards),
-    requiresAnalytics: true,
+    premium: true,
   },
 ];
 
@@ -73,14 +76,17 @@ function IconChevron({ open }: { open: boolean }) {
 }
 
 export default function ClientsSidebarSection({
-  analyticsAllowed,
   onNavigate,
 }: {
-  analyticsAllowed: boolean;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const { membership } = useMembership();
+  const { entitlements, isLocked } = useBilling();
   const inClientsSection = pathname.startsWith(ROUTES.clients);
+
+  const intelligenceLocked =
+    isLocked("clientDeepAnalytics") || !canViewAnalytics(membership);
 
   const [expanded, setExpanded] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -88,13 +94,9 @@ export default function ClientsSidebarSection({
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored === "0") {
-        setExpanded(false);
-      } else if (stored === "1") {
-        setExpanded(true);
-      } else {
-        setExpanded(inClientsSection);
-      }
+      if (stored === "0") setExpanded(false);
+      else if (stored === "1") setExpanded(true);
+      else setExpanded(inClientsSection);
     } catch {
       setExpanded(inClientsSection);
     }
@@ -103,9 +105,7 @@ export default function ClientsSidebarSection({
 
   useEffect(() => {
     if (!hydrated) return;
-    if (inClientsSection) {
-      setExpanded(true);
-    }
+    if (inClientsSection) setExpanded(true);
   }, [inClientsSection, hydrated]);
 
   const persistExpanded = useCallback((next: boolean) => {
@@ -117,19 +117,13 @@ export default function ClientsSidebarSection({
     }
   }, []);
 
-  const toggle = () => persistExpanded(!expanded);
-
   const parentActive = inClientsSection;
-
-  const visibleChildren = CHILDREN.filter(
-    (c) => !c.requiresAnalytics || analyticsAllowed
-  );
 
   return (
     <div className="space-y-0.5">
       <button
         type="button"
-        onClick={toggle}
+        onClick={() => persistExpanded(!expanded)}
         className={cn(
           "group flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[13px] font-medium transition-all duration-150",
           parentActive
@@ -162,21 +156,24 @@ export default function ClientsSidebarSection({
       >
         <div className="overflow-hidden" onClick={onNavigate}>
           <ul className="ml-3 space-y-0.5 border-l border-zinc-200/80 py-0.5 pl-2">
-            {visibleChildren.map((child) => {
+            {CHILDREN.map((child) => {
               const active = child.match(pathname);
+              const locked = Boolean(child.premium && intelligenceLocked);
               return (
                 <li key={child.href}>
-                  <Link
+                  <PremiumNavChild
                     href={child.href}
-                    className={cn(
-                      "block rounded-lg py-1.5 pl-2.5 pr-2 text-[12px] font-medium transition-all duration-150",
-                      active
-                        ? "border-l-2 border-[var(--vx-accent)] bg-zinc-50 text-zinc-900 -ml-px pl-[calc(0.625rem-1px)]"
-                        : "text-zinc-500 hover:bg-zinc-50/80 hover:text-zinc-800"
-                    )}
-                  >
-                    {child.label}
-                  </Link>
+                    label={child.label}
+                    active={active}
+                    locked={locked}
+                    lockHint={
+                      !canViewAnalytics(membership)
+                        ? "Requires analytics permission"
+                        : "Upgrade to Pro for client intelligence"
+                    }
+                    devUnlock={entitlements.devUnlock}
+                    onNavigate={onNavigate}
+                  />
                 </li>
               );
             })}

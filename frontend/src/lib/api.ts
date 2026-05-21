@@ -994,9 +994,22 @@ export async function getClientProfile(
   const client = normalizeClient(
     raw.client as unknown as Record<string, unknown>
   );
+  const mem = raw.relationship_memory ?? {};
   return {
     ...raw,
     client,
+    relationship_memory: {
+      last_conversation_topic: String(mem.last_conversation_topic ?? ""),
+      last_conversation_mood: String(mem.last_conversation_mood ?? ""),
+      last_conversation_outcome: String(mem.last_conversation_outcome ?? ""),
+      next_step: String(mem.next_step ?? ""),
+      relationship_concerns: String(mem.relationship_concerns ?? ""),
+      relationship_context: String(mem.relationship_context ?? ""),
+      follow_up_on:
+        mem.follow_up_on == null ? null : String(mem.follow_up_on),
+      last_conversation_at:
+        mem.last_conversation_at == null ? null : String(mem.last_conversation_at),
+    },
     business_context: raw.business_context ?? {
       industry: client.industry ?? "",
       market_sector: client.market_sector ?? "",

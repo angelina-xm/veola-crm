@@ -1,18 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
+import ClientIntelligenceGate from "@/src/components/clients/ClientIntelligenceGate";
 import ClientSectionNav from "@/src/components/clients/ClientSectionNav";
 import ClientLeaderboardsView from "@/src/components/clients/analytics/ClientLeaderboardsView";
 import PageHeader from "@/src/components/ui/PageHeader";
 import { useClientCommercialAnalytics } from "@/src/hooks/useClientCommercialAnalytics";
-import { NAV_LABELS, ROUTES } from "@/src/lib/product";
+import { NAV_LABELS } from "@/src/lib/product";
 
 export default function ClientLeaderboardsPage() {
   const [productFilter, setProductFilter] = useState("");
-  const { data, loading, error, load, allowed, membershipLoading } =
-    useClientCommercialAnalytics(productFilter);
+  const { data, loading, error, load } = useClientCommercialAnalytics(productFilter);
 
   return (
     <ProtectedRoute>
@@ -21,23 +20,13 @@ export default function ClientLeaderboardsPage() {
         <PageHeader
           eyebrow="Client intelligence"
           title={NAV_LABELS.clientLeaderboards}
-          description="Top buyers, growth leaders, and product-specific rankings — operational CRM leaderboards."
+          description="Top buyers, growth leaders, and product-specific rankings."
         />
 
-        {!allowed && !membershipLoading ? (
-          <div className="rounded-2xl border border-zinc-200/80 bg-white p-8 shadow-[var(--vx-shadow-card)]">
-            <h2 className="text-lg font-semibold text-zinc-900">Access restricted</h2>
-            <p className="mt-2 text-sm text-zinc-600">
-              Enable &quot;View analytics&quot; on the Team page to open leaderboards.
-            </p>
-            <Link
-              href={ROUTES.clients}
-              className="mt-4 inline-block text-sm font-medium text-[var(--vx-accent)] hover:underline"
-            >
-              ← Directory
-            </Link>
-          </div>
-        ) : (
+        <ClientIntelligenceGate
+          title={NAV_LABELS.clientLeaderboards}
+          description="Commercial leaderboards across your client portfolio"
+        >
           <ClientLeaderboardsView
             data={data}
             loading={loading}
@@ -47,7 +36,7 @@ export default function ClientLeaderboardsPage() {
             onClearFilters={() => setProductFilter("")}
             onRetry={() => void load()}
           />
-        )}
+        </ClientIntelligenceGate>
       </div>
     </ProtectedRoute>
   );

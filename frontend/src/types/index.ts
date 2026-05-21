@@ -2,9 +2,10 @@
 export type ClientType = "business" | "individual";
 export type ClientRelationshipStatus =
   | "active"
-  | "prospect"
+  | "vip"
+  | "at_risk"
   | "dormant"
-  | "churned";
+  | "returning";
 
 export interface Client {
   id: string | number;
@@ -46,6 +47,9 @@ export interface ClientRelationshipMemory {
   last_conversation_mood: string;
   last_conversation_outcome: string;
   next_step: string;
+  relationship_concerns: string;
+  relationship_context: string;
+  follow_up_on: string | null;
   last_conversation_at: string | null;
 }
 
@@ -154,6 +158,9 @@ export interface ClientInteractionPayload {
   mood?: string;
   outcome?: string;
   next_step?: string;
+  concerns?: string;
+  relationship_context?: string;
+  follow_up_on?: string | null;
   schedule_follow_up?: boolean;
   follow_up_content?: string;
   follow_up_due?: string | null;

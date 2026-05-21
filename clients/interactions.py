@@ -29,6 +29,9 @@ def record_client_interaction(
     mood: str = "",
     outcome: str = "",
     next_step: str = "",
+    concerns: str = "",
+    relationship_context: str = "",
+    follow_up_on=None,
     schedule_follow_up: bool = False,
     follow_up_content: str = "",
     follow_up_due=None,
@@ -82,17 +85,22 @@ def record_client_interaction(
     if next_step.strip():
         client.next_step = next_step.strip()
         update_fields.append("next_step")
+    if concerns.strip():
+        client.relationship_concerns = concerns.strip()
+        update_fields.append("relationship_concerns")
+    if relationship_context.strip():
+        client.relationship_context = relationship_context.strip()
+        update_fields.append("relationship_context")
+    if follow_up_on is not None:
+        client.follow_up_on = follow_up_on
+        update_fields.append("follow_up_on")
 
     client.save(update_fields=list(dict.fromkeys(update_fields)))
+
+    from .profile import relationship_memory_payload
 
     return {
         "activity_id": activity.id if activity else None,
         "task_id": task.id if task else None,
-        "relationship_memory": {
-            "last_conversation_topic": client.last_conversation_topic,
-            "last_conversation_mood": client.last_conversation_mood,
-            "last_conversation_outcome": client.last_conversation_outcome,
-            "next_step": client.next_step,
-            "last_conversation_at": client.last_conversation_at,
-        },
+        "relationship_memory": relationship_memory_payload(client),
     }

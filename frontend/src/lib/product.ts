@@ -24,6 +24,7 @@ export const NAV_LABELS = {
   deals: "Deals",
   clients: "Clients",
   clientDirectory: "Directory",
+  clientAll: "All clients",
   clientAnalytics: "Analytics",
   clientLeaderboards: "Leaderboards",
   catalog: "Catalog",

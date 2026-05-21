@@ -1,15 +1,12 @@
 "use client";
 
 import { cn } from "@/src/lib/cn";
+import {
+  relationshipStatusLabel,
+  STATUS_CLASS,
+} from "@/src/lib/clientRelationship";
 import { initialsFromLabel } from "@/src/lib/nav";
 import type { Client, ClientContact } from "@/src/types";
-
-const STATUS_CLASS: Record<string, string> = {
-  active: "bg-emerald-50 text-emerald-700",
-  prospect: "bg-blue-50 text-blue-700",
-  dormant: "bg-amber-50 text-amber-800",
-  churned: "bg-zinc-100 text-zinc-600",
-};
 
 export default function ClientProfileHero({
   client,
@@ -47,7 +44,7 @@ export default function ClientProfileHero({
                     STATUS_CLASS.active
                 )}
               >
-                {client.relationship_status ?? "active"}
+                {relationshipStatusLabel(client.relationship_status)}
               </span>
             </div>
             <h1 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 sm:text-3xl">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { useBilling } from "@/src/hooks/useBilling";
 import { useMembership } from "@/src/context/MembershipContext";
 import { getClientCommercialAnalytics } from "@/src/lib/api";
 import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
@@ -9,6 +10,10 @@ import type { ClientCommercialAnalytics } from "@/src/types";
 
 export function useClientCommercialAnalytics(productFilter: string) {
   const { membership, loading: membershipLoading } = useMembership();
+  const { isLocked } = useBilling();
+  const roleAllowed = canViewAnalytics(membership);
+  const proLocked = isLocked("clientDeepAnalytics");
+  const intelligenceUnlocked = roleAllowed && !proLocked;
   const [companyId, setCompanyId] = useState<number | null>(null);
   const [data, setData] = useState<ClientCommercialAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -20,7 +25,7 @@ export function useClientCommercialAnalytics(productFilter: string) {
   }, []);
 
   const load = useCallback(async () => {
-    if (!canViewAnalytics(membership) || companyId === null) return;
+    if (!intelligenceUnlocked || companyId === null) return;
     try {
       setLoading(true);
       setError(null);
@@ -35,19 +40,21 @@ export function useClientCommercialAnalytics(productFilter: string) {
     } finally {
       setLoading(false);
     }
-  }, [companyId, membership, productFilter]);
+  }, [companyId, intelligenceUnlocked, productFilter]);
 
   useEffect(() => {
-    if (companyId === null || membershipLoading) return;
+    if (companyId === null || membershipLoading || !intelligenceUnlocked) return;
     void load();
-  }, [companyId, membershipLoading, load]);
+  }, [companyId, membershipLoading, intelligenceUnlocked, load]);
 
   return {
     data,
     loading,
     error,
     load,
-    allowed: canViewAnalytics(membership),
+    allowed: roleAllowed,
+    intelligenceUnlocked,
+    proLocked,
     membershipLoading,
   };
 }
