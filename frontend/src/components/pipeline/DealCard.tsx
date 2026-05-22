@@ -2,7 +2,6 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useEffect, useState } from "react";
 import {
   clientNameById,
   formatCreatedRelative,
@@ -10,7 +9,7 @@ import {
 } from "@/src/lib/dealDisplay";
 import {
   dealCardShellClass,
-  dealHealthChipClass,
+  dealHealthDotClass,
   dealHealthLabel,
   resolveDealAttentionVisual,
 } from "@/src/lib/dealAttention";
@@ -90,20 +89,39 @@ export function DealCardContent({
   const clientLine =
     clientNameById(clients, deal.client) ??
     (deal.client != null && deal.client !== "" ? String(deal.client) : "No client");
-  const taskSignal = getDealTaskSignal(openTasksForDeal);
 
   return (
     <>
-      <p className="text-sm font-semibold text-[var(--vx-text)]">{clientLine}</p>
-      <p className="mt-0.5 truncate text-xs text-[var(--vx-text-muted)]">{deal.title}</p>
+      <p className="text-[14px] font-semibold leading-snug text-[var(--vx-text)]">
+        {clientLine}
+      </p>
+      <p className="mt-1 truncate text-[12px] text-[var(--vx-text-muted)]">{deal.title}</p>
       {formatDealAmountUsd(deal.amount) ? (
-        <p className="mt-1 text-sm font-medium text-[var(--vx-text-secondary)] vx-tabular">
+        <p className="mt-2 text-[13px] font-medium text-[var(--vx-text-secondary)] vx-tabular">
           {formatDealAmountUsd(deal.amount)}
         </p>
       ) : null}
-      <p className={cn("mt-1 text-[11px]", taskSignal.textClass)}>{taskSignal.text}</p>
     </>
   );
+}
+
+function taskMetaLine(
+  nextTask: Activity | undefined,
+  lastNote: Activity | undefined,
+  createdAt?: string
+): string {
+  if (nextTask) {
+    const due =
+      nextTask.due_date && dueDateVsToday(nextTask.due_date) < 0
+        ? "Overdue"
+        : nextTask.due_date && dueDateVsToday(nextTask.due_date) === 0
+          ? "Today"
+          : null;
+    return [nextTask.content || "Follow-up", due].filter(Boolean).join(" · ");
+  }
+  if (lastNote?.content) return lastNote.content;
+  if (createdAt) return formatCreatedRelative(createdAt);
+  return "No recent activity";
 }
 
 export default function DealCard({
@@ -115,28 +133,18 @@ export default function DealCard({
   dragDisabled = false,
   clients = [],
   onOpen,
-  onDelete,
   openTasksForDeal = [],
   spotlight = false,
   dimmed = false,
-  onQuickCompleteFirstTask,
-  quickCompleting = false,
   onQuickAddTask,
   quickAddingTask = false,
-  onInlineSave,
   inlineSaving = false,
-  onMoveToFallbackStage,
   movingStage = false,
   stageName,
   onSuggestedAction,
   suggestedActionLoading = false,
   needsAttention = false,
-  onTaskComplete,
-  completingTaskId = null,
   notes = [],
-  onAddNote,
-  addingNote = false,
-  isDragging = false,
 }: {
   deal: Deal;
   index: number;
@@ -145,31 +153,21 @@ export default function DealCard({
   openTasksForDeal?: Activity[];
   spotlight?: boolean;
   dimmed?: boolean;
-  isDragging?: boolean;
-  onQuickCompleteFirstTask?: () => void | Promise<void>;
-  quickCompleting?: boolean;
   onQuickAddTask?: (preset: TaskPreset, customContent?: string) => void | Promise<void>;
   quickAddingTask?: boolean;
-  onInlineSave?: (patch: { title?: string; amount?: number }) => void | Promise<void>;
   inlineSaving?: boolean;
-  onMoveToFallbackStage?: (preset: StageFallbackPreset) => void | Promise<void>;
   movingStage?: boolean;
   stageName?: string;
   onSuggestedAction?: (label: SuggestedAction) => void | Promise<void>;
   suggestedActionLoading?: boolean;
   needsAttention?: boolean;
-  onTaskComplete?: (taskId: string) => void | Promise<void>;
-  completingTaskId?: string | null;
   notes?: Activity[];
-  onAddNote?: () => void | Promise<void>;
-  addingNote?: boolean;
   isDeleting?: boolean;
   deleteDisabled?: boolean;
   dragDisabled?: boolean;
   onOpen: (deal: Deal) => void;
   onDelete: (deal: Deal) => void;
 }) {
-  const taskSignal = getDealTaskSignal(openTasksForDeal);
   const dealHealth = getDealHealth(deal, openTasksForDeal);
   const visual = resolveDealAttentionVisual(dealHealth, needsAttention);
   const healthLabel = dealHealthLabel(visual);
@@ -191,6 +189,11 @@ export default function DealCard({
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   )[0];
 
+  const meta = taskMetaLine(nextTask, lastNote, deal.created_at);
+  const isOverdue = Boolean(
+    nextTask?.due_date && dueDateVsToday(nextTask.due_date) < 0
+  );
+
   const {
     attributes,
     listeners,
@@ -209,7 +212,7 @@ export default function DealCard({
     transition,
   };
 
-  const dragging = isDragging || sortableDragging;
+  const dragging = sortableDragging;
 
   return (
     <div
@@ -217,93 +220,74 @@ export default function DealCard({
       style={style}
       className={cn(
         dealCardShellClass(visual, { dragging, dimmed, spotlight }),
-        "mb-2.5 cursor-grab active:cursor-grabbing",
+        "mb-3.5 cursor-grab active:cursor-grabbing",
         dragDisabled && "cursor-default"
       )}
       {...attributes}
       {...listeners}
     >
-      <div className="p-3.5">
-        <div className="flex items-start justify-between gap-2">
-          <button
-            type="button"
-            className="min-w-0 flex-1 text-left"
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpen(deal);
-            }}
-          >
-            <p className="truncate text-[13px] font-semibold text-[var(--vx-text)]">
+      <div className="p-4">
+        <button
+          type="button"
+          className="flex w-full items-start justify-between gap-4 text-left"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpen(deal);
+          }}
+        >
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[15px] font-semibold leading-snug tracking-tight text-[var(--vx-text)]">
               {clientLine}
             </p>
-            <p className="mt-0.5 truncate text-[11px] text-[var(--vx-text-muted)]">
+            <p className="mt-1 truncate text-[12px] leading-relaxed text-[var(--vx-text-muted)]">
               {deal.title}
             </p>
-          </button>
-          <div className="flex shrink-0 flex-col items-end gap-1">
+          </div>
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
             {formatDealAmountUsd(deal.amount) ? (
-              <span className="text-sm font-semibold tracking-tight text-[var(--vx-text)] vx-tabular">
+              <span className="text-[14px] font-medium tracking-tight text-[var(--vx-text-secondary)] vx-tabular">
                 {formatDealAmountUsd(deal.amount)}
               </span>
             ) : null}
             {healthLabel ? (
-              <span
-                className={cn(
-                  "rounded-md px-1.5 py-0.5 text-[10px] font-semibold",
-                  dealHealthChipClass(visual)
-                )}
-              >
+              <span className="flex items-center gap-1.5 text-[10px] text-[var(--vx-text-muted)]">
+                <span
+                  className={cn("h-1.5 w-1.5 rounded-full", dealHealthDotClass(visual))}
+                  aria-hidden
+                />
                 {healthLabel}
               </span>
             ) : null}
           </div>
-        </div>
+        </button>
 
-        <div className="mt-2.5 space-y-1 border-t border-[var(--vx-border-subtle)] pt-2.5">
-          {lastNote ? (
-            <p className="line-clamp-1 text-[11px] text-[var(--vx-text-secondary)]">
-              <span className="text-[var(--vx-text-muted)]">Last · </span>
-              {lastNote.content || "Note"}
-            </p>
-          ) : (
-            <p className="text-[11px] text-[var(--vx-text-muted)]">
-              No recent activity
-              {deal.created_at ? ` · ${formatCreatedRelative(deal.created_at)}` : ""}
-            </p>
+        <p
+          className={cn(
+            "mt-3 line-clamp-2 text-[12px] leading-relaxed",
+            isOverdue ? "text-amber-600/90 dark:text-amber-400/80" : "text-[var(--vx-text-muted)]"
           )}
-          {nextTask ? (
-            <p className={cn("line-clamp-1 text-[11px] font-medium", taskSignal.textClass)}>
-              Next · {nextTask.content || "Follow-up"}
-              {nextTask.due_date
-                ? ` · ${dueDateVsToday(nextTask.due_date) < 0 ? "Overdue" : dueDateVsToday(nextTask.due_date) === 0 ? "Today" : "Scheduled"}`
-                : ""}
-            </p>
-          ) : (
-            <p className="text-[11px] text-[var(--vx-text-muted)]">{taskSignal.text}</p>
-          )}
-        </div>
+        >
+          {meta}
+        </p>
 
-        <div className="mt-2.5 flex items-center justify-between gap-2">
-          <div className="flex min-w-0 flex-wrap gap-1">
-            {suggestedActions.length > 0 && onSuggestedAction ? (
-              <button
-                type="button"
-                className="rounded-md border border-[var(--vx-accent)]/20 bg-[var(--vx-accent-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--vx-accent)] hover:bg-[var(--vx-accent-soft)]"
-                disabled={suggestedActionLoading || deleteDisabled}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  void onSuggestedAction(suggestedActions[0]);
-                }}
-              >
-                {suggestedActions[0]}
-              </button>
-            ) : null}
-          </div>
-          <div
-            className="flex items-center gap-1"
-            onClick={(e) => e.stopPropagation()}
-            onPointerDown={(e) => e.stopPropagation()}
-          >
+        <div
+          className="mt-3.5 flex items-center justify-between gap-3 pt-0.5"
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          {suggestedActions.length > 0 && onSuggestedAction ? (
+            <button
+              type="button"
+              className="vx-btn-ghost min-w-0 truncate px-0 text-[11px] text-[var(--vx-text-muted)] hover:text-[var(--vx-accent)]"
+              disabled={suggestedActionLoading || deleteDisabled}
+              onClick={() => void onSuggestedAction(suggestedActions[0])}
+            >
+              {suggestedActions[0]}
+            </button>
+          ) : (
+            <span />
+          )}
+          <div className="flex shrink-0 items-center gap-1">
             {onQuickAddTask ? (
               <DealQuickTaskMenu
                 busy={quickAddingTask}
@@ -313,7 +297,7 @@ export default function DealCard({
             ) : null}
             <button
               type="button"
-              className="rounded-md px-1.5 py-0.5 text-[10px] font-medium text-[var(--vx-text-muted)] hover:bg-[var(--vx-bg-subtle)] hover:text-[var(--vx-text)]"
+              className="vx-btn-ghost text-[11px]"
               onClick={() => onOpen(deal)}
             >
               Open
@@ -322,7 +306,7 @@ export default function DealCard({
         </div>
 
         {(inlineSaving || movingStage || isDeleting) && (
-          <p className="mt-1 text-[10px] text-[var(--vx-text-muted)]">Saving…</p>
+          <p className="mt-2 text-[10px] text-[var(--vx-text-muted)]">Saving…</p>
         )}
       </div>
     </div>

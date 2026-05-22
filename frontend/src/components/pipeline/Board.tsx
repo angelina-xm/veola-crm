@@ -1417,7 +1417,7 @@ export default function Board({
       />
 
       {(overdueTasksCount > 0 || todayTasksCount > 0) && boardView === "all" ? (
-        <p className="mb-3 text-xs text-[var(--vx-text-muted)]">
+        <p className="text-[12px] text-[var(--vx-text-muted)]">
           {overdueTasksCount > 0 ? `${overdueTasksCount} overdue tasks` : null}
           {overdueTasksCount > 0 && todayTasksCount > 0 ? " · " : null}
           {todayTasksCount > 0 ? `${todayTasksCount} due today` : null}
@@ -1431,7 +1431,7 @@ export default function Board({
         onDragCancel={handleDragCancel}
         onDragEnd={handleDragEndWithCleanup}
       >
-        <div className="vx-deals-board -mx-1 flex gap-3 overflow-x-auto rounded-xl bg-[var(--vx-bg)]/60 px-1 pb-6 pt-1">
+        <div className="vx-deals-board -mx-1 flex overflow-x-auto">
           {stagesToRender.map((stage) => (
             <Stage
               key={String(stage.id)}
@@ -1475,9 +1475,9 @@ export default function Board({
             hasLost={Boolean(lostStage)}
           />
         </div>
-        <DragOverlay dropAnimation={{ duration: 180, easing: "ease-out" }}>
+        <DragOverlay dropAnimation={{ duration: 220, easing: "cubic-bezier(0.2, 0, 0, 1)" }}>
           {overlayDeal ? (
-            <div className="w-[17rem] cursor-grabbing rounded-xl border border-[var(--vx-accent)]/30 bg-[var(--vx-surface-raised)]/95 p-3.5 shadow-2xl backdrop-blur-md scale-[1.02]">
+            <div className="vx-deal-card w-[19.5rem] cursor-grabbing border border-[var(--vx-accent)]/25 p-4 shadow-[var(--vx-shadow-card-hover)] scale-[1.02]">
               <DealCardContent
                 deal={overlayDeal}
                 clients={clients}
