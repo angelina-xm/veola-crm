@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import Board from "@/src/components/pipeline/Board";
 import {
   AuthError,
@@ -19,7 +18,6 @@ import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
 import { useAuth } from "@/src/components/auth/AuthProvider";
 import { useSettings } from "@/src/context/SettingsContext";
 import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
-import { COPY, ROUTES } from "@/src/lib/product";
 import EmptyState from "@/src/components/ui/EmptyState";
 import { Client, DealsByStage, PipelineStage } from "@/src/types";
 
@@ -159,16 +157,6 @@ export default function DealsPage() {
   return (
     <ProtectedRoute>
       <>
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-zinc-500">{COPY.dealsBoardHint}</p>
-          <Link
-            href={ROUTES.dealsClosed}
-            className="text-sm font-medium text-[var(--vx-accent)] hover:text-[var(--vx-accent-hover)]"
-          >
-            {COPY.viewClosedDeals} →
-          </Link>
-        </div>
-
         {loading ? (
           <div className="flex justify-center py-16">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-800" />

@@ -7,14 +7,16 @@ import {
   clientNameById,
   formatCreatedRelative,
   formatDealAmountUsd,
-  formatDealIdLabel,
 } from "@/src/lib/dealDisplay";
 import {
-  dueDateVsToday,
-  getDealTaskSignal,
-  type DealTaskSignal,
-} from "@/src/lib/dealTaskSignal";
+  dealCardShellClass,
+  dealHealthChipClass,
+  dealHealthLabel,
+  resolveDealAttentionVisual,
+} from "@/src/lib/dealAttention";
+import { dueDateVsToday, getDealTaskSignal } from "@/src/lib/dealTaskSignal";
 import type { TaskPreset } from "@/src/lib/quickTask";
+import { cn } from "@/src/lib/cn";
 import { DAY_MS, scaleMs } from "@/src/lib/timeConfig";
 import { Activity, Client, Deal } from "@/src/types";
 import DealQuickTaskMenu from "./DealQuickTaskMenu";
@@ -23,24 +25,21 @@ export type StageFallbackPreset = "new" | "negotiation";
 export type SuggestedAction = "Call client" | "Send proposal" | "Follow up";
 export type DealHealth = "urgent" | "at_risk" | "cold";
 
-const HEALTH_STALE_MS =
-  scaleMs(
-    process.env.NEXT_PUBLIC_DEV_FAST === "true" ? 60 * 1000 : 48 * 60 * 60 * 1000
-  );
+const HEALTH_STALE_MS = scaleMs(
+  process.env.NEXT_PUBLIC_DEV_FAST === "true" ? 60 * 1000 : 48 * 60 * 60 * 1000
+);
 const FOLLOW_UP_SUGGEST_MS = scaleMs(2 * DAY_MS);
 
 export function getDealHealth(deal: Deal, activities: Activity[] = []): DealHealth {
   const hasOverdueTasks = activities.some((a) => {
     if (a.type !== "task" || a.is_completed || !a.due_date) return false;
-    const dueTs = new Date(a.due_date).getTime();
-    return Number.isFinite(dueTs) && dueTs < Date.now();
+    return dueDateVsToday(a.due_date) < 0;
   });
   if (hasOverdueTasks) return "urgent";
 
   const lastActivityTs = activities.reduce((maxTs, item) => {
     const ts = new Date(item.created_at).getTime();
-    if (!Number.isFinite(ts)) return maxTs;
-    return Math.max(maxTs, ts);
+    return Number.isFinite(ts) ? Math.max(maxTs, ts) : maxTs;
   }, Number.isFinite(new Date(deal.created_at ?? "").getTime())
     ? new Date(deal.created_at as string).getTime()
     : 0);
@@ -63,70 +62,46 @@ export function getSuggestedActions(
 
   const lastActivityTs = activities.reduce((maxTs, item) => {
     const ts = new Date(item.created_at).getTime();
-    if (!Number.isFinite(ts)) return maxTs;
-    return Math.max(maxTs, ts);
+    return Number.isFinite(ts) ? Math.max(maxTs, ts) : maxTs;
   }, Number.isFinite(new Date(deal.created_at ?? "").getTime())
     ? new Date(deal.created_at as string).getTime()
     : 0);
-  const staleForMs = Date.now() - lastActivityTs;
-  if (staleForMs > FOLLOW_UP_SUGGEST_MS) {
+  if (Date.now() - lastActivityTs > FOLLOW_UP_SUGGEST_MS) {
     out.push("Follow up");
   }
 
-  const existingOpenTaskContent = new Set(
+  const existing = new Set(
     activities
       .filter((a) => a.type === "task" && !a.is_completed)
       .map((a) => String(a.content ?? "").trim().toLowerCase())
   );
-  return out.filter(
-    (label) => !existingOpenTaskContent.has(label.trim().toLowerCase())
-  );
+  return out.filter((label) => !existing.has(label.trim().toLowerCase()));
 }
 
 export function DealCardContent({
   deal,
   clients = [],
   openTasksForDeal = [],
-  taskSignal: taskSignalProp,
 }: {
   deal: Deal;
   clients?: Client[];
   openTasksForDeal?: Activity[];
-  taskSignal?: DealTaskSignal;
 }) {
-  const formattedAmount = formatDealAmountUsd(deal.amount);
-  const clientLabel = clientNameById(clients, deal.client);
   const clientLine =
-    clientLabel ??
-    (deal.client != null && deal.client !== ""
-      ? String(deal.client)
-      : "—");
-  const taskSignal = taskSignalProp ?? getDealTaskSignal(openTasksForDeal);
+    clientNameById(clients, deal.client) ??
+    (deal.client != null && deal.client !== "" ? String(deal.client) : "No client");
+  const taskSignal = getDealTaskSignal(openTasksForDeal);
 
   return (
     <>
-      <p className="text-sm font-semibold text-gray-900">
-        {deal.title}{" "}
-        <span className="font-normal text-gray-500">
-          ({formatDealIdLabel(deal.id)})
-        </span>
-      </p>
-      <p className="mt-1 text-xs text-gray-600">
-        Client: {clientLine}
-      </p>
-      {formattedAmount ? (
-        <p className="mt-0.5 text-sm font-medium text-gray-900">
-          {formattedAmount}
+      <p className="text-sm font-semibold text-[var(--vx-text)]">{clientLine}</p>
+      <p className="mt-0.5 truncate text-xs text-[var(--vx-text-muted)]">{deal.title}</p>
+      {formatDealAmountUsd(deal.amount) ? (
+        <p className="mt-1 text-sm font-medium text-[var(--vx-text-secondary)] vx-tabular">
+          {formatDealAmountUsd(deal.amount)}
         </p>
       ) : null}
-      <p className={`mt-1 text-xs font-medium ${taskSignal.textClass}`}>
-        {taskSignal.text}
-      </p>
-      {deal.created_at ? (
-        <p className="mt-1 text-xs text-gray-500">
-          Created: {formatCreatedRelative(deal.created_at)}
-        </p>
-      ) : null}
+      <p className={cn("mt-1 text-[11px]", taskSignal.textClass)}>{taskSignal.text}</p>
     </>
   );
 }
@@ -161,6 +136,7 @@ export default function DealCard({
   notes = [],
   onAddNote,
   addingNote = false,
+  isDragging = false,
 }: {
   deal: Deal;
   index: number;
@@ -169,12 +145,10 @@ export default function DealCard({
   openTasksForDeal?: Activity[];
   spotlight?: boolean;
   dimmed?: boolean;
+  isDragging?: boolean;
   onQuickCompleteFirstTask?: () => void | Promise<void>;
   quickCompleting?: boolean;
-  onQuickAddTask?: (
-    preset: TaskPreset,
-    customContent?: string
-  ) => void | Promise<void>;
+  onQuickAddTask?: (preset: TaskPreset, customContent?: string) => void | Promise<void>;
   quickAddingTask?: boolean;
   onInlineSave?: (patch: { title?: string; amount?: number }) => void | Promise<void>;
   inlineSaving?: boolean;
@@ -196,57 +170,38 @@ export default function DealCard({
   onDelete: (deal: Deal) => void;
 }) {
   const taskSignal = getDealTaskSignal(openTasksForDeal);
-  const hasOpenTask = openTasksForDeal.some(
-    (t) => t.type === "task" && !t.is_completed
-  );
   const dealHealth = getDealHealth(deal, openTasksForDeal);
+  const visual = resolveDealAttentionVisual(dealHealth, needsAttention);
+  const healthLabel = dealHealthLabel(visual);
   const suggestedActions = getSuggestedActions(deal, stageName, openTasksForDeal);
-  const [titleEdit, setTitleEdit] = useState(false);
-  const [amountEdit, setAmountEdit] = useState(false);
-  const [titleDraft, setTitleDraft] = useState(deal.title);
-  const [amountDraft, setAmountDraft] = useState(
-    deal.amount != null ? String(deal.amount) : ""
-  );
-  const [completedLocalIds, setCompletedLocalIds] = useState<Set<string>>(
-    () => new Set()
-  );
-  useEffect(() => {
-    if (!titleEdit) {
-      setTitleDraft(deal.title);
-    }
-  }, [deal.title, titleEdit]);
-  useEffect(() => {
-    if (!amountEdit) {
-      setAmountDraft(deal.amount != null ? String(deal.amount) : "");
-    }
-  }, [deal.amount, amountEdit]);
-  const topTasks = [...openTasksForDeal]
-    .filter((t) => t.type === "task")
+
+  const clientLine =
+    clientNameById(clients, deal.client) ??
+    (deal.client != null && deal.client !== "" ? String(deal.client) : "No client");
+
+  const nextTask = [...openTasksForDeal]
+    .filter((t) => t.type === "task" && !t.is_completed)
     .sort((a, b) => {
-      const aDue = a.due_date ? dueDateVsToday(a.due_date) : Number.POSITIVE_INFINITY;
-      const bDue = b.due_date ? dueDateVsToday(b.due_date) : Number.POSITIVE_INFINITY;
-      if (aDue !== bDue) return aDue - bDue;
-      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-    })
-    .slice(0, 3);
-  const sortedNotes = [...notes].sort(
+      const aDue = a.due_date ? dueDateVsToday(a.due_date) : 99;
+      const bDue = b.due_date ? dueDateVsToday(b.due_date) : 99;
+      return aDue - bDue;
+    })[0];
+
+  const lastNote = [...notes].sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  );
-  const lastActivity = sortedNotes[0] ?? null;
+  )[0];
+
   const {
     attributes,
     listeners,
     setNodeRef,
     transform,
     transition,
+    isDragging: sortableDragging,
   } = useSortable({
     id: `deal-${String(deal.id)}`,
     disabled: dragDisabled,
-    data: {
-      stageId,
-      index,
-      dealId: String(deal.id),
-    },
+    data: { stageId, index, dealId: String(deal.id) },
   });
 
   const style = {
@@ -254,325 +209,121 @@ export default function DealCard({
     transition,
   };
 
-  const focusRing =
-    spotlight && !dimmed
-      ? "ring-2 ring-blue-500 ring-offset-1 bg-blue-50/60"
-      : "";
-  const attentionClass = needsAttention
-    ? "border-amber-200/80 bg-amber-50/50 ring-1 ring-amber-100"
-    : "";
-  const urgentClass =
-    dealHealth === "urgent"
-      ? "border-rose-200/80 bg-rose-50/40 ring-1 ring-rose-100"
-      : "";
-  const dimClass = dimmed ? "opacity-40" : "";
+  const dragging = isDragging || sortableDragging;
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`mb-2 flex gap-0 overflow-hidden rounded-lg border border-zinc-200/90 bg-white shadow-sm transition-all duration-200 hover:border-zinc-300 hover:shadow-md ${taskSignal.borderClass} ${focusRing} ${attentionClass} ${urgentClass} ${dimClass}`}
+      className={cn(
+        dealCardShellClass(visual, { dragging, dimmed, spotlight }),
+        "mb-2.5 cursor-grab active:cursor-grabbing",
+        dragDisabled && "cursor-default"
+      )}
       {...attributes}
+      {...listeners}
     >
-      <button
-        type="button"
-        className="shrink-0 cursor-grab touch-none border-r border-gray-100 px-2 py-3 text-gray-400 hover:bg-gray-50 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
-        {...listeners}
-        disabled={dragDisabled}
-        aria-label="Перетащить"
-      >
-        ⋮⋮
-      </button>
-      <div className="min-w-0 flex-1 py-3 pr-3">
-        <div className="w-full text-left">
-          <div className="flex items-start justify-between gap-2.5">
-            <div className="min-w-0 flex-1">
-              <div className="mb-1 flex items-center gap-1.5">
-                <span
-                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                    dealHealth === "urgent"
-                      ? "bg-red-100 text-red-800"
-                      : dealHealth === "at_risk"
-                        ? "bg-amber-100 text-amber-800"
-                        : "bg-slate-100 text-slate-700"
-                  }`}
-                >
-                  {dealHealth === "urgent"
-                    ? "🔥 Urgent"
-                    : dealHealth === "at_risk"
-                      ? "⚠️ At risk"
-                      : "🧊 Cold"}
-                </span>
-              </div>
-              {titleEdit ? (
-                <input
-                  autoFocus
-                  value={titleDraft}
-                  onChange={(e) => setTitleDraft(e.target.value)}
-                  className="w-full rounded border border-blue-300 px-1.5 py-1 text-sm font-semibold text-gray-900"
-                  disabled={inlineSaving || deleteDisabled}
-                  onBlur={() => {
-                    setTitleEdit(false);
-                    const next = titleDraft.trim();
-                    if (!next || next === deal.title || !onInlineSave) {
-                      setTitleDraft(deal.title);
-                      return;
-                    }
-                    void onInlineSave({ title: next });
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      e.currentTarget.blur();
-                    }
-                    if (e.key === "Escape") {
-                      setTitleDraft(deal.title);
-                      setTitleEdit(false);
-                    }
-                  }}
-                />
-              ) : (
-                <button
-                  type="button"
-                  className="cursor-pointer rounded px-1.5 py-0.5 text-left text-base font-bold text-gray-900 hover:bg-gray-100"
-                  onClick={() => setTitleEdit(true)}
-                  disabled={inlineSaving || deleteDisabled}
-                  title="Click to edit title"
-                >
-                  {deal.title}{" "}
-                  <span className="font-normal text-gray-500">
-                    ({formatDealIdLabel(deal.id)})
-                  </span>
-                </button>
-              )}
-            </div>
-            <button
-              type="button"
-              className="text-xs text-gray-500 hover:underline"
-              onClick={() => onOpen(deal)}
-            >
-              Details
-            </button>
+      <div className="p-3.5">
+        <div className="flex items-start justify-between gap-2">
+          <button
+            type="button"
+            className="min-w-0 flex-1 text-left"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen(deal);
+            }}
+          >
+            <p className="truncate text-[13px] font-semibold text-[var(--vx-text)]">
+              {clientLine}
+            </p>
+            <p className="mt-0.5 truncate text-[11px] text-[var(--vx-text-muted)]">
+              {deal.title}
+            </p>
+          </button>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            {formatDealAmountUsd(deal.amount) ? (
+              <span className="text-sm font-semibold tracking-tight text-[var(--vx-text)] vx-tabular">
+                {formatDealAmountUsd(deal.amount)}
+              </span>
+            ) : null}
+            {healthLabel ? (
+              <span
+                className={cn(
+                  "rounded-md px-1.5 py-0.5 text-[10px] font-semibold",
+                  dealHealthChipClass(visual)
+                )}
+              >
+                {healthLabel}
+              </span>
+            ) : null}
           </div>
-          <p className="mt-1 text-xs text-gray-700">
-            Client: {clientNameById(clients, deal.client) ?? (deal.client ? String(deal.client) : "—")}
-          </p>
-          {amountEdit ? (
-            <input
-              autoFocus
-              type="number"
-              inputMode="decimal"
-              min={0}
-              step="0.01"
-              value={amountDraft}
-              onChange={(e) => setAmountDraft(e.target.value)}
-              className="mt-1 w-full rounded border border-blue-300 px-1.5 py-1 text-sm font-medium text-gray-900"
-              disabled={inlineSaving || deleteDisabled}
-              onBlur={() => {
-                setAmountEdit(false);
-                if (!onInlineSave) {
-                  setAmountDraft(deal.amount != null ? String(deal.amount) : "");
-                  return;
-                }
-                const parsed = Number.parseFloat(amountDraft.replace(",", "."));
-                if (!Number.isFinite(parsed) || parsed === Number(deal.amount ?? 0)) {
-                  setAmountDraft(deal.amount != null ? String(deal.amount) : "");
-                  return;
-                }
-                void onInlineSave({ amount: parsed });
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  e.currentTarget.blur();
-                }
-                if (e.key === "Escape") {
-                  setAmountDraft(deal.amount != null ? String(deal.amount) : "");
-                  setAmountEdit(false);
-                }
-              }}
-            />
+        </div>
+
+        <div className="mt-2.5 space-y-1 border-t border-[var(--vx-border-subtle)] pt-2.5">
+          {lastNote ? (
+            <p className="line-clamp-1 text-[11px] text-[var(--vx-text-secondary)]">
+              <span className="text-[var(--vx-text-muted)]">Last · </span>
+              {lastNote.content || "Note"}
+            </p>
           ) : (
-            <button
-              type="button"
-              className="mt-1 cursor-pointer rounded px-1.5 py-0.5 text-left text-base font-semibold text-indigo-900 hover:bg-indigo-50"
-              onClick={() => setAmountEdit(true)}
-              disabled={inlineSaving || deleteDisabled}
-              title="Click to edit amount"
-            >
-              {formatDealAmountUsd(deal.amount) ?? "Set amount"}
-            </button>
+            <p className="text-[11px] text-[var(--vx-text-muted)]">
+              No recent activity
+              {deal.created_at ? ` · ${formatCreatedRelative(deal.created_at)}` : ""}
+            </p>
           )}
-          <p className={`mt-1 text-xs font-medium ${taskSignal.textClass}`}>
-            {taskSignal.text}
-          </p>
-          {deal.created_at ? (
-            <p className="mt-1 text-xs text-gray-500">
-              Created: {formatCreatedRelative(deal.created_at)}
+          {nextTask ? (
+            <p className={cn("line-clamp-1 text-[11px] font-medium", taskSignal.textClass)}>
+              Next · {nextTask.content || "Follow-up"}
+              {nextTask.due_date
+                ? ` · ${dueDateVsToday(nextTask.due_date) < 0 ? "Overdue" : dueDateVsToday(nextTask.due_date) === 0 ? "Today" : "Scheduled"}`
+                : ""}
             </p>
-          ) : null}
-          {needsAttention ? (
-            <p className="mt-1 inline-flex animate-pulse items-center gap-1 text-xs font-semibold text-amber-900">
-              <span aria-hidden>⚠️</span>
-              <span>Quiet lately</span>
-            </p>
-          ) : null}
+          ) : (
+            <p className="text-[11px] text-[var(--vx-text-muted)]">{taskSignal.text}</p>
+          )}
         </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {onQuickAddTask ? (
-            <DealQuickTaskMenu
-              busy={quickAddingTask}
-              disabled={deleteDisabled}
-              onSelect={(preset, customContent) => {
-                void onQuickAddTask(preset, customContent);
-              }}
-            />
-          ) : null}
-          {hasOpenTask && onQuickCompleteFirstTask ? (
-            <button
-              type="button"
-              className="cursor-pointer rounded border border-emerald-600 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-900 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={quickCompleting || deleteDisabled}
-              onClick={(e) => {
-                e.stopPropagation();
-                void onQuickCompleteFirstTask();
-              }}
-            >
-              {quickCompleting ? "…" : "✔ Complete"}
-            </button>
-          ) : null}
-          {onMoveToFallbackStage ? (
-            <select
-              className="cursor-pointer rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={movingStage || deleteDisabled}
-              defaultValue=""
-              onChange={(e) => {
-                const value = e.target.value as StageFallbackPreset | "";
-                if (!value) return;
-                void onMoveToFallbackStage(value);
-                e.currentTarget.value = "";
-              }}
-            >
-              <option value="" disabled>
-                Move to →
-              </option>
-              <option value="new">New</option>
-              <option value="negotiation">Negotiation</option>
-            </select>
-          ) : null}
-        </div>
-        {suggestedActions.length > 0 && onSuggestedAction ? (
-          <div className="mt-2.5 rounded-md border border-indigo-200 bg-indigo-50 px-2.5 py-2">
-            <p className="text-xs font-semibold text-indigo-800">
-              💡 Suggested actions
-            </p>
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {suggestedActions.map((action) => (
-                <button
-                  key={action}
-                  type="button"
-                  className="cursor-pointer rounded border border-indigo-500 bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white shadow-sm hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  disabled={suggestedActionLoading || deleteDisabled}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void onSuggestedAction(action);
-                  }}
-                >
-                  {action}
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : null}
-        {topTasks.length > 0 ? (
-          <div className="mt-2 rounded border border-gray-200 bg-gray-50 px-2 py-1.5">
-            <p className="text-[11px] font-medium text-gray-700">📌 Tasks</p>
-            <ul className="mt-1 space-y-1">
-              {topTasks.map((task) => {
-                const id = String(task.id);
-                const completed = completedLocalIds.has(id);
-                const dueCmp =
-                  task.due_date && !completed ? dueDateVsToday(task.due_date) : 1;
-                const isOverdue = dueCmp < 0;
-                return (
-                  <li key={id}>
-                    <button
-                      type="button"
-                      className={`flex w-full cursor-pointer items-center gap-1.5 rounded px-1 py-0.5 text-left text-xs hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 ${
-                        completed ? "text-gray-500 line-through" : isOverdue ? "text-red-700" : "text-gray-700"
-                      }`}
-                      disabled={completed || completingTaskId === id || !onTaskComplete}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (!onTaskComplete) return;
-                        setCompletedLocalIds((prev) => new Set(prev).add(id));
-                        void onTaskComplete(id);
-                      }}
-                    >
-                      <span aria-hidden>{completed ? "✔" : "☐"}</span>
-                      <span className="truncate">
-                        {completed ? "Completed" : task.content || "Task"}
-                      </span>
-                      {isOverdue ? <span aria-hidden>⚠️</span> : null}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ) : null}
-        <div className="mt-2 rounded border border-slate-200 bg-slate-50 px-2 py-1.5">
-          <div className="mb-1 flex items-center justify-between gap-2">
-            <p className="text-[11px] font-medium text-slate-700">Notes</p>
-            {onAddNote ? (
+
+        <div className="mt-2.5 flex items-center justify-between gap-2">
+          <div className="flex min-w-0 flex-wrap gap-1">
+            {suggestedActions.length > 0 && onSuggestedAction ? (
               <button
                 type="button"
-                className="cursor-pointer rounded border border-slate-300 bg-white px-2 py-0.5 text-[11px] text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={addingNote || deleteDisabled}
+                className="rounded-md border border-[var(--vx-accent)]/20 bg-[var(--vx-accent-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--vx-accent)] hover:bg-[var(--vx-accent-soft)]"
+                disabled={suggestedActionLoading || deleteDisabled}
                 onClick={(e) => {
                   e.stopPropagation();
-                  void onAddNote();
+                  void onSuggestedAction(suggestedActions[0]);
                 }}
               >
-                {addingNote ? "..." : "📝 Add note"}
+                {suggestedActions[0]}
               </button>
             ) : null}
           </div>
-          {sortedNotes.length === 0 ? (
-            <p className="text-xs text-slate-500">No notes yet.</p>
-          ) : (
-            <ul className="space-y-1">
-              {sortedNotes.map((note) => (
-                <li key={String(note.id)} className="text-xs text-slate-700">
-                  {note.content ? String(note.content) : "Note"}{" "}
-                  <span className="text-slate-500">
-                    {new Date(note.created_at).toLocaleString()}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-          {lastActivity ? (
-            <p className="mt-1 text-[11px] text-slate-600">
-              Last activity: {lastActivity.content || "Note"} {" · "}
-              {new Date(lastActivity.created_at).toLocaleString()}
-            </p>
-          ) : null}
+          <div
+            className="flex items-center gap-1"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            {onQuickAddTask ? (
+              <DealQuickTaskMenu
+                busy={quickAddingTask}
+                disabled={deleteDisabled}
+                onSelect={(preset, custom) => void onQuickAddTask(preset, custom)}
+              />
+            ) : null}
+            <button
+              type="button"
+              className="rounded-md px-1.5 py-0.5 text-[10px] font-medium text-[var(--vx-text-muted)] hover:bg-[var(--vx-bg-subtle)] hover:text-[var(--vx-text)]"
+              onClick={() => onOpen(deal)}
+            >
+              Open
+            </button>
+          </div>
         </div>
-        {inlineSaving || movingStage ? (
-          <p className="mt-1 text-xs text-gray-500">Saving...</p>
-        ) : null}
-        <button
-          type="button"
-          className="mt-2 text-xs text-red-600 hover:underline disabled:opacity-50"
-          disabled={deleteDisabled}
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(deal);
-          }}
-        >
-          {isDeleting ? "Deleting..." : "Delete"}
-        </button>
+
+        {(inlineSaving || movingStage || isDeleting) && (
+          <p className="mt-1 text-[10px] text-[var(--vx-text-muted)]">Saving…</p>
+        )}
       </div>
     </div>
   );

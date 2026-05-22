@@ -245,3 +245,17 @@ body {
   background: var(--vx-badge-neutral-bg);
   color: var(--vx-badge-neutral-text);
 }
+
+.vx-deals-board {
+  min-height: calc(100vh - 12rem);
+  scrollbar-gutter: stable;
+}
+
+.vx-deals-board::-webkit-scrollbar {
+  height: 6px;
+}
+
+.vx-deals-board::-webkit-scrollbar-thumb {
+  background: var(--vx-border);
+  border-radius: 99px;
+}

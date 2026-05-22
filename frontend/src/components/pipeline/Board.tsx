@@ -17,7 +17,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Stage from "./Stage";
 import DealModal from "./DealModal";
-import NotificationBar from "@/src/components/notifications/NotificationBar";
 import {
   DealCardContent,
   getDealHealth,
@@ -53,9 +52,7 @@ import {
 } from "@/src/lib/pipelineLifecycle";
 import {
   clientNameById,
-  formatCreatedRelative,
   formatDealAmountUsd,
-  formatDealIdLabel,
 } from "@/src/lib/dealDisplay";
 import { groupOpenTasksByDealId } from "@/src/lib/dealTaskSignal";
 import { createTaskFromPreset, type TaskPreset } from "@/src/lib/quickTask";
@@ -86,9 +83,15 @@ import {
   PipelineStage,
   StaleDeal,
 } from "@/src/types";
-import PipelineAnalyticsCompact from "@/src/components/analytics/PipelineAnalyticsCompact";
-import PipelineHealthBanner from "@/src/components/pipeline/PipelineHealthBanner";
+import DealsWorkspaceBar, {
+  formatPipelineMetric,
+  type DealsBoardView,
+} from "@/src/components/deals/DealsWorkspaceBar";
+import { sumDealAmounts } from "@/src/lib/dealAttention";
+import { dueDateVsToday } from "@/src/lib/dealTaskSignal";
 import type { PipelineHealth } from "@/src/types";
+
+const HIGH_VALUE_USD = 10_000;
 
 type PendingClose = {
   deal: Deal;
@@ -168,14 +171,6 @@ function isDealStale({
   const now = Date.now();
   const parsedCreated = new Date(createdAt ?? "").getTime();
   const parsedLast = new Date(lastActivityAt ?? "").getTime();
-  console.log("DEBUG DEAL FULL", {
-    created_at: createdAt ?? null,
-    parsedCreated,
-    lastActivity: lastActivityAt ?? null,
-    parsedLast: Number.isFinite(parsedLast) ? parsedLast : null,
-    now,
-    STALE_MS,
-  });
   const createdTs = parsedCreated;
   const createdIsValid = Number.isFinite(createdTs);
 
@@ -325,20 +320,6 @@ export default function Board({
   automationSettingsLoading,
 }: BoardProps) {
   const { membership, loading: membershipLoading } = useMembership();
-  useEffect(() => {
-    console.log("[Board] mount");
-    return () => {
-      console.log("[Board] unmount");
-    };
-  }, []);
-
-  useEffect(() => {
-    console.log("[Board] automationSettings", {
-      automationSettings,
-      automationSettingsLoading,
-    });
-  }, [automationSettings, automationSettingsLoading]);
-
   const router = useRouter();
   const allowCreateDeals =
     !membershipLoading && canCreateDeals(membership);
@@ -454,6 +435,8 @@ export default function Board({
     null
   );
   const [sortByPriority, setSortByPriority] = useState(true);
+  const [boardView, setBoardView] = useState<DealsBoardView>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [priorityStageOrder, setPriorityStageOrder] = useState<string[] | null>(
     null
   );
@@ -746,11 +729,6 @@ export default function Board({
           createdAt: deal.created_at,
           lastActivityAt,
         });
-        console.log("ATTENTION CHECK", {
-          dealId: deal.id,
-          isStale: stale,
-          needsAttention: stale,
-        });
         if (stale) {
           out.add(dealId);
         }
@@ -812,10 +790,101 @@ export default function Board({
     () => Object.values(dealsByStage).flatMap((list) => list ?? []),
     [dealsByStage]
   );
-  const attentionDeals = useMemo(
-    () => allDeals.filter((d) => attentionDealIds.has(String(d.id))),
-    [allDeals, attentionDealIds]
+  const closingSoonIds = useMemo(() => {
+    const out = new Set<string>();
+    for (const deal of allDeals) {
+      const id = String(deal.id);
+      const tasks = openTasksByDealId[id] ?? [];
+      const soon = tasks.some(
+        (t) =>
+          t.type === "task" &&
+          !t.is_completed &&
+          t.due_date &&
+          dueDateVsToday(t.due_date) <= 7
+      );
+      if (soon) out.add(id);
+    }
+    return out;
+  }, [allDeals, openTasksByDealId]);
+
+  const highValueIds = useMemo(() => {
+    const out = new Set<string>();
+    for (const deal of allDeals) {
+      const n =
+        typeof deal.amount === "number"
+          ? deal.amount
+          : Number.parseFloat(String(deal.amount ?? ""));
+      if (Number.isFinite(n) && n >= HIGH_VALUE_USD) out.add(String(deal.id));
+    }
+    return out;
+  }, [allDeals]);
+
+  const viewHighlightIds = useMemo(() => {
+    if (boardView === "attention") return attentionDealIds;
+    if (boardView === "closing") return closingSoonIds;
+    if (boardView === "high_value") return highValueIds;
+    return null;
+  }, [boardView, attentionDealIds, closingSoonIds, highValueIds]);
+
+  const filterDimFromView = Boolean(
+    boardView !== "all" && viewHighlightIds && viewHighlightIds.size > 0
   );
+
+  const effectiveHighlightSet = useMemo(() => {
+    if (filterDimFromView && viewHighlightIds) return viewHighlightIds;
+    return highlightSet;
+  }, [filterDimFromView, viewHighlightIds, highlightSet]);
+
+  const effectiveFilterDim = filterDimActive || filterDimFromView;
+
+  const matchesSearch = useCallback(
+    (deal: Deal) => {
+      const q = searchQuery.trim().toLowerCase();
+      if (!q) return true;
+      const client =
+        clientNameById(clients, deal.client)?.toLowerCase() ?? "";
+      return (
+        deal.title.toLowerCase().includes(q) ||
+        client.includes(q) ||
+        String(deal.id).includes(q)
+      );
+    },
+    [clients, searchQuery]
+  );
+
+  const filteredDealsByStage = useMemo(() => {
+    const next: DealsByStage = {};
+    for (const [stageId, list] of Object.entries(dealsByStage)) {
+      next[stageId] = (list ?? []).filter(matchesSearch);
+    }
+    return next;
+  }, [dealsByStage, matchesSearch]);
+
+  const workspaceMetrics = useMemo(() => {
+    const active = allDeals.length;
+    const pipelineTotal = sumDealAmounts(allDeals);
+    const attention = attentionDealIds.size;
+    const closing = closingSoonIds.size;
+    return [
+      { label: "Active", value: String(active), tone: "default" as const },
+      {
+        label: "Need attention",
+        value: String(attention),
+        tone: attention > 0 ? ("warn" as const) : ("default" as const),
+      },
+      {
+        label: "Pipeline",
+        value: formatPipelineMetric(pipelineTotal),
+        tone: "accent" as const,
+      },
+      {
+        label: "Closing soon",
+        value: String(closing),
+        tone: closing > 0 ? ("success" as const) : ("default" as const),
+      },
+    ];
+  }, [allDeals, attentionDealIds.size, closingSoonIds.size]);
+
   const stagesToRender = useMemo(() => {
     if (!sortByPriority || !priorityStageOrder) return stages;
     const byId = new Map(stages.map((s) => [String(s.id), s]));
@@ -1335,133 +1404,24 @@ export default function Board({
 
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={openCreate}
-            disabled={boardBusy || membershipLoading || !allowCreateDeals}
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-zinc-800 disabled:opacity-50"
-          >
-            Add Deal
-          </button>
-          <button
-            type="button"
-            onClick={() => setSortByPriority((v) => !v)}
-            className={`rounded-lg border px-3 py-2 text-sm font-medium ${
-              sortByPriority
-                ? "border-indigo-400 bg-indigo-50 text-indigo-700"
-                : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-            }`}
-          >
-            {sortByPriority ? "Sort by priority: on" : "Sort by priority"}
-          </button>
-        </div>
-      </div>
-
-      <NotificationBar
-        items={syncedNotificationItems}
-        totalBadge={syncedNotificationTotal}
-        activeType={notificationFocus}
-        onSelect={handleNotificationSelect}
-        onClear={handleNotificationClear}
-      />
-      {(overdueTasksCount > 0 || todayTasksCount > 0) ? (
-        <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
-          {overdueTasksCount > 0 ? (
-            <span className="rounded border border-red-200 bg-red-50 px-2 py-1 text-red-700">
-              🔴 {overdueTasksCount} overdue
-            </span>
-          ) : null}
-          {todayTasksCount > 0 ? (
-            <span className="rounded border border-amber-200 bg-amber-50 px-2 py-1 text-amber-800">
-              🟡 {todayTasksCount} today
-            </span>
-          ) : null}
-        </div>
-      ) : null}
-
-      <PipelineHealthBanner
-        health={pipelineHealth}
-        loading={pipelineHealthLoading}
+      <DealsWorkspaceBar
+        metrics={workspaceMetrics}
+        view={boardView}
+        onViewChange={setBoardView}
+        search={searchQuery}
+        onSearchChange={setSearchQuery}
+        sortByPriority={sortByPriority}
+        onSortToggle={() => setSortByPriority((v) => !v)}
+        onCreateDeal={openCreate}
+        createDisabled={boardBusy || membershipLoading || !allowCreateDeals}
       />
 
-      {attentionDeals.length > 0 ? (
-        <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
-          <p className="font-medium">
-            {attentionDeals.length}{" "}
-            {attentionDeals.length === 1
-              ? "deal could use a check-in"
-              : "deals could use a check-in"}
-          </p>
-          <ul className="mt-2 max-h-40 space-y-2 overflow-y-auto">
-            {attentionDeals.map((s) => {
-              const staleAmount = formatDealAmountUsd(s.amount);
-              const dealId = String(s.id);
-              const lastTaskAt = (openTasksByDealId[dealId] ?? []).reduce<string | null>(
-                (latest, t) => {
-                  const ts = new Date(t.created_at).getTime();
-                  if (!Number.isFinite(ts)) return latest;
-                  if (!latest) return t.created_at;
-                  return ts > new Date(latest).getTime() ? t.created_at : latest;
-                },
-                null
-              );
-              const clientLabel =
-                clientNameById(clients, s.client) ?? String(s.client ?? "—");
-              return (
-              <li
-                key={s.id}
-                className="rounded border border-slate-200 bg-white px-2 py-1.5"
-              >
-                <button
-                  type="button"
-                  disabled={boardBusy}
-                  onClick={() => {
-                    const d = findDealInBoard(dealsByStage, String(s.id));
-                    if (d) openEdit(d);
-                  }}
-                  className="w-full text-left hover:underline disabled:opacity-50"
-                >
-                  <span className="font-medium text-gray-900">
-                    {s.title}{" "}
-                    <span className="font-normal text-gray-500">
-                      ({formatDealIdLabel(s.id)})
-                    </span>
-                  </span>
-                  <span className="block text-xs text-gray-600">
-                    Client: {clientLabel}
-                  </span>
-                  {staleAmount ? (
-                    <span className="mt-0.5 block text-sm font-medium text-gray-900">
-                      {staleAmount}
-                    </span>
-                  ) : null}
-                  <span className="mt-0.5 block text-xs text-gray-500">
-                    Created: {formatCreatedRelative(s.created_at)}
-                  </span>
-                  <span className="mt-0.5 block text-xs text-gray-500">
-                    Last activity:{" "}
-                    {lastTaskAt
-                      ? new Date(lastTaskAt).toLocaleString()
-                      : "Never"}
-                    {" · "}
-                    {formatActivityAgo(lastTaskAt, s.created_at)}
-                  </span>
-                </button>
-              </li>
-              );
-            })}
-          </ul>
-        </div>
-      ) : null}
-      {showAnalytics ? (
-        <PipelineAnalyticsCompact
-          data={analyticsOverview}
-          loading={analyticsLoading}
-          error={analyticsError}
-          onRetry={() => void loadAnalyticsOverview()}
-        />
+      {(overdueTasksCount > 0 || todayTasksCount > 0) && boardView === "all" ? (
+        <p className="mb-3 text-xs text-[var(--vx-text-muted)]">
+          {overdueTasksCount > 0 ? `${overdueTasksCount} overdue tasks` : null}
+          {overdueTasksCount > 0 && todayTasksCount > 0 ? " · " : null}
+          {todayTasksCount > 0 ? `${todayTasksCount} due today` : null}
+        </p>
       ) : null}
 
       <DndContext
@@ -1471,16 +1431,16 @@ export default function Board({
         onDragCancel={handleDragCancel}
         onDragEnd={handleDragEndWithCleanup}
       >
-        <div className="flex gap-4 overflow-x-auto pb-4">
+        <div className="vx-deals-board -mx-1 flex gap-3 overflow-x-auto rounded-xl bg-[var(--vx-bg)]/60 px-1 pb-6 pt-1">
           {stagesToRender.map((stage) => (
             <Stage
               key={String(stage.id)}
               stage={stage}
-              deals={dealsByStage[String(stage.id)] || []}
+              deals={filteredDealsByStage[String(stage.id)] || []}
               clients={clients}
               openTasksByDealId={openTasksByDealId}
-              highlightDealIds={highlightSet}
-              filterDimActive={filterDimActive}
+              highlightDealIds={effectiveHighlightSet}
+              filterDimActive={effectiveFilterDim}
               isLoading={dndLoading}
               deletingDealId={deletingDealId}
               dragDisabled={Boolean(deletingDealId || dndLoading)}
@@ -1504,11 +1464,6 @@ export default function Board({
               attentionDealIds={attentionDealIds}
               onTaskComplete={allowPipelineMutations ? handleTaskComplete : undefined}
               completingTaskId={completingTaskId}
-              priorityLabel={
-                sortByPriority
-                  ? (priorityStageLabels[String(stage.id)] ?? "low")
-                  : null
-              }
               notesByDealId={notesByDealId}
               onAddNote={allowPipelineMutations ? handleAddNote : undefined}
               addingNoteDealId={addingNoteDealId}
@@ -1520,16 +1475,9 @@ export default function Board({
             hasLost={Boolean(lostStage)}
           />
         </div>
-        <DragOverlay>
+        <DragOverlay dropAnimation={{ duration: 180, easing: "ease-out" }}>
           {overlayDeal ? (
-            <div
-              className={`w-60 cursor-grabbing rounded bg-white p-3 opacity-95 shadow-xl ring-2 ${
-                filterDimActive &&
-                highlightSet.has(String(overlayDeal.id))
-                  ? "ring-blue-600 ring-4"
-                  : "ring-blue-300"
-              }`}
-            >
+            <div className="w-[17rem] cursor-grabbing rounded-xl border border-[var(--vx-accent)]/30 bg-[var(--vx-surface-raised)]/95 p-3.5 shadow-2xl backdrop-blur-md scale-[1.02]">
               <DealCardContent
                 deal={overlayDeal}
                 clients={clients}
