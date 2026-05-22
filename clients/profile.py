@@ -11,6 +11,7 @@ from django.db.models import Avg
 from activities.models import Activity
 from activities.task_query import visible_tasks_queryset
 from clients.models import Client, ClientContact, ClientProductLink
+from clients.relationship_intelligence import build_relationship_intelligence
 from deals.models import Deal
 from deals.operational import closed_stage_kind, is_operational_deal
 from deals.visibility import get_operational_visible_deals, get_visible_deals
@@ -80,6 +81,13 @@ class ClientProfileBuilder:
             self.client.product_links.select_related("product").all()
         )
 
+        intelligence = build_relationship_intelligence(
+            client=self.client,
+            user=self.user,
+            company=self.company,
+            membership=self.membership,
+        )
+
         return {
             "client": self._client_payload(),
             "business_context": self._business_context_payload(),
@@ -88,6 +96,7 @@ class ClientProfileBuilder:
             "has_primary_contact": primary is not None,
             "primary_contact": self._contact_payload(primary) if primary else None,
             "relationship_memory": relationship_memory_payload(self.client),
+            "relationship_intelligence": intelligence,
             "metrics": {
                 "customer_since": deals_qs.order_by("created_at")
                 .values_list("created_at", flat=True)
@@ -112,6 +121,10 @@ class ClientProfileBuilder:
             "name": c.name,
             "client_type": c.client_type,
             "relationship_status": c.relationship_status,
+            "relationship_owner_id": c.relationship_owner_id,
+            "relationship_owner_email": (
+                c.relationship_owner.email if c.relationship_owner else None
+            ),
             "email": c.email,
             "phone": c.phone,
             "industry": c.industry,

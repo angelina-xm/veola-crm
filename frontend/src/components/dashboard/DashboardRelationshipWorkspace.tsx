@@ -1,0 +1,105 @@
+"use client";
+
+import Link from "next/link";
+import { cn } from "@/src/lib/cn";
+import { SIGNAL_DOT } from "@/src/lib/clientRelationship";
+import { ROUTES } from "@/src/lib/product";
+import type { RelationshipWorkspace } from "@/src/types";
+
+const HEALTH_LABELS: Record<string, string> = {
+  healthy: "Healthy",
+  cooling_down: "Cooling",
+  needs_attention: "Attention",
+  re_engagement: "Re-engage",
+};
+
+export default function DashboardRelationshipWorkspace({
+  workspace,
+  loading,
+}: {
+  workspace: RelationshipWorkspace | null;
+  loading?: boolean;
+}) {
+  const summary = workspace?.health_summary;
+  const signals = workspace?.signals?.slice(0, 4) ?? [];
+
+  return (
+    <section className="vx-card flex flex-col md:col-span-2">
+      <div className="vx-card-head">
+        <div>
+          <h2 className="text-[13px] font-semibold text-[var(--vx-text)]">
+            Relationship workspace
+          </h2>
+          <p className="mt-0.5 text-[11px] text-[var(--vx-text-muted)]">
+            Company-wide calm signals — foundation for command center
+          </p>
+        </div>
+        <Link
+          href={ROUTES.clients}
+          className="text-xs font-medium text-[var(--vx-accent)] hover:text-[var(--vx-accent-hover)]"
+        >
+          Clients
+        </Link>
+      </div>
+      <div className="px-4 py-3">
+        {loading ? (
+          <div className="h-20 animate-pulse rounded-lg bg-[var(--vx-bg-subtle)]" />
+        ) : !workspace ? (
+          <p className="text-sm text-[var(--vx-text-muted)]">
+            Relationship data unavailable.
+          </p>
+        ) : (
+          <>
+            {summary ? (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {Object.entries(summary).map(([key, count]) =>
+                  count > 0 ? (
+                    <span
+                      key={key}
+                      className="rounded-lg bg-[var(--vx-bg-subtle)] px-2.5 py-1 text-[11px] text-[var(--vx-text-secondary)]"
+                    >
+                      <span className="font-semibold text-[var(--vx-text)]">
+                        {count}
+                      </span>{" "}
+                      {HEALTH_LABELS[key] ?? key}
+                    </span>
+                  ) : null
+                )}
+              </div>
+            ) : null}
+            {signals.length === 0 ? (
+              <p className="text-sm text-[var(--vx-text-muted)]">
+                No relationship signals need attention right now.
+              </p>
+            ) : (
+              <ul className="space-y-1.5">
+                {signals.map((sig, i) => (
+                  <li key={`${sig.client_id}-${sig.code}-${i}`}>
+                    <Link
+                      href={`${ROUTES.clients}/${sig.client_id}`}
+                      className="flex items-start gap-2.5 rounded-lg bg-[var(--vx-bg-subtle)] px-3 py-2 transition-colors hover:bg-[var(--vx-nav-active-bg)]"
+                    >
+                      <span
+                        className={cn(
+                          "mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full",
+                          SIGNAL_DOT[sig.severity] ?? "bg-zinc-500"
+                        )}
+                      />
+                      <span className="min-w-0 flex-1 text-xs leading-snug text-[var(--vx-text-secondary)]">
+                        <span className="font-medium text-[var(--vx-text)]">
+                          {sig.client_name}
+                        </span>
+                        {" — "}
+                        {sig.title}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </div>
+    </section>
+  );
+}

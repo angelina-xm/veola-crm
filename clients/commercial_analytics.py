@@ -18,6 +18,7 @@ from django.utils import timezone
 from activities.models import Activity
 from analytics.services.scoping import visible_activities_base, visible_deals
 from clients.models import Client, ClientProductLink, Product
+from clients.relationship_intelligence import relationship_health_for_analytics
 from deals.models import Deal, DealLineItem
 from deals.operational import closed_stage_kind
 
@@ -171,15 +172,10 @@ def build_client_commercial_analytics(
             else (100.0 if recent_rev > 0 else 0.0)
         )
         last_at = row.get("last_activity_at")
-        health = "unknown"
-        if last_at:
-            days = (now - last_at).days
-            if days <= 30:
-                health = "healthy"
-            elif days <= 90:
-                health = "attention"
-            else:
-                health = "dormant"
+        health = relationship_health_for_analytics(
+            last_activity_at=last_at,
+            relationship_status=row.get("relationship_status") or "",
+        )
 
         comparison.append(
             {

@@ -29,12 +29,12 @@ export default function ClientRelationshipStatusSelect({
   };
 
   return (
-    <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-[var(--vx-shadow-card)]">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
-        Customer state
+    <div className="vx-card p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--vx-text-muted)]">
+        Relationship state
       </p>
-      <p className="mt-0.5 text-xs text-zinc-500">
-        Relationship layer — works with signals, tasks, and analytics
+      <p className="mt-0.5 text-xs text-[var(--vx-text-muted)]">
+        Human business state — separate from deal stages
       </p>
       <div className="mt-3 flex flex-wrap gap-1.5">
         {CLIENT_RELATIONSHIP_STATUSES.map((s) => (
@@ -47,14 +47,14 @@ export default function ClientRelationshipStatusSelect({
               "rounded-full px-2.5 py-1 text-[11px] font-semibold transition",
               value === s.value
                 ? STATUS_CLASS[s.value] ?? STATUS_CLASS.active
-                : "bg-zinc-50 text-zinc-500 hover:bg-zinc-100"
+                : "bg-[var(--vx-bg-subtle)] text-[var(--vx-text-muted)] hover:bg-[var(--vx-nav-active-bg)]"
             )}
           >
             {s.label}
           </button>
         ))}
       </div>
-      <p className="mt-2 text-[11px] text-zinc-400">
+      <p className="mt-2 text-[11px] text-[var(--vx-text-muted)]">
         Current: {relationshipStatusLabel(value)}
       </p>
     </div>

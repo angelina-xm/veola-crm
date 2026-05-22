@@ -32,6 +32,7 @@ class ClientSerializer(serializers.ModelSerializer):
             "name",
             "client_type",
             "relationship_status",
+            "relationship_owner",
             "email",
             "phone",
             "industry",
@@ -65,6 +66,7 @@ class ClientWriteSerializer(serializers.ModelSerializer):
             "name",
             "client_type",
             "relationship_status",
+            "relationship_owner",
             "email",
             "phone",
             "industry",
@@ -206,3 +208,4 @@ class ClientProfileSerializer(serializers.Serializer):
     products = serializers.ListField()
     metrics = serializers.DictField()
     operational = serializers.DictField()
+    relationship_intelligence = serializers.DictField()

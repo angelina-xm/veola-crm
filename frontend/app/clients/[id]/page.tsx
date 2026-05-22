@@ -7,6 +7,7 @@ import ProtectedRoute from "@/src/components/auth/ProtectedRoute";
 import { useAuth } from "@/src/components/auth/AuthProvider";
 import CustomerTimeline from "@/src/components/clients/CustomerTimeline";
 import ClientRelationshipMemoryCard from "@/src/components/clients/profile/ClientRelationshipMemoryCard";
+import ClientRelationshipIntelligenceCard from "@/src/components/clients/profile/ClientRelationshipIntelligenceCard";
 import ClientRelationshipStatusSelect from "@/src/components/clients/profile/ClientRelationshipStatusSelect";
 import ClientProfileInsightsLink from "@/src/components/clients/profile/ClientProfileInsightsLink";
 import ClientBusinessContextPanel from "@/src/components/clients/profile/ClientBusinessContext";
@@ -290,6 +291,11 @@ export default function ClientProfilePage() {
                 />
               </div>
               <div className="space-y-6">
+                {profile.relationship_intelligence ? (
+                  <ClientRelationshipIntelligenceCard
+                    intelligence={profile.relationship_intelligence}
+                  />
+                ) : null}
                 <ClientRelationshipStatusSelect
                   value={
                     (profile.client.relationship_status ??

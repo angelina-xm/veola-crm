@@ -19,6 +19,7 @@ from .serializers import (
     ClientWriteSerializer,
 )
 from .timeline import CustomerTimelineBuilder
+from .relationship_intelligence import build_relationship_workspace
 from .permissions import (
     HasCompany,
     CanCreateDeals,
@@ -47,6 +48,7 @@ class ClientViewSet(viewsets.ModelViewSet):
             "timeline",
             "profile",
             "product_links",
+            "relationship_workspace",
         ):
             return [IsAuthenticated(), HasCompany()]
 
@@ -70,6 +72,15 @@ class ClientViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.company)
+
+    @action(detail=False, methods=["get"], url_path="relationship-workspace")
+    def relationship_workspace(self, request):
+        payload = build_relationship_workspace(
+            user=request.user,
+            company=request.company,
+            membership=getattr(request, "membership", None),
+        )
+        return Response(payload)
 
     @action(detail=True, methods=["get"], url_path="profile")
     def profile(self, request, pk=None):

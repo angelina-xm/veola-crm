@@ -3,15 +3,75 @@ export type ClientType = "business" | "individual";
 export type ClientRelationshipStatus =
   | "active"
   | "vip"
-  | "at_risk"
+  | "growing"
+  | "returning"
   | "dormant"
-  | "returning";
+  | "at_risk"
+  | "lost_momentum"
+  | "seasonal"
+  | "high_potential";
+
+export type RelationshipHealth =
+  | "healthy"
+  | "cooling_down"
+  | "needs_attention"
+  | "re_engagement";
+
+export interface RelationshipSignal {
+  code: string;
+  severity: "attention" | "info" | "positive";
+  title: string;
+  detail: string;
+}
+
+export interface RelationshipIntelligence {
+  relationship_status: ClientRelationshipStatus;
+  relationship_health: RelationshipHealth;
+  relationship_health_label: string;
+  health_reason: string;
+  days_since_last_touch: number | null;
+  signals: RelationshipSignal[];
+  product_behavior: {
+    primary_pattern: string;
+    highlights: string[];
+    link_count: number;
+    has_won_deals?: boolean;
+  };
+  buying_patterns: {
+    won_deals: number;
+    active_deals: number;
+    lifetime_revenue: number;
+    last_activity_at: string | null;
+    repeat_buyer: boolean;
+  };
+  team: {
+    relationship_owner: {
+      user_id: number | null;
+      email: string | null;
+      display_name: string | null;
+      source: string;
+    };
+    open_task_assignees: string[];
+    deal_assignees: string[];
+  };
+}
+
+export interface RelationshipWorkspace {
+  health_summary: Record<RelationshipHealth, number>;
+  status_summary: Record<string, number>;
+  signals: Array<
+    RelationshipSignal & { client_id: number; client_name: string }
+  >;
+  client_count: number;
+}
 
 export interface Client {
   id: string | number;
   name: string;
   client_type?: ClientType;
   relationship_status?: ClientRelationshipStatus;
+  relationship_owner?: number | null;
+  relationship_owner_email?: string | null;
   email?: string | null;
   phone?: string | null;
   industry?: string;
@@ -96,7 +156,9 @@ export type ClientProductRelationship =
   | "frequent"
   | "recent"
   | "interested"
-  | "stopped";
+  | "stopped"
+  | "seasonal"
+  | "high_value";
 
 export type CatalogProductType = "physical" | "service";
 
@@ -174,6 +236,7 @@ export interface ClientProfile {
   has_primary_contact: boolean;
   primary_contact: ClientContact | null;
   relationship_memory: ClientRelationshipMemory;
+  relationship_intelligence?: RelationshipIntelligence;
   products: ClientProductLink[];
   metrics: ClientProfileMetrics;
   operational: {

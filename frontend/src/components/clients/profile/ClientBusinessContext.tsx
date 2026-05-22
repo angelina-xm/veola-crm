@@ -9,6 +9,8 @@ const RELATIONSHIP_LABEL: Record<string, string> = {
   recent: "Recently ordered",
   interested: "Interested in",
   stopped: "Stopped ordering",
+  seasonal: "Seasonal buyer",
+  high_value: "High-value buyer",
 };
 
 export function relationshipLabel(key: string): string {

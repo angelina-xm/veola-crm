@@ -16,6 +16,8 @@ const REL_OPTIONS: { value: ClientProductRelationship; label: string }[] = [
   { value: "recent", label: "Recently ordered" },
   { value: "interested", label: "Interested in" },
   { value: "stopped", label: "Stopped ordering" },
+  { value: "seasonal", label: "Seasonal buyer" },
+  { value: "high_value", label: "High-value buyer" },
 ];
 
 export default function ClientProductsSection({

@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
@@ -12,9 +13,13 @@ class Client(models.Model):
     class RelationshipStatus(models.TextChoices):
         ACTIVE = "active", "Active"
         VIP = "vip", "VIP"
-        AT_RISK = "at_risk", "At risk"
-        DORMANT = "dormant", "Dormant"
+        GROWING = "growing", "Growing"
         RETURNING = "returning", "Returning"
+        DORMANT = "dormant", "Dormant"
+        AT_RISK = "at_risk", "At risk"
+        LOST_MOMENTUM = "lost_momentum", "Lost momentum"
+        SEASONAL = "seasonal", "Seasonal"
+        HIGH_POTENTIAL = "high_potential", "High potential"
 
     company = models.ForeignKey(
         Company,
@@ -29,9 +34,17 @@ class Client(models.Model):
         default=ClientType.BUSINESS,
     )
     relationship_status = models.CharField(
-        max_length=20,
+        max_length=24,
         choices=RelationshipStatus.choices,
         default=RelationshipStatus.ACTIVE,
+    )
+    relationship_owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="owned_clients",
+        help_text="Primary owner for this business relationship.",
     )
 
     email = models.EmailField(blank=True, null=True)
@@ -156,6 +169,8 @@ class ClientProductLink(models.Model):
         RECENT = "recent", "Recent purchase"
         INTERESTED = "interested", "Interested in"
         STOPPED = "stopped", "Stopped ordering"
+        SEASONAL = "seasonal", "Seasonal buyer"
+        HIGH_VALUE = "high_value", "High-value buyer"
 
     client = models.ForeignKey(
         Client,

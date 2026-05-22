@@ -938,6 +938,14 @@ function normalizeClient(raw: Record<string, unknown>): Client {
     client_type:
       raw.client_type === "individual" ? "individual" : "business",
     relationship_status: (raw.relationship_status as Client["relationship_status"]) ?? "active",
+    relationship_owner:
+      raw.relationship_owner == null
+        ? null
+        : Number(raw.relationship_owner),
+    relationship_owner_email:
+      raw.relationship_owner_email == null
+        ? null
+        : String(raw.relationship_owner_email),
     email: raw.email == null ? null : String(raw.email),
     phone: raw.phone == null ? null : String(raw.phone),
     industry: String(raw.industry ?? ""),
@@ -1020,7 +1028,24 @@ export async function getClientProfile(
       company_size: client.company_size ?? "",
     },
     products: raw.products ?? [],
+    relationship_intelligence: raw.relationship_intelligence as
+      | import("@/src/types").RelationshipIntelligence
+      | undefined,
   };
+}
+
+export async function getRelationshipWorkspace(
+  companyId: number
+): Promise<import("@/src/types").RelationshipWorkspace> {
+  const res = await fetchWithAuth(
+    `/clients/relationship-workspace/`,
+    {},
+    companyId
+  );
+  if (!res.ok) {
+    throw new Error(await parseErrorBody(res));
+  }
+  return res.json();
 }
 
 export async function patchClient(

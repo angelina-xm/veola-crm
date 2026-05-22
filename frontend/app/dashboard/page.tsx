@@ -7,6 +7,7 @@ import DashboardPipelineHealthGrid from "@/src/components/dashboard/DashboardPip
 import DashboardQuickActions from "@/src/components/dashboard/DashboardQuickActions";
 import DashboardSalesFunnel from "@/src/components/dashboard/DashboardSalesFunnel";
 import DashboardStatCards from "@/src/components/dashboard/DashboardStatCards";
+import DashboardRelationshipWorkspace from "@/src/components/dashboard/DashboardRelationshipWorkspace";
 import DashboardSignalsPanel from "@/src/components/dashboard/DashboardSignalsPanel";
 import DashboardWelcome from "@/src/components/dashboard/DashboardWelcome";
 import RecentActivityFeed from "@/src/components/dashboard/RecentActivityFeed";
@@ -15,11 +16,17 @@ import {
   AuthError,
   getAnalyticsV1Overview,
   getPipelineHealth,
+  getRelationshipWorkspace,
   getTasksBucket,
 } from "@/src/lib/api";
 import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
 import { mergeOperationalSnapshot } from "@/src/lib/taskSemantics";
-import type { AnalyticsV1Overview, CrmTask, PipelineHealth } from "@/src/types";
+import type {
+  AnalyticsV1Overview,
+  CrmTask,
+  PipelineHealth,
+  RelationshipWorkspace,
+} from "@/src/types";
 
 export default function DashboardPage() {
   const { isReady, isAuthenticated, logout } = useAuth();
@@ -29,6 +36,8 @@ export default function DashboardPage() {
   const [health, setHealth] = useState<PipelineHealth | null>(null);
   const [operationalTasks, setOperationalTasks] = useState<CrmTask[]>([]);
   const [completedTodayCount, setCompletedTodayCount] = useState(0);
+  const [relationshipWorkspace, setRelationshipWorkspace] =
+    useState<RelationshipWorkspace | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useLayoutEffect(() => {
@@ -51,13 +60,14 @@ export default function DashboardPage() {
         setError(null);
         const tenantId = getStoredCompanyId() ?? companyId;
 
-        const [analytics, pipelineHealth, overdue, today, completed] =
+        const [analytics, pipelineHealth, overdue, today, completed, relWorkspace] =
           await Promise.all([
             getAnalyticsV1Overview(tenantId, "week"),
             getPipelineHealth(tenantId),
             getTasksBucket(tenantId, "overdue", { scope: "my" }),
             getTasksBucket(tenantId, "today", { scope: "my" }),
             getTasksBucket(tenantId, "completed", { scope: "my" }),
+            getRelationshipWorkspace(tenantId).catch(() => null),
           ]);
 
         setOverview(analytics);
@@ -74,6 +84,7 @@ export default function DashboardPage() {
           );
         });
         setCompletedTodayCount(completedToday.length);
+        setRelationshipWorkspace(relWorkspace);
       } catch (err) {
         if (err instanceof AuthError) {
           logout(err.reason);
@@ -142,6 +153,11 @@ export default function DashboardPage() {
             health={health}
           />
         </div>
+
+        <DashboardRelationshipWorkspace
+          workspace={relationshipWorkspace}
+          loading={loading}
+        />
       </div>
     </ProtectedRoute>
   );
