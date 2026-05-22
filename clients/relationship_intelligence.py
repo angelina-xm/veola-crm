@@ -4,7 +4,7 @@ Customer Relationship Intelligence Layer — readable operational signals, not A
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from django.contrib.auth import get_user_model
@@ -43,10 +43,35 @@ PRODUCT_RELATIONSHIP_LABELS = {
 }
 
 
-def _days_since(dt) -> int | None:
-    if not dt:
+def _coerce_aware_datetime(value: date | datetime | None) -> datetime | None:
+    """Normalize date/datetime (naive or aware) for safe comparisons."""
+    if value is None:
         return None
-    return (timezone.now() - dt).days
+    if isinstance(value, date) and not isinstance(value, datetime):
+        value = datetime.combine(value, datetime.min.time())
+    if timezone.is_naive(value):
+        value = timezone.make_aware(value, timezone.get_current_timezone())
+    return value
+
+
+def _latest_timestamp(*values: date | datetime | None) -> datetime | None:
+    normalized = [_coerce_aware_datetime(v) for v in values if v is not None]
+    return max(normalized) if normalized else None
+
+
+def _days_since(dt: date | datetime | None) -> int | None:
+    coerced = _coerce_aware_datetime(dt)
+    if not coerced:
+        return None
+    return (timezone.now() - coerced).days
+
+
+def _is_past_due(due: date | datetime | None, *, now: datetime | None = None) -> bool:
+    coerced = _coerce_aware_datetime(due)
+    if not coerced:
+        return False
+    now = now or timezone.now()
+    return coerced < now
 
 
 def _infer_relationship_owner(client: Client, deals: list[Deal]) -> dict[str, Any]:
@@ -102,19 +127,12 @@ def build_relationship_intelligence(
 
     last_activity = activities_qs.aggregate(m=Max("created_at"))["m"]
     last_conversation = client.last_conversation_at
-    last_touch = max(
-        [t for t in (last_activity, last_conversation) if t],
-        default=None,
-    )
+    last_touch = _latest_timestamp(last_activity, last_conversation)
     days_idle = _days_since(last_touch)
 
     won = [d for d in deals if closed_stage_kind(d.stage) == "won"]
     active = [d for d in deals if is_operational_deal(d)]
-    overdue_tasks = [
-        t
-        for t in open_tasks
-        if t.due_date and t.due_date < now.date()
-    ]
+    overdue_tasks = [t for t in open_tasks if _is_past_due(t.due_date, now=now)]
 
     status = client.relationship_status or Client.RelationshipStatus.ACTIVE
 
@@ -270,9 +288,8 @@ def _build_signals(
         )
     ]
     if frequent and won_deals:
-        last_won = max(
-            (d.closed_at or d.created_at for d in won_deals if d.closed_at or d.created_at),
-            default=None,
+        last_won = _latest_timestamp(
+            *(d.closed_at or d.created_at for d in won_deals if d.closed_at or d.created_at)
         )
         if last_won and (now - last_won).days > 60:
             add(
@@ -287,8 +304,8 @@ def _build_signals(
         for d in active_deals
         if d.stage
         and "negotiat" in (d.stage.name or "").lower()
-        and last_touch
-        and (now - last_touch).days > 14
+        and days_idle is not None
+        and days_idle > 14
     ]
     if stale_negotiation:
         add(
@@ -353,7 +370,7 @@ def _buying_patterns(won: list, active: list, last_touch) -> dict[str, Any]:
         "won_deals": len(won),
         "active_deals": len(active),
         "lifetime_revenue": round(revenue, 2),
-        "last_activity_at": last_touch,
+        "last_activity_at": last_touch.isoformat() if last_touch else None,
         "repeat_buyer": len(won) >= 2,
     }
 
