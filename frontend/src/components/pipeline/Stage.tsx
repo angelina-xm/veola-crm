@@ -13,8 +13,24 @@ import type { TaskPreset } from "@/src/lib/quickTask";
 import type { StageFallbackPreset, SuggestedAction } from "./DealCard";
 import { Activity, Client, Deal, PipelineStage } from "@/src/types";
 
+const STAGE_ACCENTS = [
+  "bg-sky-400/80",
+  "bg-violet-400/80",
+  "bg-amber-400/80",
+  "bg-emerald-400/80",
+  "bg-rose-400/80",
+  "bg-indigo-400/80",
+];
+
+function stageAccentClass(stageId: string, stageIndex: number): string {
+  const n =
+    stageId.split("").reduce((a, c) => a + c.charCodeAt(0), 0) + stageIndex;
+  return STAGE_ACCENTS[n % STAGE_ACCENTS.length];
+}
+
 export default function Stage({
   stage,
+  stageIndex = 0,
   deals,
   clients = [],
   openTasksByDealId = {},
@@ -26,6 +42,7 @@ export default function Stage({
   onDealDelete,
   highlightDealIds,
   filterDimActive,
+  closingSoonDealIds,
   onQuickCompleteFirstTask,
   quickCompletingDealId,
   onQuickAddTask,
@@ -42,13 +59,16 @@ export default function Stage({
   notesByDealId,
   onAddNote,
   addingNoteDealId,
+  onAddDealInStage,
 }: {
   stage: PipelineStage;
+  stageIndex?: number;
   deals: Deal[];
   clients?: Client[];
   openTasksByDealId?: Record<string, Activity[]>;
   highlightDealIds?: Set<string>;
   filterDimActive?: boolean;
+  closingSoonDealIds?: Set<string>;
   isOver?: boolean;
   onQuickCompleteFirstTask?: (dealId: string) => void | Promise<void>;
   quickCompletingDealId?: string | null;
@@ -79,6 +99,7 @@ export default function Stage({
   notesByDealId?: Record<string, Activity[]>;
   onAddNote?: (dealId: string) => void | Promise<void>;
   addingNoteDealId?: string | null;
+  onAddDealInStage?: (stageId: string) => void;
   isLoading?: boolean;
   deletingDealId: string | null;
   dragDisabled?: boolean;
@@ -87,6 +108,7 @@ export default function Stage({
 }) {
   const safeDeals = Array.isArray(deals) ? deals : [];
   const totalValue = sumDealAmounts(safeDeals);
+  const accent = stageAccentClass(String(stage.id), stageIndex);
 
   const { setNodeRef, isOver: dropOver } = useDroppable({
     id: `stage-${String(stage.id)}`,
@@ -98,27 +120,40 @@ export default function Stage({
   return (
     <div
       className={cn(
-        "vx-deals-column flex flex-col overflow-hidden rounded-2xl transition-all duration-300",
+        "vx-deals-column flex flex-col overflow-hidden rounded-2xl transition-all duration-300 ease-out",
         "border border-[var(--vx-border-subtle)] bg-[var(--vx-column-bg)]",
-        activeDrop && "ring-1 ring-[var(--vx-accent)]/20",
+        activeDrop && "vx-deals-column--active",
         isLoading && "opacity-60"
       )}
     >
-      <div className="sticky top-0 z-10 border-b border-[var(--vx-border-subtle)] bg-[var(--vx-column-bg)]/95 px-4 py-3.5 backdrop-blur-md">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="truncate text-[13px] font-medium text-[var(--vx-text)]">
-            {stage.name}
-          </h2>
-          <span className="shrink-0 text-[12px] font-medium text-[var(--vx-text-muted)] vx-tabular">
+      <header className="relative border-b border-[var(--vx-border-subtle)] px-4 pb-3 pt-3.5">
+        <span
+          className={cn("absolute inset-x-4 top-0 h-px rounded-full opacity-60", accent)}
+          aria-hidden
+        />
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", accent)} aria-hidden />
+            <h2 className="truncate text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--vx-text-secondary)]">
+              {stage.name}
+            </h2>
+          </div>
+          <span className="shrink-0 rounded-md bg-[var(--vx-bg-subtle)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--vx-text-muted)] vx-tabular">
             {safeDeals.length}
           </span>
         </div>
-        <p className="mt-1.5 text-[11px] text-[var(--vx-text-muted)] vx-tabular">
+        <p className="mt-1.5 pl-3.5 text-[12px] font-medium text-[var(--vx-text)] vx-tabular">
           {formatDealAmountUsd(totalValue) ?? "$0"}
         </p>
-      </div>
+      </header>
 
-      <div ref={setNodeRef} className="min-h-[14rem] flex-1 px-3 py-3">
+      <div
+        ref={setNodeRef}
+        className={cn(
+          "vx-deals-column-body min-h-[16rem] flex-1 px-2.5 py-2.5 transition-colors duration-300",
+          activeDrop && "bg-[var(--vx-accent-soft)]/[0.06]"
+        )}
+      >
         <SortableContext
           items={safeDeals.map((d) => `deal-${String(d.id)}`)}
           strategy={verticalListSortingStrategy}
@@ -126,14 +161,14 @@ export default function Stage({
           {safeDeals.length === 0 ? (
             <div
               className={cn(
-                "flex min-h-[10rem] flex-col items-center justify-center rounded-xl border border-dashed px-4 py-8 text-center transition-colors duration-300",
+                "flex min-h-[12rem] flex-col items-center justify-center rounded-xl border border-dashed px-4 py-10 text-center transition-all duration-300",
                 activeDrop
-                  ? "border-[var(--vx-accent)]/25 bg-[var(--vx-accent-soft)]/10"
-                  : "border-[var(--vx-border)] bg-[var(--vx-card-bg)]/30"
+                  ? "border-[var(--vx-accent)]/30 bg-[var(--vx-accent-soft)]/10 scale-[1.01]"
+                  : "border-[var(--vx-border)]/80 bg-[var(--vx-card-bg)]/20"
               )}
             >
               <p className="text-[12px] font-medium text-[var(--vx-text-muted)]">
-                Drop deals here
+                {activeDrop ? "Release to drop" : "Drop deals here"}
               </p>
             </div>
           ) : (
@@ -152,6 +187,7 @@ export default function Stage({
                   openTasksForDeal={openTasksByDealId[id] ?? []}
                   spotlight={spot}
                   dimmed={dim}
+                  closingSoon={Boolean(closingSoonDealIds?.has(id))}
                   isDeleting={deletingDealId === id}
                   deleteDisabled={deletingDealId !== null}
                   dragDisabled={dragDisabled}
@@ -177,6 +213,17 @@ export default function Stage({
             })
           )}
         </SortableContext>
+
+        {onAddDealInStage ? (
+          <button
+            type="button"
+            className="vx-deals-add-deal mt-1 w-full"
+            onClick={() => onAddDealInStage(String(stage.id))}
+          >
+            <span aria-hidden>+</span>
+            Add deal
+          </button>
+        ) : null}
       </div>
     </div>
   );

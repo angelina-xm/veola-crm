@@ -23,6 +23,8 @@ export interface DealModalProps {
   deal: Deal | null;
   companyId: number;
   stages: PipelineStage[];
+  /** Pre-select stage when opening create from a column. */
+  defaultStageId?: string;
   clients: Client[];
   submitting: boolean;
   deletingDeal?: boolean;
@@ -69,6 +71,7 @@ export default function DealModal({
   deal,
   companyId,
   stages,
+  defaultStageId,
   clients,
   submitting,
   deletingDeal = false,
@@ -128,12 +131,19 @@ export default function DealModal({
       setStageId(String(deal.stageId ?? deal.stage ?? firstStageId));
       return;
     }
+    if (mode === "create" && defaultStageId) {
+      const ok = stages.some((s) => String(s.id) === String(defaultStageId));
+      if (ok) {
+        setStageId(String(defaultStageId));
+        return;
+      }
+    }
     setStageId((prev) => {
       if (!prev) return firstStageId;
       const stillExists = stages.some((s) => String(s.id) === prev);
       return stillExists ? prev : firstStageId;
     });
-  }, [mode, deal, firstStageId, stages]);
+  }, [mode, deal, defaultStageId, firstStageId, stages]);
 
   useEffect(() => {
     if (mode !== "create") return;

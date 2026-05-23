@@ -2,15 +2,23 @@ import type { Deal } from "@/src/types";
 import type { DealHealth } from "@/src/components/pipeline/DealCard";
 import { cn } from "@/src/lib/cn";
 
-export type DealAttentionVisual = "healthy" | "hot" | "at_risk" | "stale";
+export type DealAttentionVisual =
+  | "healthy"
+  | "hot"
+  | "at_risk"
+  | "stale"
+  | "closing";
 
 export function resolveDealAttentionVisual(
   health: DealHealth,
-  needsAttention: boolean
+  needsAttention: boolean,
+  closingSoon = false
 ): DealAttentionVisual {
+  if (closingSoon && health === "cold") return "closing";
   if (health === "urgent") return "hot";
   if (health === "at_risk") return "at_risk";
   if (needsAttention) return "stale";
+  if (closingSoon) return "closing";
   return "healthy";
 }
 
@@ -19,17 +27,60 @@ export function dealCardShellClass(
   opts?: { dragging?: boolean; dimmed?: boolean; spotlight?: boolean }
 ): string {
   return cn(
-    "vx-deal-card group relative border",
-    "border-[var(--vx-border-subtle)]",
-    visual === "healthy" && "hover:border-[var(--vx-border)]",
-    visual === "hot" && "border-l-[3px] border-l-[var(--vx-accent)]/45 pl-[calc(1rem-3px)]",
-    visual === "at_risk" && "border-l-[3px] border-l-amber-500/35 pl-[calc(1rem-3px)]",
-    visual === "stale" && "opacity-[0.92]",
-    opts?.dimmed && "opacity-30 saturate-[0.85]",
-    opts?.spotlight && "ring-1 ring-[var(--vx-accent)]/30",
-    opts?.dragging &&
-      "scale-[1.015] shadow-[var(--vx-shadow-card-hover)] ring-1 ring-[var(--vx-accent)]/20 z-10"
+    "vx-deal-card group relative overflow-hidden rounded-xl border",
+    "border-[var(--vx-border-subtle)] bg-[var(--vx-card-bg)]",
+    "shadow-[var(--vx-shadow-card)]",
+    visual === "healthy" && "hover:border-[var(--vx-border)] hover:shadow-[var(--vx-shadow-card-hover)]",
+    visual === "hot" && "vx-deal-edge vx-deal-edge--hot",
+    visual === "at_risk" && "vx-deal-edge vx-deal-edge--risk",
+    visual === "stale" && "vx-deal-edge vx-deal-edge--stale",
+    visual === "closing" && "vx-deal-edge vx-deal-edge--closing",
+    opts?.dimmed && "opacity-[0.28] saturate-[0.7] pointer-events-none",
+    opts?.spotlight && "ring-1 ring-[var(--vx-accent)]/35 shadow-[var(--vx-shadow-card-hover)]",
+    opts?.dragging && "opacity-[0.35] scale-[0.98] shadow-none ring-0"
   );
+}
+
+export type DealStatusBadge = {
+  label: string;
+  tone: "neutral" | "warn" | "risk" | "closing" | "positive";
+};
+
+export function dealStatusBadges(input: {
+  visual: DealAttentionVisual;
+  isOverdue: boolean;
+  daysIdle: number | null;
+  nextTaskContent?: string;
+  relationshipLabel?: string | null;
+}): DealStatusBadge[] {
+  const out: DealStatusBadge[] = [];
+  if (input.relationshipLabel) {
+    out.push({ label: input.relationshipLabel, tone: "neutral" });
+  }
+  if (input.isOverdue) {
+    out.push({ label: "Follow-up overdue", tone: "warn" });
+  } else if (input.visual === "hot") {
+    out.push({ label: "Needs action", tone: "warn" });
+  } else if (input.visual === "at_risk") {
+    out.push({
+      label:
+        input.daysIdle != null && input.daysIdle >= 14
+          ? `No reply in ${input.daysIdle}d`
+          : "At risk",
+      tone: "risk",
+    });
+  } else if (input.visual === "stale") {
+    out.push({
+      label:
+        input.daysIdle != null
+          ? `Stalled for ${input.daysIdle}d`
+          : "Needs attention",
+      tone: "warn",
+    });
+  } else if (input.visual === "closing") {
+    out.push({ label: "Closing soon", tone: "closing" });
+  }
+  return out.slice(0, 2);
 }
 
 export function dealHealthLabel(visual: DealAttentionVisual): string | null {
@@ -40,6 +91,8 @@ export function dealHealthLabel(visual: DealAttentionVisual): string | null {
       return "At risk";
     case "stale":
       return "Quiet";
+    case "closing":
+      return "Closing";
     default:
       return null;
   }
@@ -48,11 +101,13 @@ export function dealHealthLabel(visual: DealAttentionVisual): string | null {
 export function dealHealthDotClass(visual: DealAttentionVisual): string {
   switch (visual) {
     case "hot":
-      return "bg-[var(--vx-accent)]/70";
+      return "bg-amber-400/80";
     case "at_risk":
-      return "bg-amber-500/60";
+      return "bg-rose-400/70";
     case "stale":
       return "bg-[var(--vx-text-muted)]/50";
+    case "closing":
+      return "bg-violet-400/70";
     default:
       return "bg-transparent";
   }

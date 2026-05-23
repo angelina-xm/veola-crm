@@ -6,6 +6,7 @@ import {
   closestCorners,
   pointerWithin,
   type CollisionDetection,
+  type DragOverEvent,
   DragEndEvent,
   DragStartEvent,
   PointerSensor,
@@ -18,7 +19,7 @@ import { useRouter } from "next/navigation";
 import Stage from "./Stage";
 import DealModal from "./DealModal";
 import {
-  DealCardContent,
+  DealCardPreview,
   getDealHealth,
   type StageFallbackPreset,
   type SuggestedAction,
@@ -355,7 +356,10 @@ export default function Board({
     void loadAnalyticsOverview();
   }, [dealsByStage, showAnalytics, membershipLoading, loadAnalyticsOverview]);
   const [overlayDeal, setOverlayDeal] = useState<Deal | null>(null);
+  const [overlayStageName, setOverlayStageName] = useState<string | undefined>();
+  const [overStageId, setOverStageId] = useState<string | null>(null);
   const [dndLoading, setDndLoading] = useState(false);
+  const [createStageId, setCreateStageId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [dealInModal, setDealInModal] = useState<Deal | null>(null);
@@ -865,25 +869,21 @@ export default function Board({
     const pipelineTotal = sumDealAmounts(allDeals);
     const attention = attentionDealIds.size;
     const closing = closingSoonIds.size;
-    return [
-      { label: "Active", value: String(active), tone: "default" as const },
-      {
-        label: "Need attention",
-        value: String(attention),
-        tone: attention > 0 ? ("warn" as const) : ("default" as const),
-      },
-      {
-        label: "Pipeline",
-        value: formatPipelineMetric(pipelineTotal),
-        tone: "accent" as const,
-      },
-      {
-        label: "Closing soon",
-        value: String(closing),
-        tone: closing > 0 ? ("success" as const) : ("default" as const),
-      },
-    ];
-  }, [allDeals, attentionDealIds.size, closingSoonIds.size]);
+    const atRisk = [...attentionDealIds].filter((id) => {
+      const tasks = openTasksByDealId[id] ?? [];
+      return getDealHealth(
+        allDeals.find((d) => String(d.id) === id) ?? ({} as Deal),
+        tasks
+      ) === "at_risk";
+    }).length;
+    return {
+      pipelineLabel: formatPipelineMetric(pipelineTotal),
+      active,
+      attention,
+      atRisk,
+      closing,
+    };
+  }, [allDeals, attentionDealIds, closingSoonIds, openTasksByDealId]);
 
   const stagesToRender = useMemo(() => {
     if (!sortByPriority || !priorityStageOrder) return stages;
@@ -951,8 +951,7 @@ export default function Board({
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      /** Порог только для элементов с activator listeners (ручка карточки). */
-      activationConstraint: { distance: 6 },
+      activationConstraint: { distance: 8 },
     })
   );
 
@@ -962,6 +961,25 @@ export default function Board({
         source[stageId]?.some((deal) => String(deal.id) === dealId)
       ),
     []
+  );
+
+  const resolveOverStageId = useCallback(
+    (overRawId: string | undefined): string | null => {
+      if (!overRawId) return null;
+      if (overRawId.startsWith("stage-")) {
+        return parseStageId(overRawId);
+      }
+      const dealId = parseDealId(overRawId);
+      return findStageIdByDealId(dealsByStage, dealId) ?? null;
+    },
+    [dealsByStage, findStageIdByDealId]
+  );
+
+  const handleDragOver = useCallback(
+    (event: DragOverEvent) => {
+      setOverStageId(resolveOverStageId(String(event.over?.id ?? "")));
+    },
+    [resolveOverStageId]
   );
 
   const openCloseIntent = useCallback(
@@ -1134,20 +1152,25 @@ export default function Board({
         return;
       }
       const activeDealId = parseDealId(String(event.active.id));
-      for (const deals of Object.values(dealsByStage)) {
+      for (const [stageId, deals] of Object.entries(dealsByStage)) {
         const deal = deals.find((d) => String(d.id) === activeDealId);
         if (deal) {
           setOverlayDeal(deal);
+          const stage = stages.find((s) => String(s.id) === stageId);
+          setOverlayStageName(stage?.name);
           return;
         }
       }
       setOverlayDeal(null);
+      setOverlayStageName(undefined);
     },
-    [dealsByStage, dndLoading]
+    [dealsByStage, dndLoading, stages]
   );
 
   const handleDragCancel = useCallback(() => {
     setOverlayDeal(null);
+    setOverlayStageName(undefined);
+    setOverStageId(null);
   }, []);
 
   const handleDragEndWithCleanup = useCallback(
@@ -1156,24 +1179,36 @@ export default function Board({
         await handleDragEnd(event);
       } finally {
         setOverlayDeal(null);
+        setOverlayStageName(undefined);
+        setOverStageId(null);
       }
     },
     [handleDragEnd]
   );
 
-  const openCreate = useCallback(() => {
-    if (!canCreateDeals(membership)) return;
-    if (!stages.length) {
-      if (typeof window !== "undefined") {
-        window.alert("Нет доступных стадий. Сначала добавьте этапы воронки.");
+  const openCreate = useCallback(
+    (stageId?: string) => {
+      if (!canCreateDeals(membership)) return;
+      if (!stages.length) {
+        if (typeof window !== "undefined") {
+          window.alert("Нет доступных стадий. Сначала добавьте этапы воронки.");
+        }
+        return;
       }
-      return;
-    }
-    setModalMode("create");
-    setDealInModal(null);
-    setModalError(null);
-    setModalOpen(true);
-  }, [stages, membership]);
+      setCreateStageId(
+        stageId != null
+          ? String(stageId)
+          : stages[0]?.id != null
+            ? String(stages[0].id)
+            : null
+      );
+      setModalMode("create");
+      setDealInModal(null);
+      setModalError(null);
+      setModalOpen(true);
+    },
+    [stages, membership]
+  );
 
   const openEdit = useCallback((deal: Deal) => {
     setModalMode("edit");
@@ -1405,14 +1440,18 @@ export default function Board({
   return (
     <>
       <DealsWorkspaceBar
-        metrics={workspaceMetrics}
+        pipelineValue={workspaceMetrics.pipelineLabel}
+        activeCount={workspaceMetrics.active}
+        attentionCount={workspaceMetrics.attention}
+        atRiskCount={workspaceMetrics.atRisk}
+        closingCount={workspaceMetrics.closing}
         view={boardView}
         onViewChange={setBoardView}
         search={searchQuery}
         onSearchChange={setSearchQuery}
         sortByPriority={sortByPriority}
         onSortToggle={() => setSortByPriority((v) => !v)}
-        onCreateDeal={openCreate}
+        onCreateDeal={() => openCreate()}
         createDisabled={boardBusy || membershipLoading || !allowCreateDeals}
       />
 
@@ -1428,20 +1467,27 @@ export default function Board({
         sensors={sensors}
         collisionDetection={boardCollisionDetection}
         onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragCancel={handleDragCancel}
         onDragEnd={handleDragEndWithCleanup}
       >
-        <div className="vx-deals-board -mx-1 flex overflow-x-auto">
-          {stagesToRender.map((stage) => (
+        <div className="vx-deals-board -mx-1 flex overflow-x-auto pb-1">
+          {stagesToRender.map((stage, stageIndex) => (
             <Stage
               key={String(stage.id)}
               stage={stage}
+              stageIndex={stageIndex}
               deals={filteredDealsByStage[String(stage.id)] || []}
               clients={clients}
               openTasksByDealId={openTasksByDealId}
               highlightDealIds={effectiveHighlightSet}
               filterDimActive={effectiveFilterDim}
+              closingSoonDealIds={closingSoonIds}
+              isOver={overStageId === String(stage.id)}
               isLoading={dndLoading}
+              onAddDealInStage={
+                allowCreateDeals ? (sid) => openCreate(sid) : undefined
+              }
               deletingDealId={deletingDealId}
               dragDisabled={Boolean(deletingDealId || dndLoading)}
               onDealOpen={openEdit}
@@ -1475,15 +1521,25 @@ export default function Board({
             hasLost={Boolean(lostStage)}
           />
         </div>
-        <DragOverlay dropAnimation={{ duration: 220, easing: "cubic-bezier(0.2, 0, 0, 1)" }}>
+        <DragOverlay
+          dropAnimation={{
+            duration: 260,
+            easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+          }}
+          zIndex={60}
+        >
           {overlayDeal ? (
-            <div className="vx-deal-card w-[19.5rem] cursor-grabbing border border-[var(--vx-accent)]/25 p-4 shadow-[var(--vx-shadow-card-hover)] scale-[1.02]">
-              <DealCardContent
+            <div className="w-[20rem] cursor-grabbing rotate-[0.5deg] scale-[1.03] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.55)]">
+              <DealCardPreview
                 deal={overlayDeal}
                 clients={clients}
                 openTasksForDeal={
                   openTasksByDealId[String(overlayDeal.id)] ?? []
                 }
+                stageName={overlayStageName}
+                closingSoon={closingSoonIds.has(String(overlayDeal.id))}
+                needsAttention={attentionDealIds.has(String(overlayDeal.id))}
+                notes={notesByDealId[String(overlayDeal.id)] ?? []}
               />
             </div>
           ) : null}
@@ -1523,6 +1579,7 @@ export default function Board({
           deal={dealInModal}
           companyId={companyId}
           stages={stages}
+          defaultStageId={modalMode === "create" ? createStageId ?? undefined : undefined}
           clients={clients}
           submitting={modalSubmitting}
           deletingDeal={
