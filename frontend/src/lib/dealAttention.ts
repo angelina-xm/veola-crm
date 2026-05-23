@@ -28,9 +28,11 @@ export function dealCardShellClass(
 ): string {
   return cn(
     "vx-deal-card group relative overflow-hidden rounded-xl border",
-    "border-[var(--vx-border-subtle)] bg-[var(--vx-card-bg)]",
-    "shadow-[var(--vx-shadow-card)]",
-    visual === "healthy" && "hover:border-[var(--vx-border)] hover:shadow-[var(--vx-shadow-card-hover)]",
+    "border-[var(--vx-deals-card-border)] bg-[var(--vx-deals-card-bg)]",
+    "shadow-[var(--vx-deals-card-shadow)]",
+    "backdrop-blur-sm",
+    visual === "healthy" &&
+      "hover:border-[var(--vx-border)] hover:shadow-[var(--vx-deals-card-shadow-hover)] hover:-translate-y-px",
     visual === "hot" && "vx-deal-edge vx-deal-edge--hot",
     visual === "at_risk" && "vx-deal-edge vx-deal-edge--risk",
     visual === "stale" && "vx-deal-edge vx-deal-edge--stale",

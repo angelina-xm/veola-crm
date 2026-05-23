@@ -121,30 +121,29 @@ export default function Stage({
     <div
       className={cn(
         "vx-deals-column flex flex-col overflow-hidden rounded-2xl transition-all duration-300 ease-out",
-        "border border-[var(--vx-border-subtle)] bg-[var(--vx-column-bg)]",
         activeDrop && "vx-deals-column--active",
         isLoading && "opacity-60"
       )}
     >
-      <header className="relative border-b border-[var(--vx-border-subtle)] px-4 pb-3 pt-3.5">
+      <header className="vx-deals-column-head">
         <span
-          className={cn("absolute inset-x-4 top-0 h-px rounded-full opacity-60", accent)}
+          className={cn("absolute inset-x-0 top-0 h-px opacity-50", accent)}
           aria-hidden
         />
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2">
             <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", accent)} aria-hidden />
-            <h2 className="truncate text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--vx-text-secondary)]">
+            <h2 className="truncate text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--vx-text-secondary)]">
               {stage.name}
             </h2>
+            <span className="shrink-0 rounded-md bg-[var(--vx-bg-subtle)]/80 px-1.5 py-0.5 text-[10px] font-medium text-[var(--vx-text-muted)] vx-tabular">
+              {safeDeals.length}
+            </span>
           </div>
-          <span className="shrink-0 rounded-md bg-[var(--vx-bg-subtle)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--vx-text-muted)] vx-tabular">
-            {safeDeals.length}
-          </span>
+          <p className="shrink-0 text-[13px] font-semibold text-[var(--vx-text)] vx-tabular">
+            {formatDealAmountUsd(totalValue) ?? "$0"}
+          </p>
         </div>
-        <p className="mt-1.5 pl-3.5 text-[12px] font-medium text-[var(--vx-text)] vx-tabular">
-          {formatDealAmountUsd(totalValue) ?? "$0"}
-        </p>
       </header>
 
       <div

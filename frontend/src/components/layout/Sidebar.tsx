@@ -211,7 +211,7 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     );
 
   return (
-    <aside className="flex h-full flex-col border-r border-[var(--vx-border)] bg-[var(--vx-surface)] px-2.5 py-3 shadow-[var(--vx-shadow-sidebar)]">
+    <aside className="flex h-full flex-col border-r border-[var(--vx-border)] bg-[var(--vx-surface)] px-2 py-3 shadow-[var(--vx-shadow-sidebar)]">
       <div className="px-0.5" onClick={onNavigate}>
         <WorkspaceMark companyName={companyName} />
       </div>

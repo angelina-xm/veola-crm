@@ -85,9 +85,11 @@ import {
   StaleDeal,
 } from "@/src/types";
 import DealsWorkspaceBar, {
-  formatPipelineMetric,
   type DealsBoardView,
+  type DealsTimeframe,
 } from "@/src/components/deals/DealsWorkspaceBar";
+import { formatPipelineMetric } from "@/src/components/deals/DealsWorkspaceBar.utils";
+import { useShellLayout } from "@/src/context/ShellLayoutContext";
 import { sumDealAmounts } from "@/src/lib/dealAttention";
 import { dueDateVsToday } from "@/src/lib/dealTaskSignal";
 import type { PipelineHealth } from "@/src/types";
@@ -440,7 +442,12 @@ export default function Board({
   );
   const [sortByPriority, setSortByPriority] = useState(true);
   const [boardView, setBoardView] = useState<DealsBoardView>("all");
+  const [timeframe, setTimeframe] = useState<DealsTimeframe>("quarter");
   const [searchQuery, setSearchQuery] = useState("");
+  const { toggleMobileNav } = useShellLayout();
+  const pipelineName = membership?.company_name
+    ? `${membership.company_name} Sales Pipeline`
+    : "Sales Pipeline";
   const [priorityStageOrder, setPriorityStageOrder] = useState<string[] | null>(
     null
   );
@@ -878,6 +885,7 @@ export default function Board({
     }).length;
     return {
       pipelineLabel: formatPipelineMetric(pipelineTotal),
+      pipelineTotal,
       active,
       attention,
       atRisk,
@@ -1438,25 +1446,32 @@ export default function Board({
   }, [dealInModal, handleDelete]);
 
   return (
-    <>
+    <div className="vx-deals-canvas">
       <DealsWorkspaceBar
+        pipelineName={pipelineName}
         pipelineValue={workspaceMetrics.pipelineLabel}
+        pipelineValueRaw={workspaceMetrics.pipelineTotal}
         activeCount={workspaceMetrics.active}
+        stageCount={stages.length}
         attentionCount={workspaceMetrics.attention}
         atRiskCount={workspaceMetrics.atRisk}
         closingCount={workspaceMetrics.closing}
+        inProgressValue={workspaceMetrics.pipelineTotal}
         view={boardView}
         onViewChange={setBoardView}
+        timeframe={timeframe}
+        onTimeframeChange={setTimeframe}
         search={searchQuery}
         onSearchChange={setSearchQuery}
         sortByPriority={sortByPriority}
         onSortToggle={() => setSortByPriority((v) => !v)}
         onCreateDeal={() => openCreate()}
         createDisabled={boardBusy || membershipLoading || !allowCreateDeals}
+        onMenuToggle={toggleMobileNav}
       />
 
       {(overdueTasksCount > 0 || todayTasksCount > 0) && boardView === "all" ? (
-        <p className="text-[12px] text-[var(--vx-text-muted)]">
+        <p className="mb-3 px-1 text-[11px] text-[var(--vx-text-muted)]">
           {overdueTasksCount > 0 ? `${overdueTasksCount} overdue tasks` : null}
           {overdueTasksCount > 0 && todayTasksCount > 0 ? " · " : null}
           {todayTasksCount > 0 ? `${todayTasksCount} due today` : null}
@@ -1529,7 +1544,7 @@ export default function Board({
           zIndex={60}
         >
           {overlayDeal ? (
-            <div className="w-[20rem] cursor-grabbing rotate-[0.5deg] scale-[1.03] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.55)]">
+            <div className="w-[21rem] cursor-grabbing rotate-[0.35deg] scale-[1.04] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.65)]">
               <DealCardPreview
                 deal={overlayDeal}
                 clients={clients}
@@ -1605,6 +1620,6 @@ export default function Board({
           }}
         />
       ) : null}
-    </>
+    </div>
   );
 }

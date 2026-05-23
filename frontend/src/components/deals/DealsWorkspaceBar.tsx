@@ -2,61 +2,136 @@
 
 import Link from "next/link";
 import { cn } from "@/src/lib/cn";
-import { COPY, NAV_LABELS, ROUTES } from "@/src/lib/product";
+import { ROUTES } from "@/src/lib/product";
+import { formatPipelineMetric } from "./DealsWorkspaceBar.utils";
 
 export type DealsBoardView = "all" | "attention" | "closing" | "high_value";
+export type DealsTimeframe = "quarter" | "month" | "all";
 
 const VIEWS: { id: DealsBoardView; label: string }[] = [
-  { id: "all", label: "All deals" },
+  { id: "all", label: "All" },
   { id: "attention", label: "Attention" },
-  { id: "closing", label: "Closing soon" },
+  { id: "closing", label: "Closing" },
   { id: "high_value", label: "High value" },
 ];
 
+const TIMEFRAMES: { id: DealsTimeframe; label: string }[] = [
+  { id: "quarter", label: "This quarter" },
+  { id: "month", label: "This month" },
+  { id: "all", label: "All time" },
+];
+
+export { formatPipelineMetric };
+
 export default function DealsWorkspaceBar({
+  pipelineName,
   pipelineValue,
+  pipelineValueRaw: _pipelineValueRaw,
   activeCount,
+  stageCount,
   attentionCount,
   atRiskCount,
   closingCount,
+  inProgressValue,
   view,
   onViewChange,
+  timeframe,
+  onTimeframeChange,
   search,
   onSearchChange,
   sortByPriority,
   onSortToggle,
   onCreateDeal,
   createDisabled,
+  onMenuToggle,
 }: {
+  pipelineName: string;
   pipelineValue: string;
+  pipelineValueRaw: number;
   activeCount: number;
+  stageCount: number;
   attentionCount: number;
   atRiskCount: number;
   closingCount: number;
+  inProgressValue: number;
   view: DealsBoardView;
   onViewChange: (v: DealsBoardView) => void;
+  timeframe: DealsTimeframe;
+  onTimeframeChange: (t: DealsTimeframe) => void;
   search: string;
   onSearchChange: (q: string) => void;
   sortByPriority: boolean;
   onSortToggle: () => void;
   onCreateDeal: () => void;
   createDisabled?: boolean;
+  onMenuToggle?: () => void;
 }) {
+  const statusRows = [
+    {
+      label: "In progress",
+      value: inProgressValue,
+      count: activeCount,
+      dot: "bg-sky-400/80",
+    },
+    {
+      label: "At risk",
+      value: 0,
+      count: atRiskCount,
+      dot: "bg-rose-400/80",
+      hide: atRiskCount === 0,
+    },
+    {
+      label: "Need attention",
+      value: 0,
+      count: attentionCount,
+      dot: "bg-amber-400/80",
+      hide: attentionCount === 0,
+    },
+    {
+      label: "Closing soon",
+      value: 0,
+      count: closingCount,
+      dot: "bg-violet-400/80",
+      hide: closingCount === 0,
+    },
+  ].filter((r) => !r.hide);
+
   return (
-    <div className="vx-deals-workspace-bar sticky top-[var(--vx-topbar-height)] z-20 -mx-1 border-b border-[var(--vx-border-subtle)] bg-[var(--vx-surface)]/90 px-1 pb-4 pt-2 backdrop-blur-xl">
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <h1 className="text-lg font-semibold tracking-tight text-[var(--vx-text)]">
-              {NAV_LABELS.deals}
-            </h1>
-            <p className="mt-0.5 text-[12px] text-[var(--vx-text-muted)]">
-              {COPY.dealsBoardHint}
-            </p>
+    <header className="vx-deals-command-bar">
+      <div className="flex flex-col gap-5">
+        {/* Row 1 — title + controls */}
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            {onMenuToggle ? (
+              <button
+                type="button"
+                className="vx-deals-icon-btn lg:hidden"
+                onClick={onMenuToggle}
+                aria-label="Open menu"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path
+                    d="M4 7h16M4 12h16M4 17h16"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+            ) : null}
+            <div className="min-w-0">
+              <h1 className="text-xl font-semibold tracking-tight text-[var(--vx-text)]">
+                Deals
+              </h1>
+              <p className="mt-0.5 flex items-center gap-1.5 text-[12px] text-[var(--vx-text-muted)]">
+                <span className="inline-block h-1 w-1 rounded-full bg-[var(--vx-accent)]" />
+                {pipelineName}
+              </p>
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-            <div className="relative min-w-[12rem] flex-1 sm:max-w-xs">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative min-w-[11rem] flex-1 sm:min-w-[14rem] sm:max-w-md">
               <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--vx-text-muted)]">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
                   <circle cx="11" cy="11" r="6" stroke="currentColor" strokeWidth="1.5" />
@@ -73,79 +148,153 @@ export default function DealsWorkspaceBar({
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
                 placeholder="Search deals, clients…"
-                className="vx-deals-search vx-input w-full"
+                className="vx-deals-search vx-input w-full pr-14"
               />
+              <kbd className="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 rounded border border-[var(--vx-border-subtle)] bg-[var(--vx-bg-subtle)] px-1.5 py-0.5 text-[10px] text-[var(--vx-text-muted)] sm:inline">
+                ⌘K
+              </kbd>
             </div>
+
+            <div
+              className="vx-deals-filter-tabs hidden sm:inline-flex"
+              role="tablist"
+              aria-label="Filters"
+            >
+              {VIEWS.map((v) => (
+                <button
+                  key={v.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={view === v.id}
+                  onClick={() => onViewChange(v.id)}
+                  className={cn(view === v.id && "is-active")}
+                >
+                  {v.label}
+                </button>
+              ))}
+            </div>
+
             <button
               type="button"
               onClick={onSortToggle}
-              className={cn(
-                "vx-btn-secondary",
-                sortByPriority &&
-                  "border-[var(--vx-accent)]/30 bg-[var(--vx-accent-soft)] text-[var(--vx-accent)]"
-              )}
+              className={cn("vx-deals-icon-btn", sortByPriority && "is-active")}
+              title="Sort by priority"
             >
-              Priority
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path
+                  d="M4 6h16M7 12h10M10 18h4"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              </svg>
             </button>
-            <Link href={ROUTES.dealsClosed} className="vx-btn-secondary">
-              Closed
+
+            <Link href={ROUTES.dealsClosed} className="vx-deals-icon-btn" title="Closed deals">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path
+                  d="M12 15a3 3 0 100-6 3 3 0 000 6z"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                />
+              </svg>
             </Link>
+
             <button
               type="button"
               onClick={onCreateDeal}
               disabled={createDisabled}
-              className="vx-btn-primary disabled:opacity-50"
+              className="vx-deals-cta disabled:opacity-50"
             >
+              <span aria-hidden>+</span>
               New deal
             </button>
           </div>
         </div>
 
-        <div className="vx-deals-pipeline-summary flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px]">
-          <span className="font-semibold text-[var(--vx-text)] vx-tabular">
-            {pipelineValue}
-            <span className="ml-1.5 font-normal text-[var(--vx-text-muted)]">
-              pipeline
-            </span>
-          </span>
-          <span className="h-3 w-px bg-[var(--vx-border-subtle)]" aria-hidden />
-          <span className="text-[var(--vx-text-secondary)] vx-tabular">
-            <span className="font-medium text-[var(--vx-text)]">{activeCount}</span>{" "}
-            active
-          </span>
-          {closingCount > 0 ? (
-            <>
-              <span className="h-3 w-px bg-[var(--vx-border-subtle)]" aria-hidden />
-              <span className="inline-flex items-center gap-1.5 text-violet-300/90">
-                <span className="h-1.5 w-1.5 rounded-full bg-violet-400/80" />
-                {closingCount} closing soon
-              </span>
-            </>
-          ) : null}
-          {atRiskCount > 0 ? (
-            <>
-              <span className="h-3 w-px bg-[var(--vx-border-subtle)]" aria-hidden />
-              <span className="inline-flex items-center gap-1.5 text-rose-300/90">
-                <span className="h-1.5 w-1.5 rounded-full bg-rose-400/80" />
-                {atRiskCount} at risk
-              </span>
-            </>
-          ) : null}
-          {attentionCount > 0 ? (
-            <>
-              <span className="h-3 w-px bg-[var(--vx-border-subtle)]" aria-hidden />
-              <span className="inline-flex items-center gap-1.5 text-amber-200/90">
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-400/80" />
-                {attentionCount} need attention
-              </span>
-            </>
+        {/* Row 2 — pipeline metrics */}
+        <div className="vx-deals-metrics-panel">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="flex flex-wrap items-end gap-8">
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--vx-text-muted)]">
+                  Pipeline value
+                </p>
+                <p className="mt-1 flex items-center gap-2 text-2xl font-semibold tracking-tight text-[var(--vx-text)] vx-tabular">
+                  {pipelineValue}
+                  <span className="text-[var(--vx-accent)] opacity-80" aria-hidden>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M4 19V5M10 19V9M16 19v-6M22 19H2"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </span>
+                </p>
+              </div>
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--vx-text-muted)]">
+                  Active deals
+                </p>
+                <p className="mt-1 text-lg font-semibold text-[var(--vx-text)] vx-tabular">
+                  {activeCount}
+                  <span className="ml-1.5 text-[13px] font-normal text-[var(--vx-text-muted)]">
+                    across {stageCount} stages
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <select
+                value={timeframe}
+                onChange={(e) => onTimeframeChange(e.target.value as DealsTimeframe)}
+                className="vx-deals-timeframe"
+                aria-label="Timeframe"
+              >
+                {TIMEFRAMES.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {statusRows.length > 0 ? (
+            <div className="mt-4 grid gap-2 border-t border-[var(--vx-border-subtle)]/60 pt-4 sm:grid-cols-2 lg:grid-cols-4">
+              {statusRows.map((row) => (
+                <div
+                  key={row.label}
+                  className="flex items-center justify-between gap-2 text-[12px]"
+                >
+                  <span className="flex items-center gap-2 text-[var(--vx-text-secondary)]">
+                    <span className={cn("h-1.5 w-1.5 rounded-full", row.dot)} />
+                    {row.label}
+                  </span>
+                  <span className="text-[var(--vx-text-muted)] vx-tabular">
+                    {row.label === "In progress"
+                      ? formatPipelineMetric(row.value)
+                      : `${row.count}`}
+                  </span>
+                </div>
+              ))}
+            </div>
           ) : null}
         </div>
 
+        {/* Mobile filters */}
         <div
-          className="inline-flex max-w-full flex-wrap gap-0.5 rounded-xl border border-[var(--vx-border-subtle)] bg-[var(--vx-board-bg)] p-0.5"
+          className="vx-deals-filter-tabs inline-flex sm:hidden"
           role="tablist"
-          aria-label="Deal views"
+          aria-label="Filters"
         >
           {VIEWS.map((v) => (
             <button
@@ -154,27 +303,13 @@ export default function DealsWorkspaceBar({
               role="tab"
               aria-selected={view === v.id}
               onClick={() => onViewChange(v.id)}
-              className={cn(
-                "rounded-lg px-3.5 py-1.5 text-[11px] font-medium transition-all duration-200",
-                view === v.id
-                  ? "bg-[var(--vx-card-bg)] text-[var(--vx-text)] shadow-sm"
-                  : "text-[var(--vx-text-muted)] hover:text-[var(--vx-text-secondary)]"
-              )}
+              className={cn(view === v.id && "is-active")}
             >
               {v.label}
             </button>
           ))}
         </div>
       </div>
-    </div>
+    </header>
   );
-}
-
-export function formatPipelineMetric(total: number): string {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: "USD",
-    notation: total >= 1000 ? "compact" : "standard",
-    maximumFractionDigits: 0,
-  }).format(total);
 }

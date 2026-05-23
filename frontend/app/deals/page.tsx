@@ -156,7 +156,7 @@ export default function DealsPage() {
 
   return (
     <ProtectedRoute>
-      <div className="vx-deals-workspace -mx-1 px-1 pb-8">
+      <div className="vx-deals-workspace min-h-screen pb-6">
         {loading ? (
           <div className="flex justify-center py-16">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-800" />

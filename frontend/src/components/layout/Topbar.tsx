@@ -19,9 +19,12 @@ import { COPY, ROUTES } from "@/src/lib/product";
 export default function Topbar({
   onMenuToggle,
   menuOpen,
+  minimal = false,
 }: {
   onMenuToggle?: () => void;
   menuOpen?: boolean;
+  /** Slim bar on Deals workspace — title/search live in DealsWorkspaceBar */
+  minimal?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -67,10 +70,20 @@ export default function Topbar({
   }, []);
 
   return (
-    <header className="sticky top-0 z-30 flex h-[var(--vx-topbar-height)] shrink-0 items-center gap-3 border-b border-[var(--vx-border)] bg-[var(--vx-surface)]/95 px-4 backdrop-blur-md lg:px-5">
+    <header
+      className={cn(
+        "sticky top-0 z-30 flex shrink-0 items-center gap-3 border-b border-[var(--vx-border)] bg-[var(--vx-surface)]/95 px-4 backdrop-blur-md lg:px-5",
+        minimal
+          ? "h-0 overflow-hidden border-transparent p-0 opacity-0 lg:h-[2.75rem] lg:opacity-100 lg:overflow-visible"
+          : "h-[var(--vx-topbar-height)]"
+      )}
+    >
       <button
         type="button"
-        className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--vx-text-secondary)] transition-colors hover:bg-[var(--vx-bg-subtle)] lg:hidden"
+        className={cn(
+          "flex h-8 w-8 items-center justify-center rounded-lg text-[var(--vx-text-secondary)] transition-colors hover:bg-[var(--vx-bg-subtle)]",
+          minimal ? "hidden" : "lg:hidden"
+        )}
         onClick={onMenuToggle}
         aria-label="Toggle menu"
         aria-expanded={menuOpen}
@@ -85,14 +98,23 @@ export default function Topbar({
         </svg>
       </button>
 
-      <div className="min-w-0 shrink-0">
-        <p className="truncate text-[11px] text-[var(--vx-text-muted)]">{companyName}</p>
-        <h1 className="truncate text-base font-semibold tracking-tight text-[var(--vx-text)]">
-          {pageTitle}
-        </h1>
-      </div>
+      {!minimal ? (
+        <div className="min-w-0 shrink-0">
+          <p className="truncate text-[11px] text-[var(--vx-text-muted)]">{companyName}</p>
+          <h1 className="truncate text-base font-semibold tracking-tight text-[var(--vx-text)]">
+            {pageTitle}
+          </h1>
+        </div>
+      ) : (
+        <div className="hidden flex-1 lg:block" aria-hidden />
+      )}
 
-      <div className="hidden min-w-0 flex-1 justify-center px-3 md:flex">
+      <div
+        className={cn(
+          "hidden min-w-0 flex-1 justify-center px-3 md:flex",
+          minimal && "!hidden"
+        )}
+      >
         <div className="relative w-full max-w-sm">
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--vx-text-muted)]">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
