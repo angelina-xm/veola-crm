@@ -15,6 +15,8 @@ import {
 import { Client, Deal, PipelineStage, StaleDeal } from "@/src/types";
 import DealActivitiesTimeline from "./DealActivitiesTimeline";
 import DealInactivityPanel from "./DealInactivityPanel";
+import { useTranslation } from "@/src/context/LocaleContext";
+import { translateStageName } from "@/src/lib/i18nHelpers";
 
 export type DealModalMode = "create" | "edit";
 
@@ -84,6 +86,7 @@ export default function DealModal({
   staleRow = null,
   onActivitiesMutated,
 }: DealModalProps) {
+  const { t } = useTranslation();
   const busy = submitting || deletingDeal;
   const firstStageId = stages[0] ? String(stages[0].id) : "";
 
@@ -187,7 +190,7 @@ export default function DealModal({
   };
 
   const titleText =
-    mode === "create" ? "Новая сделка" : "Редактировать сделку";
+    mode === "create" ? t("pipeline.modalCreate") : t("pipeline.modalEdit");
 
   return (
     <div
@@ -220,13 +223,13 @@ export default function DealModal({
                 </p>
                 {deal.client != null ? (
                   <p className="text-xs text-gray-600">
-                    Client:{" "}
+                    {t("pipeline.clientLabelPrefix")}:{" "}
                     {clientNameById(clients, deal.client) ?? String(deal.client)}
                   </p>
                 ) : null}
                 {deal.created_at ? (
                   <p className="text-xs text-gray-500">
-                    Created: {formatCreatedRelative(deal.created_at)}
+                    {t("pipeline.labelCreated")}: {formatCreatedRelative(deal.created_at)}
                   </p>
                 ) : null}
               </div>
@@ -237,7 +240,7 @@ export default function DealModal({
             onClick={onClose}
             disabled={busy}
             className="rounded px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 disabled:opacity-50"
-            aria-label="Закрыть"
+            aria-label={t("pipeline.modalCloseAria")}
           >
             ✕
           </button>
@@ -252,7 +255,7 @@ export default function DealModal({
 
           <div>
             <label htmlFor="deal-title" className="mb-1 block text-sm font-medium text-gray-700">
-              Название
+              {t("pipeline.labelTitle")}
             </label>
             <input
               id="deal-title"
@@ -267,7 +270,7 @@ export default function DealModal({
 
           <div>
             <label htmlFor="deal-amount" className="mb-1 block text-sm font-medium text-gray-700">
-              Сумма
+              {t("pipeline.labelAmount")}
             </label>
             <input
               id="deal-amount"
@@ -285,7 +288,7 @@ export default function DealModal({
 
           <div>
             <label htmlFor="deal-stage" className="mb-1 block text-sm font-medium text-gray-700">
-              Этап
+              {t("pipeline.labelStage")}
             </label>
             <select
               id="deal-stage"
@@ -296,19 +299,18 @@ export default function DealModal({
               required
             >
               {stages.length === 0 ? (
-                <option value="">Нет доступных стадий</option>
+                <option value="">{t("pipeline.noStagesOption")}</option>
               ) : (
                 stages.map((s) => (
                   <option key={String(s.id)} value={String(s.id)}>
-                    {s.name}
+                    {translateStageName(s.name)}
                   </option>
                 ))
               )}
             </select>
             {stages.length === 0 ? (
               <p className="mt-1 text-xs text-amber-700">
-                Добавьте стадии воронки для текущей компании, затем повторите
-                создание сделки.
+                {t("pipeline.noStagesHint")}
               </p>
             ) : null}
           </div>
@@ -316,7 +318,7 @@ export default function DealModal({
           {mode === "create" ? (
             <div>
               <label htmlFor="deal-client" className="mb-1 block text-sm font-medium text-gray-700">
-                Клиент
+                {t("pipeline.labelClient")}
               </label>
               <select
                 id="deal-client"
@@ -327,7 +329,7 @@ export default function DealModal({
                 required
               >
                 {clientsInCompany.length === 0 ? (
-                  <option value="">Нет клиентов в компании</option>
+                  <option value="">{t("pipeline.noClientsInCompany")}</option>
                 ) : (
                   clientsInCompany.map((c) => (
                     <option key={String(c.id)} value={String(c.id)}>
@@ -338,14 +340,14 @@ export default function DealModal({
               </select>
               {clientsInCompany.length === 0 ? (
                 <div className="mt-2 flex items-center gap-2">
-                  <p className="text-xs text-amber-700">Нет клиентов в компании.</p>
+                  <p className="text-xs text-amber-700">{t("pipeline.noClientsInCompany")}</p>
                   <button
                     type="button"
                     onClick={onCreateClient}
                     disabled={busy}
                     className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700"
                   >
-                    Create client
+                    {t("pipeline.createClient")}
                   </button>
                 </div>
               ) : null}
@@ -355,10 +357,10 @@ export default function DealModal({
           {catalog.length > 0 || lineItems.length > 0 ? (
             <div className="rounded border border-gray-200 bg-gray-50/80 p-3">
               <p className="text-xs font-medium text-gray-700">
-                Products (optional)
+                {t("pipeline.productsOptional")}
               </p>
               <p className="mt-0.5 text-[11px] text-gray-500">
-                Sales context from catalog — not invoicing
+                {t("pipeline.productsHint")}
               </p>
               <div className="mt-2 flex gap-2">
                 <select
@@ -367,7 +369,7 @@ export default function DealModal({
                   className="min-w-0 flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm"
                   disabled={busy}
                 >
-                  <option value="">Add product…</option>
+                  <option value="">{t("pipeline.addProduct")}</option>
                   {catalog
                     .filter(
                       (p) => !lineItems.some((li) => li.product_id === p.id)
@@ -401,7 +403,7 @@ export default function DealModal({
                   }}
                   className="rounded border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium"
                 >
-                  Add
+                  {t("pipeline.addBtn")}
                 </button>
               </div>
               {lineItems.length > 0 ? (
@@ -417,7 +419,7 @@ export default function DealModal({
                       <input
                         type="number"
                         min={1}
-                        placeholder="Qty"
+                        placeholder={t("pipeline.qty")}
                         className="w-14 rounded border border-gray-300 px-1.5 py-1"
                         value={li.quantity ?? 1}
                         onChange={(e) => {
@@ -439,7 +441,7 @@ export default function DealModal({
                       />
                       <input
                         type="number"
-                        placeholder="Price"
+                        placeholder={t("pipeline.price")}
                         className="w-24 rounded border border-gray-300 px-1.5 py-1"
                         value={
                           li.unit_price == null ? "" : String(li.unit_price)
@@ -489,7 +491,7 @@ export default function DealModal({
               }
               className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
             >
-              {submitting ? "Loading..." : mode === "create" ? "Создать" : "Сохранить"}
+              {submitting ? t("common.loading") : mode === "create" ? t("common.create") : t("common.save")}
             </button>
             <button
               type="button"
@@ -497,7 +499,7 @@ export default function DealModal({
               disabled={busy}
               className="rounded border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
             >
-              Отмена
+              {t("common.cancel")}
             </button>
             {mode === "edit" && onDelete ? (
               <button
@@ -506,7 +508,7 @@ export default function DealModal({
                 disabled={busy}
                 className="ml-auto rounded border border-red-300 bg-white px-4 py-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50"
               >
-                {deletingDeal ? "Deleting..." : "Delete"}
+                {deletingDeal ? t("pipeline.deleting") : t("pipeline.deleteDeal")}
               </button>
             ) : null}
           </div>

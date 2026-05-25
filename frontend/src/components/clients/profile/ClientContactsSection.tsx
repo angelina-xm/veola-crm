@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { cn } from "@/src/lib/cn";
 import type { ClientContact } from "@/src/types";
+import { useTranslation } from "@/src/context/LocaleContext";
 
 const EMPTY: Omit<ClientContact, "id"> = {
   full_name: "",
@@ -23,6 +24,7 @@ export default function ClientContactsSection({
   onSave: (payload: Omit<ClientContact, "id"> & { id?: number }) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState<
     (Omit<ClientContact, "id"> & { id?: number }) | null
   >(null);
@@ -48,23 +50,21 @@ export default function ClientContactsSection({
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-zinc-900">People</h2>
-          <p className="mt-0.5 text-xs text-zinc-500">
-            Decision makers and day-to-day contacts at this account
-          </p>
+          <h2 className="text-sm font-semibold text-zinc-900">{t("clients.people")}</h2>
+          <p className="mt-0.5 text-xs text-zinc-500">{t("clients.contactsHint")}</p>
         </div>
         <button
           type="button"
           onClick={startAdd}
           className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-800 hover:bg-zinc-50"
         >
-          Add contact
+          {t("clients.addContact")}
         </button>
       </div>
 
       {contacts.length === 0 && !editing ? (
         <p className="mt-4 rounded-xl border border-dashed border-zinc-200 py-8 text-center text-sm text-zinc-500">
-          No contacts yet. Add someone who owns the relationship on their side.
+          {t("clients.noContacts")}
         </p>
       ) : (
         <ul className="mt-4 space-y-2">
@@ -118,29 +118,29 @@ export default function ClientContactsSection({
       {editing ? (
         <div className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50/50 p-4">
           <p className="text-xs font-semibold text-zinc-700">
-            {editing.id ? "Edit contact" : "New contact"}
+            {editing.id ? t("clients.editContact") : t("clients.newContact")}
           </p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <input
-              placeholder="Full name"
+              placeholder={t("clients.placeholderName")}
               value={editing.full_name}
               onChange={(e) => setEditing({ ...editing, full_name: e.target.value })}
               className="rounded-lg border border-zinc-200 px-2 py-2 text-sm sm:col-span-2"
             />
             <input
-              placeholder="Role / title"
+              placeholder={t("clients.placeholderRole")}
               value={editing.role_title}
               onChange={(e) => setEditing({ ...editing, role_title: e.target.value })}
               className="rounded-lg border border-zinc-200 px-2 py-2 text-sm"
             />
             <input
-              placeholder="Email"
+              placeholder={t("clients.placeholderEmail")}
               value={editing.email}
               onChange={(e) => setEditing({ ...editing, email: e.target.value })}
               className="rounded-lg border border-zinc-200 px-2 py-2 text-sm"
             />
             <input
-              placeholder="Phone"
+              placeholder={t("clients.placeholderPhone")}
               value={editing.phone}
               onChange={(e) => setEditing({ ...editing, phone: e.target.value })}
               className="rounded-lg border border-zinc-200 px-2 py-2 text-sm"

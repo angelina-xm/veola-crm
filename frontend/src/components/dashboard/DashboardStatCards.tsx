@@ -2,6 +2,7 @@
 
 import { cn } from "@/src/lib/cn";
 import { formatMoney } from "@/src/lib/formatRelative";
+import { useTranslation } from "@/src/context/LocaleContext";
 
 type StatCard = {
   key: string;
@@ -44,13 +45,16 @@ export default function DashboardStatCards({
   needsAttention: number;
   loading?: boolean;
 }) {
+  const { t } = useTranslation();
+  const na = t("common.notAvailable");
+
   const cards: StatCard[] = [
     {
       key: "revenue",
-      label: "Revenue",
+      label: t("dashboardStats.revenue"),
       value: formatMoney(revenue),
-      sub: "Won this month",
-      tag: "Primary",
+      sub: t("dashboardStats.revenueSub"),
+      tag: t("dashboardStats.tagPrimary"),
       tagTone: "neutral",
       primary: true,
       iconTone: "purple",
@@ -67,11 +71,11 @@ export default function DashboardStatCards({
     },
     {
       key: "deals",
-      label: "Active deals",
-      value: loading ? "—" : String(activeDeals),
-      sub: "On your board",
+      label: t("dashboardStats.activeDeals"),
+      value: loading ? na : String(activeDeals),
+      sub: t("dashboardStats.activeDealsSub"),
       tagTone: "success",
-      tag: "Open",
+      tag: t("dashboardStats.tagOpen"),
       iconTone: "teal",
       icon: (
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -86,10 +90,13 @@ export default function DashboardStatCards({
     },
     {
       key: "attention",
-      label: "Needs attention",
-      value: loading ? "—" : String(needsAttention),
-      sub: needsAttention > 0 ? "Review follow-ups" : "Pipeline healthy",
-      tag: needsAttention > 0 ? "Action" : "Clear",
+      label: t("dashboardStats.needsAttention"),
+      value: loading ? na : String(needsAttention),
+      sub:
+        needsAttention > 0
+          ? t("dashboardStats.attentionSubReview")
+          : t("dashboardStats.attentionSubHealthy"),
+      tag: needsAttention > 0 ? t("dashboardStats.tagAction") : t("dashboardStats.tagClear"),
       tagTone: needsAttention > 0 ? "danger" : "success",
       iconTone: "amber",
       icon: (
@@ -105,13 +112,16 @@ export default function DashboardStatCards({
     },
     {
       key: "tasks",
-      label: "Tasks today",
-      value: loading ? "—" : String(tasksToday),
+      label: t("dashboardStats.tasksToday"),
+      value: loading ? na : String(tasksToday),
       sub:
         tasksCompletedToday > 0
-          ? `${tasksCompletedToday} completed today`
-          : "Overdue + due today",
-      tag: tasksToday > 0 ? `${tasksToday} open` : "Clear",
+          ? t("dashboardStats.tasksSubCompleted", { count: tasksCompletedToday })
+          : t("dashboardStats.tasksSubDefault"),
+      tag:
+        tasksToday > 0
+          ? t("dashboardStats.tagOpenCount", { count: tasksToday })
+          : t("dashboardStats.tagClear"),
       tagTone: tasksToday > 0 ? "warning" : "success",
       iconTone: "green",
       icon: (

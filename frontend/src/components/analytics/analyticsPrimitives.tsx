@@ -5,6 +5,7 @@ import type {
   AnalyticsV1FunnelStage,
   AnalyticsV1TeamRow,
 } from "@/src/types";
+import { translate } from "@/src/i18n/translate";
 
 export function formatUsd(amountStr: string): string {
   const n = Number.parseFloat(amountStr);
@@ -35,19 +36,19 @@ export function formatShortTime(iso: string): string {
 export function feedLabel(item: AnalyticsV1FeedItem): string {
   switch (item.kind) {
     case "deal_won":
-      return "Deal won";
+      return translate("analyticsWorkspace.feedDealWon");
     case "deal_moved":
-      return "Deal moved";
+      return translate("analyticsWorkspace.feedDealMoved");
     case "note_added":
-      return "Note added";
+      return translate("analyticsWorkspace.feedNoteAdded");
     case "task_completed":
-      return "Task completed";
+      return translate("analyticsWorkspace.feedTaskCompleted");
     case "task_open":
-      return "Task";
+      return translate("analyticsWorkspace.feedTask");
     default:
       return item.type
         ? item.type.charAt(0).toUpperCase() + item.type.slice(1)
-        : "Activity";
+        : translate("analyticsWorkspace.feedActivity");
   }
 }
 
@@ -78,11 +79,10 @@ export function RevenueTrendChart({
     return (
       <div className="flex min-h-[132px] flex-col items-center justify-center rounded-lg border border-dashed border-zinc-200 bg-zinc-50/60 px-5 py-8 text-center">
         <p className="text-sm font-medium tracking-tight text-zinc-800">
-          Close your first deal to unlock revenue trends
+          {translate("analyticsWorkspace.revenueTrendLockedTitle")}
         </p>
         <p className="mt-2 max-w-[260px] text-xs leading-relaxed text-zinc-500">
-          Won deal value over time will appear here once you have closed revenue in
-          this window.
+          {translate("analyticsWorkspace.revenueTrendLockedBody")}
         </p>
       </div>
     );
@@ -96,14 +96,14 @@ export function RevenueTrendChart({
     <div className="w-full">
       <div className="mb-1 flex items-end justify-end">
         <span className="text-[10px] font-medium tabular-nums text-zinc-400">
-          Max {formatUsd(String(max))}
+          {translate("analyticsWorkspace.maxRevenue", { amount: formatUsd(String(max)) })}
         </span>
       </div>
       <div
         className="mx-auto flex max-w-md items-end justify-center gap-2 border-b border-zinc-200/90 pb-px sm:gap-2.5"
         style={{ minHeight: chartHeightPx + 28 }}
         role="img"
-        aria-label="Won revenue by period"
+        aria-label={translate("analyticsWorkspace.revenueChartAria")}
       >
         {points.map((p, i) => {
           const v = numeric[i] ?? 0;
@@ -147,8 +147,8 @@ export function FunnelStagesList({
   if (funnel.length === 0) {
     return (
       <EmptyBlock
-        title="No funnel stages"
-        body="Add deal stages in settings so your board flow appears here."
+        title={translate("analyticsWorkspace.noFunnelTitle")}
+        body={translate("analyticsWorkspace.noFunnelBody")}
       />
     );
   }
@@ -235,13 +235,17 @@ export function TeamRow({ row }: { row: AnalyticsV1TeamRow }) {
     <li className="flex flex-col gap-2 rounded-lg border border-zinc-100 bg-white px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-medium text-zinc-900">{row.email}</p>
-        <p className="text-[10px] text-zinc-400">Member</p>
+        <p className="text-[10px] text-zinc-400">{translate("analyticsWorkspace.member")}</p>
       </div>
       <dl className="grid grid-cols-4 gap-2 sm:shrink-0 sm:gap-3">
-        <StatPill k="Won" v={String(row.deals_won)} />
-        <StatPill k="Active" v={String(row.deals_active)} />
-        <StatPill k="Revenue" v={formatUsd(row.revenue_won)} narrow />
-        <StatPill k="Stale" v={String(row.stale_deals)} warn={row.stale_deals > 0} />
+        <StatPill k={translate("analyticsWorkspace.teamWon")} v={String(row.deals_won)} />
+        <StatPill k={translate("analyticsWorkspace.teamActive")} v={String(row.deals_active)} />
+        <StatPill k={translate("analyticsWorkspace.teamRevenue")} v={formatUsd(row.revenue_won)} narrow />
+        <StatPill
+          k={translate("analyticsWorkspace.teamStale")}
+          v={String(row.stale_deals)}
+          warn={row.stale_deals > 0}
+        />
       </dl>
     </li>
   );
@@ -306,7 +310,10 @@ export function ActivityRow({ item, dense }: { item: AnalyticsV1FeedItem; dense?
             <span className="font-medium text-zinc-600">{item.deal_title}</span>
           ) : null}
           {item.deal_title && item.author_email ? " · " : null}
-          {item.author_email ?? (item.author_id ? `User ${item.author_id}` : "")}
+          {item.author_email ??
+            (item.author_id
+              ? translate("analyticsWorkspace.userId", { id: String(item.author_id) })
+              : "")}
         </p>
         {item.content ? (
           <p className="mt-0.5 line-clamp-1 text-[10px] leading-snug text-zinc-500">
@@ -345,7 +352,7 @@ export function AnalyticsLoadingCard() {
           className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-700"
           aria-hidden
         />
-        <p className="text-sm font-medium text-zinc-600">Loading analytics…</p>
+        <p className="text-sm font-medium text-zinc-600">{translate("analyticsWorkspace.loading")}</p>
       </div>
     </div>
   );
@@ -360,14 +367,14 @@ export function AnalyticsErrorCard({
 }) {
   return (
     <div className="mb-4 rounded-xl border border-red-200/90 bg-red-50/50 px-5 py-4 text-red-950">
-      <p className="text-sm font-semibold tracking-tight">Analytics unavailable</p>
+      <p className="text-sm font-semibold tracking-tight">{translate("analyticsWorkspace.unavailable")}</p>
       <p className="mt-1.5 text-xs leading-relaxed text-red-900/85">{error}</p>
       <button
         type="button"
         onClick={onRetry}
         className="mt-4 rounded-md bg-red-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-red-800"
       >
-        Retry
+        {translate("analyticsWorkspace.retry")}
       </button>
     </div>
   );

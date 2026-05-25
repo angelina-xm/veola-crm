@@ -1,6 +1,7 @@
 "use client";
 
 import type { NotificationItem } from "@/src/lib/api";
+import { useTranslation } from "@/src/context/LocaleContext";
 
 function iconFor(type: NotificationItem["type"]) {
   if (type === "overdue_task") return "🔴";
@@ -21,19 +22,20 @@ export default function NotificationBar({
   onSelect: (item: NotificationItem) => void;
   onClear: () => void;
 }) {
+  const { t } = useTranslation();
   if (items.length === 0 || totalBadge === 0) return null;
 
   return (
     <div
       className="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm"
       role="region"
-      aria-label="Notifications"
+      aria-label={t("topbar.notifications")}
     >
       <div className="mb-2 flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2">
         <span className="text-base" aria-hidden>
           🔔
         </span>
-        <span className="font-semibold">Notifications</span>
+        <span className="font-semibold">{t("topbar.notifications")}</span>
         <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-800">
           {totalBadge}
         </span>
@@ -43,7 +45,7 @@ export default function NotificationBar({
             onClick={onClear}
             className="ml-auto rounded border border-slate-300 bg-white px-2 py-0.5 text-xs text-slate-700 hover:bg-slate-100"
           >
-            Clear filter
+            {t("common.clearFilter")}
           </button>
         ) : null}
       </div>

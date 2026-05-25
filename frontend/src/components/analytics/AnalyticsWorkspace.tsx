@@ -19,6 +19,7 @@ import {
   RevenueTrendChart,
   TeamRow,
 } from "./analyticsPrimitives";
+import { useTranslation } from "@/src/context/LocaleContext";
 
 const FEED_PREVIEW = 10;
 const MINI = 5;
@@ -43,6 +44,7 @@ export default function AnalyticsWorkspace({
   onGranularityChange: (g: AnalyticsGranularity) => void;
   onRetry: () => void;
 }) {
+  const { t } = useTranslation();
   const { entitlements, isLocked } = useBilling();
   const exportLocked = isLocked("exportReports");
 
@@ -72,7 +74,7 @@ export default function AnalyticsWorkspace({
           className="h-9 w-9 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-700"
           aria-hidden
         />
-        <p className="text-sm font-medium text-zinc-600">Loading analytics…</p>
+        <p className="text-sm font-medium text-zinc-600">{t("analyticsWorkspace.loading")}</p>
       </div>
     );
   }
@@ -93,21 +95,20 @@ export default function AnalyticsWorkspace({
       <header className="flex flex-col gap-4 border-b border-zinc-200/80 pb-8 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">
-            Workspace
+            {t("nav.workspace")}
           </p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-900 sm:text-3xl">
-            Analytics
+            {t("analytics.pageTitle")}
           </h1>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-zinc-500">
-            Revenue, funnel, and team performance for deals you can access. Deeper view than
-            the board snapshot on your Deals workspace.
+            {t("copy.analyticsHint")}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div
             className="inline-flex rounded-lg border border-zinc-200/90 bg-zinc-50/90 p-0.5"
             role="tablist"
-            aria-label="Trend period"
+            aria-label={t("analyticsWorkspace.trendPeriod")}
           >
             {(["week", "month"] as const).map((g) => (
               <button
@@ -122,7 +123,7 @@ export default function AnalyticsWorkspace({
                     : "text-zinc-500 hover:text-zinc-800"
                 }`}
               >
-                {g === "week" ? "Weekly" : "Monthly"}
+                {g === "week" ? t("analyticsWorkspace.granularityWeek") : t("analyticsWorkspace.granularityMonth")}
               </button>
             ))}
           </div>
@@ -131,8 +132,8 @@ export default function AnalyticsWorkspace({
             disabled={exportLocked || !data}
             title={
               exportLocked
-                ? "Export is a Pro feature — enable PRO_FEATURES_ENABLED for dev"
-                : "Download analytics JSON snapshot"
+                ? t("analyticsWorkspace.exportLocked")
+                : t("analyticsWorkspace.exportJson")
             }
             onClick={handleExport}
             className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
@@ -141,7 +142,7 @@ export default function AnalyticsWorkspace({
                 : "border-zinc-200/90 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50"
             }`}
           >
-            Export
+            {t("analyticsWorkspace.exportJson")}
             <ProBadge devUnlock={entitlements.devUnlock} className="!px-1.5 !py-0 !text-[9px]" />
           </button>
         </div>
@@ -150,32 +151,36 @@ export default function AnalyticsWorkspace({
       {/* KPIs */}
       <section aria-labelledby="ws-kpis">
         <h2 id="ws-kpis" className="sr-only">
-          Key metrics
+          {t("analyticsWorkspace.keyMetricsSr")}
         </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           <KpiCard
-            label="Open value"
-            hint="Sum of active deals"
+            label={t("analyticsWorkspace.openValue")}
+            hint={t("analyticsWorkspace.openValueHint")}
             value={formatUsd(kpis.pipeline_value)}
           />
-          <KpiCard label="Active deals" value={String(kpis.active_deals)} />
+          <KpiCard label={t("analyticsWorkspace.kpiActiveDeals")} value={String(kpis.active_deals)} />
           <KpiCard
-            label="Conversion"
-            hint="Won ÷ visible"
+            label={t("analyticsWorkspace.conversion")}
+            hint={t("analyticsWorkspace.conversionHint")}
             value={formatPct(kpis.conversion_rate_pct)}
           />
           <KpiCard
-            label="Stale health"
-            hint="Ok · Risk · Stale"
+            label={t("analyticsWorkspace.staleHealth")}
+            hint={t("analyticsWorkspace.staleHint")}
             value={`${kpis.stale_health.healthy} · ${kpis.stale_health.at_risk} · ${kpis.stale_health.stale}`}
           />
           <KpiCard
-            label="Won this month"
+            label={t("analyticsWorkspace.wonThisMonth")}
             hint={formatUsd(kpis.won_this_month_revenue)}
-            value={kpis.won_this_month === 1 ? "1 deal" : `${kpis.won_this_month} deals`}
+            value={
+              kpis.won_this_month === 1
+                ? t("analyticsWorkspace.oneDeal")
+                : t("analyticsWorkspace.dealsCount", { count: kpis.won_this_month })
+            }
             accent
           />
-          <KpiCard label="Avg deal size" value={formatUsd(kpis.average_deal_size)} />
+          <KpiCard label={t("analyticsWorkspace.avgDealSize")} value={formatUsd(kpis.average_deal_size)} />
         </div>
       </section>
 
@@ -185,14 +190,15 @@ export default function AnalyticsWorkspace({
         aria-labelledby="ws-insights"
       >
         <h2 id="ws-insights" className="sr-only">
-          Revenue and funnel
+          {t("analyticsWorkspace.revenueFunnelSr")}
         </h2>
         <div className="rounded-2xl border border-zinc-200/70 bg-white p-5 shadow-sm lg:col-span-7 lg:p-6">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-            Revenue trend
+            {t("analyticsWorkspace.sectionRevenue")}
           </h3>
           <p className="mt-1 text-xs text-zinc-400">
-            {data.meta.revenue_trend_basis?.replace(/_/g, " ") ?? "Won revenue by period"}
+            {data.meta.revenue_trend_basis?.replace(/_/g, " ") ??
+              t("analyticsWorkspace.revenueChartAria")}
           </p>
           <div className="mt-6 min-h-[160px]">
             <RevenueTrendChart points={revenue_trend} chartHeightPx={112} />
@@ -200,9 +206,9 @@ export default function AnalyticsWorkspace({
         </div>
         <div className="rounded-2xl border border-zinc-200/70 bg-white p-5 shadow-sm lg:col-span-5 lg:p-6">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-            Deal funnel
+            {t("analyticsWorkspace.dealFunnel")}
           </h3>
-          <p className="mt-1 text-xs text-zinc-400">Deal count per stage · drop from prior</p>
+          <p className="mt-1 text-xs text-zinc-400">{t("analyticsWorkspace.stageDropHint")}</p>
           <div className="mt-5 max-h-[min(420px,55vh)] overflow-y-auto pr-1">
             <FunnelStagesList funnel={funnel} />
           </div>
@@ -214,16 +220,16 @@ export default function AnalyticsWorkspace({
         <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-              Team performance
+              {t("analyticsWorkspace.sectionTeam")}
             </h3>
-            <p className="text-xs text-zinc-400">Assignee, else creator</p>
+            <p className="text-xs text-zinc-400">{t("analyticsWorkspace.assigneeHint")}</p>
           </div>
         </div>
         {team_performance.length === 0 ? (
           <EmptyBlock
             className="mt-5"
-            title="No team rollup yet"
-            body="When visible deals have owners, leaderboard metrics appear here."
+            title={t("analyticsWorkspace.noTeamTitle")}
+            body={t("analyticsWorkspace.noTeamBody")}
           />
         ) : (
           <ul className="mt-5 space-y-2">
@@ -237,34 +243,34 @@ export default function AnalyticsWorkspace({
       {/* Activity insights */}
       <section className="rounded-2xl border border-zinc-200/70 bg-white p-5 shadow-sm sm:p-6">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-          Activity insights
+          {t("analyticsWorkspace.activityInsights")}
         </h3>
         <p className="mt-1 text-xs text-zinc-400">
-          Pulled from the same activity stream — grouped for scanning.
+          {t("analyticsWorkspace.activityInsightsHint")}
         </p>
 
         <div className="mt-6 grid gap-5 lg:grid-cols-2 xl:grid-cols-4">
-          <InsightColumn title="Recent" items={recentSlice} empty="No activity in this window." />
+          <InsightColumn title={t("analyticsWorkspace.colRecent")} items={recentSlice} empty={t("analyticsWorkspace.emptyRecent")} />
           <InsightColumn
-            title="Stage changes"
+            title={t("analyticsWorkspace.colStageChanges")}
             items={stageMoves.slice(0, MINI)}
-            empty="No stage moves logged yet."
+            empty={t("analyticsWorkspace.emptyStageMoves")}
           />
           <InsightColumn
-            title="Won deals"
+            title={t("analyticsWorkspace.colWonDeals")}
             items={wonFeed.slice(0, MINI)}
-            empty="No won events in the feed yet."
+            empty={t("analyticsWorkspace.emptyWonEvents")}
           />
           <InsightColumn
-            title="Tasks completed"
+            title={t("analyticsWorkspace.colTasksCompleted")}
             items={tasksDone.slice(0, MINI)}
-            empty="No completed tasks in the feed yet."
+            empty={t("analyticsWorkspace.emptyTasksCompleted")}
           />
         </div>
       </section>
 
       {loading && data ? (
-        <p className="text-center text-xs font-medium text-zinc-400">Refreshing data…</p>
+        <p className="text-center text-xs font-medium text-zinc-400">{t("analyticsWorkspace.refreshing")}</p>
       ) : null}
     </div>
   );

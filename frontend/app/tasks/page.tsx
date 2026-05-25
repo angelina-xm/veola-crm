@@ -42,6 +42,8 @@ import {
   taskStatusLabel,
 } from "@/src/lib/taskSemantics";
 import type { Client, CrmTask, Deal, TaskBucketQuery, TaskPriority } from "@/src/types";
+import { useTranslation } from "@/src/context/LocaleContext";
+import { translate } from "@/src/i18n/translate";
 
 type TaskScope = "my" | "team";
 
@@ -56,9 +58,15 @@ function toDatetimeLocalValue(iso: string | null): string {
 }
 
 function formatDueLabel(iso: string | null): string {
-  if (!iso) return "No due date";
+  if (!iso) return translate("tasksPage.noDueDate");
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
+  if (Number.isNaN(d.getTime())) return translate("common.notAvailable");
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endToday = new Date(startToday);
+  endToday.setDate(endToday.getDate() + 1);
+  if (d < startToday) return translate("tasks.overdue");
+  if (d < endToday) return translate("tasks.dueToday");
   return d.toLocaleString(undefined, {
     month: "short",
     day: "numeric",
@@ -102,7 +110,9 @@ export default function TasksPage() {
   return (
     <Suspense
       fallback={
-        <div className="py-16 text-center text-sm text-zinc-500">Loading tasks…</div>
+        <div className="py-16 text-center text-sm text-zinc-500">
+          {translate("tasksPage.loading")}
+        </div>
       }
     >
       <TasksPageContent />
@@ -111,6 +121,7 @@ export default function TasksPage() {
 }
 
 function TasksPageContent() {
+  const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isReady, isAuthenticated } = useAuth();
@@ -206,11 +217,11 @@ function TasksPageContent() {
       }
       setByBucket(next);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load tasks");
+      setError(e instanceof Error ? e.message : t("tasksPage.failedLoad"));
     } finally {
       setLoading(false);
     }
-  }, [companyId, scope]);
+  }, [companyId, scope, t]);
 
   useEffect(() => {
     if (!isReady || !isAuthenticated || companyId === null) return;
@@ -257,7 +268,7 @@ function TasksPageContent() {
       await completeCrmTask(companyId, task.id);
       await loadBuckets();
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : "Could not complete task");
+      window.alert(e instanceof Error ? e.message : t("tasksPage.couldNotComplete"));
     } finally {
       setBusyId(null);
     }
@@ -274,7 +285,7 @@ function TasksPageContent() {
       await patchCrmTask(companyId, task.id, { due_date: iso });
       await loadBuckets();
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : "Could not reschedule");
+      window.alert(e instanceof Error ? e.message : t("tasksPage.couldNotReschedule"));
     } finally {
       setBusyId(null);
     }
@@ -293,7 +304,7 @@ function TasksPageContent() {
       });
       await loadBuckets();
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : "Could not save task");
+      window.alert(e instanceof Error ? e.message : t("tasksPage.couldNotSave"));
     } finally {
       setBusyId(null);
     }
@@ -304,17 +315,17 @@ function TasksPageContent() {
     const dealNum = newDealId ? Number.parseInt(newDealId, 10) : NaN;
     const clientNum = newClientId ? Number.parseInt(newClientId, 10) : NaN;
     if (!newContent.trim()) {
-      window.alert("Describe the follow-up.");
+      window.alert(t("tasksPage.describeFollowUp"));
       return;
     }
     if (!Number.isFinite(dealNum) && !Number.isFinite(clientNum)) {
-      window.alert("Choose a deal or a client.");
+      window.alert(t("tasksPage.chooseDealOrClient"));
       return;
     }
     setCreateLoading(true);
     try {
       if (!membership?.user_id) {
-        window.alert("Session not ready. Try again.");
+        window.alert(t("tasksPage.sessionNotReady"));
         return;
       }
       const assigned_to = resolveAssigneeUserId(
@@ -344,7 +355,7 @@ function TasksPageContent() {
       setCreateOpen(false);
       await loadBuckets();
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : "Could not create task");
+      window.alert(e instanceof Error ? e.message : t("tasksPage.couldNotCreate"));
     } finally {
       setCreateLoading(false);
     }
@@ -356,12 +367,10 @@ function TasksPageContent() {
           <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
-                Tasks
+                {t("tasksPage.title")}
               </h1>
               <p className="mt-1 max-w-xl text-sm text-zinc-500">
-                Follow-ups and operational work across visible deals. Use{" "}
-                <span className="font-medium text-zinc-700">My queue</span> for
-                items assigned to you (or unassigned tasks you created).
+                {t("tasksPage.subtitle")}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -375,7 +384,7 @@ function TasksPageContent() {
                       : "text-zinc-600 hover:bg-zinc-50"
                   }`}
                 >
-                  My queue
+                  {t("tasksPage.myQueue")}
                 </button>
                 <button
                   type="button"
@@ -386,7 +395,7 @@ function TasksPageContent() {
                       : "text-zinc-600 hover:bg-zinc-50"
                   }`}
                 >
-                  Team
+                  {t("tasksPage.team")}
                 </button>
               </div>
               {allowCreate ? (
@@ -395,13 +404,13 @@ function TasksPageContent() {
                   onClick={() => setCreateOpen((v) => !v)}
                   className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500"
                 >
-                  {createOpen ? "Close" : "New follow-up"}
+                  {createOpen ? t("common.close") : t("tasksPage.newFollowUp")}
                 </button>
               ) : null}
             </div>
           </header>
 
-          {membershipBlock(membershipLoading, error, createOpen, allowCreate, {
+          {membershipBlock(t, membershipLoading, error, createOpen, allowCreate, {
             clients,
             deals,
             newClientId,
@@ -426,16 +435,16 @@ function TasksPageContent() {
           {loading &&
           BUCKETS.every((b) => (byBucket[b] ?? []).length === 0) ? (
             <div className="mb-6 rounded-2xl border border-zinc-200 bg-white py-10 text-center text-sm text-zinc-500">
-              Loading tasks…
+              {t("tasksPage.loading")}
             </div>
           ) : (
           <div className="space-y-10">
             {(
               [
-                ["today", "Today", "Due today and still actionable."],
-                ["upcoming", "Upcoming", "Later this week or no due date yet."],
-                ["overdue", "Overdue", "Past due — needs attention."],
-                ["completed", "Completed", "Recently closed."],
+                ["today", t("tasksPage.bucketToday"), t("tasksPage.bucketTodayHint")],
+                ["upcoming", t("tasksPage.bucketUpcoming"), t("tasksPage.bucketUpcomingHint")],
+                ["overdue", t("tasksPage.bucketOverdue"), t("tasksPage.bucketOverdueHint")],
+                ["completed", t("tasksPage.bucketCompleted"), t("tasksPage.bucketCompletedHint")],
               ] as const
             ).map(([key, title, subtitle]) => (
               <section key={key}>
@@ -452,7 +461,7 @@ function TasksPageContent() {
                 </div>
                 {byBucket[key].length === 0 ? (
                   <div className="rounded-xl border border-dashed border-zinc-200 bg-white/60 px-4 py-8 text-center text-sm text-zinc-500">
-                    Nothing here.
+                    {t("tasksPage.emptyBucket")}
                   </div>
                 ) : (
                   <ul className="grid gap-3 sm:grid-cols-1">
@@ -483,6 +492,7 @@ function TasksPageContent() {
 }
 
 function membershipBlock(
+  t: (key: string, params?: Record<string, string | number>) => string,
   membershipLoading: boolean,
   error: string | null,
   createOpen: boolean,
@@ -512,7 +522,7 @@ function membershipBlock(
   if (membershipLoading) {
     return (
       <div className="mb-6 rounded-2xl border border-zinc-200 bg-white py-12 text-center text-sm text-zinc-500">
-        Loading…
+        {t("common.loading")}
       </div>
     );
   }
@@ -525,14 +535,11 @@ function membershipBlock(
       ) : null}
       {createOpen && allowCreate ? (
         <div className="mb-8 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <h3 className="text-sm font-semibold text-zinc-900">New follow-up</h3>
-          <p className="mt-1 text-xs text-zinc-500">
-            Link to a deal when you can. Due today by default — adjust who owns
-            the follow-up.
-          </p>
+          <h3 className="text-sm font-semibold text-zinc-900">{t("tasksPage.newFollowUp")}</h3>
+          <p className="mt-1 text-xs text-zinc-500">{t("tasksPage.formHint")}</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <label className="block text-xs font-medium text-zinc-600">
-              Deal
+              {t("tasksPage.deal")}
               <select
                 className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm"
                 value={form.newDealId}
@@ -542,7 +549,7 @@ function membershipBlock(
                 }}
                 disabled={form.createLoading}
               >
-                <option value="">—</option>
+                <option value="">{t("common.notAvailable")}</option>
                 {form.deals.map((d) => (
                   <option key={d.id} value={String(d.id)}>
                     {d.title}
@@ -551,7 +558,7 @@ function membershipBlock(
               </select>
             </label>
             <label className="block text-xs font-medium text-zinc-600">
-              Client (if no deal)
+              {t("tasksPage.clientIfNoDeal")}
               <select
                 className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm"
                 value={form.newClientId}
@@ -561,7 +568,7 @@ function membershipBlock(
                 }}
                 disabled={form.createLoading || Boolean(form.newDealId)}
               >
-                <option value="">—</option>
+                <option value="">{t("common.notAvailable")}</option>
                 {form.clients.map((c) => (
                   <option key={c.id} value={String(c.id)}>
                     {c.name}
@@ -570,18 +577,18 @@ function membershipBlock(
               </select>
             </label>
             <label className="col-span-full block text-xs font-medium text-zinc-600">
-              What to do
+              {t("tasksPage.whatToDo")}
               <textarea
                 className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
                 rows={3}
                 value={form.newContent}
                 onChange={(e) => form.setNewContent(e.target.value)}
-                placeholder="Call, send proposal, book meeting…"
+                placeholder={t("tasksPage.descriptionPlaceholder")}
                 disabled={form.createLoading}
               />
             </label>
             <label className="block text-xs font-medium text-zinc-600">
-              Due
+              {t("tasksPage.due")}
               <input
                 type="datetime-local"
                 className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm"
@@ -591,7 +598,7 @@ function membershipBlock(
               />
             </label>
             <label className="block text-xs font-medium text-zinc-600">
-              Priority
+              {t("tasksPage.priority")}
               <select
                 className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm"
                 value={form.newPriority}
@@ -600,10 +607,10 @@ function membershipBlock(
                 }
                 disabled={form.createLoading}
               >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
+                <option value="low">{t("tasks.priorityLow")}</option>
+                <option value="medium">{t("tasks.priorityMedium")}</option>
+                <option value="high">{t("tasks.priorityHigh")}</option>
+                <option value="urgent">{t("tasks.priorityUrgent")}</option>
               </select>
             </label>
             <div className="col-span-full">
@@ -624,7 +631,7 @@ function membershipBlock(
               disabled={form.createLoading}
               className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
             >
-              {form.createLoading ? "Saving…" : "Create task"}
+              {form.createLoading ? t("common.saving") : t("tasksPage.createTask")}
             </button>
           </div>
         </div>
@@ -642,6 +649,7 @@ function TaskRow(props: {
   onReschedule: (localDue: string) => void;
   onSaveEdit: (content: string, priority: TaskPriority) => void;
 }) {
+  const { t } = useTranslation();
   const { task, section, busy, onComplete, onOpenDeal, onReschedule, onSaveEdit } =
     props;
   const [expandSchedule, setExpandSchedule] = useState(false);
@@ -659,7 +667,7 @@ function TaskRow(props: {
   const targetLabel =
     task.deal_title && task.client_name
       ? `${task.deal_title} · ${task.client_name}`
-      : task.deal_title || task.client_name || "—";
+      : task.deal_title || task.client_name || t("common.notAvailable");
 
   return (
     <div className={cardShellClass(task, section)}>
@@ -684,10 +692,10 @@ function TaskRow(props: {
               {priorityLabel(task.priority)}
             </span>
             {task.state === "backlog" && !task.is_completed ? (
-              <span className="text-[10px] font-medium text-zinc-400">No due date</span>
+              <span className="text-[10px] font-medium text-zinc-400">{t("tasksPage.noDueDate")}</span>
             ) : null}
           </div>
-          <p className="text-sm font-medium text-zinc-900">{task.content || "—"}</p>
+          <p className="text-sm font-medium text-zinc-900">{task.content || t("common.notAvailable")}</p>
           <p className="truncate text-xs text-zinc-500">{targetLabel}</p>
           <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-zinc-500">
             <span>{formatDueLabel(task.due_date)}</span>
@@ -695,7 +703,7 @@ function TaskRow(props: {
             <span>
               {task.assigned_to_email
                 ? task.assigned_to_email
-                : "Unassigned"}
+                : t("tasksPage.unassigned")}
             </span>
           </div>
         </div>
@@ -707,7 +715,7 @@ function TaskRow(props: {
               onClick={onComplete}
               className="rounded-md bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
             >
-              Done
+              {t("tasksPage.done")}
             </button>
           ) : null}
           {!task.is_completed ? (
@@ -717,7 +725,7 @@ function TaskRow(props: {
               onClick={() => setExpandSchedule((v) => !v)}
               className="rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
             >
-              {expandSchedule ? "Close" : "Reschedule"}
+              {expandSchedule ? t("common.close") : t("tasksPage.reschedule")}
             </button>
           ) : null}
           <button
@@ -726,7 +734,7 @@ function TaskRow(props: {
             onClick={() => setExpandEdit((v) => !v)}
             className="rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
           >
-            {expandEdit ? "Close" : "Edit"}
+            {expandEdit ? t("common.close") : t("tasksPage.edit")}
           </button>
           {task.deal ? (
             <button
@@ -734,14 +742,14 @@ function TaskRow(props: {
               onClick={onOpenDeal}
               className="rounded-md border border-indigo-100 bg-indigo-50 px-2.5 py-1.5 text-xs font-medium text-indigo-800 hover:bg-indigo-100"
             >
-              Deal
+              {t("tasksPage.deal")}
             </button>
           ) : task.client ? (
             <Link
               href={`/clients/${task.client}`}
               className="rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
             >
-              Client
+              {t("tasksPage.client")}
             </Link>
           ) : null}
         </div>
@@ -749,7 +757,7 @@ function TaskRow(props: {
       {expandSchedule && !task.is_completed ? (
         <div className="mt-4 flex flex-wrap items-end gap-2 border-t border-zinc-100 pt-3">
           <label className="text-xs font-medium text-zinc-600">
-            New due
+            {t("tasksPage.newDue")}
             <input
               type="datetime-local"
               className="mt-1 block rounded-lg border border-zinc-200 px-2 py-1.5 text-sm"
@@ -766,7 +774,7 @@ function TaskRow(props: {
             }}
             className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
           >
-            Save
+            {t("common.save")}
           </button>
           <button
             type="button"
@@ -777,7 +785,7 @@ function TaskRow(props: {
             }}
             className="text-xs text-zinc-500 underline hover:text-zinc-700"
           >
-            Clear due
+            {t("tasksPage.clearDue")}
           </button>
         </div>
       ) : null}
@@ -797,10 +805,10 @@ function TaskRow(props: {
                 setPriorityDraft(e.target.value as TaskPriority)
               }
             >
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent</option>
+              <option value="low">{t("tasks.priorityLow")}</option>
+              <option value="medium">{t("tasks.priorityMedium")}</option>
+              <option value="high">{t("tasks.priorityHigh")}</option>
+              <option value="urgent">{t("tasks.priorityUrgent")}</option>
             </select>
             <button
               type="button"
@@ -811,7 +819,7 @@ function TaskRow(props: {
               }}
               className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
             >
-              Save changes
+              {t("tasksPage.saveChanges")}
             </button>
           </div>
         </div>

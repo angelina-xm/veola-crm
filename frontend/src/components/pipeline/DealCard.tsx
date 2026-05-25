@@ -11,6 +11,8 @@ import { dueDateVsToday } from "@/src/lib/dealTaskSignal";
 import type { TaskPreset } from "@/src/lib/quickTask";
 import { cn } from "@/src/lib/cn";
 import { DAY_MS, scaleMs } from "@/src/lib/timeConfig";
+import { suggestedActionLabel } from "@/src/lib/i18nHelpers";
+import { translate } from "@/src/i18n/translate";
 import { Activity, Client, Deal } from "@/src/types";
 import DealQuickTaskMenu from "./DealQuickTaskMenu";
 
@@ -256,8 +258,9 @@ export default function DealCard({
         daysIdle={idleDays}
         nextStep={
           nextTask?.content?.trim() ||
-          suggestedActions[0] ||
-          "Review deal"
+          suggestedActions[0]
+            ? suggestedActionLabel(suggestedActions[0])
+            : translate("pipeline.reviewDeal")
         }
         nextTaskDue={nextTask?.due_date ?? undefined}
         shellOpts={{

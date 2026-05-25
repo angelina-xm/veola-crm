@@ -6,33 +6,34 @@ import PageHeader from "@/src/components/ui/PageHeader";
 import { useMembership } from "@/src/context/MembershipContext";
 import { useSettings } from "@/src/context/SettingsContext";
 import { canManageAutomations } from "@/src/lib/roles";
+import { useTranslation } from "@/src/context/LocaleContext";
 
 type RuleRow = {
   id: "auto_follow_up" | "auto_discount" | "auto_reorder";
-  title: string;
-  description: string;
+  titleKey: string;
+  descriptionKey: string;
 };
 
 const RULES: RuleRow[] = [
   {
     id: "auto_follow_up",
-    title: "Follow up when deal is inactive (5+ days)",
-    description:
-      "When on, creates one follow-up task at tier 2. When off, calm signals only.",
+    titleKey: "automation.ruleInactive",
+    descriptionKey: "automation.ruleInactiveHint",
   },
   {
     id: "auto_discount",
-    title: "Offer discount when pricing objections",
-    description: "Create task: Offer discount",
+    titleKey: "automation.ruleDiscount",
+    descriptionKey: "automation.ruleDiscountHint",
   },
   {
     id: "auto_reorder",
-    title: "Suggest reorder for returning clients",
-    description: "Create task: Suggest reorder",
+    titleKey: "automation.ruleReorder",
+    descriptionKey: "automation.ruleReorderHint",
   },
 ];
 
 export default function AutomationSettingsPage() {
+  const { t } = useTranslation();
   const {
     settings,
     loading,
@@ -70,7 +71,7 @@ export default function AutomationSettingsPage() {
         [id]: !previous,
       });
     } catch {
-      setError("Failed to save setting. Please try again.");
+      setError(t("settings.failedSave"));
     } finally {
       setSavingRuleId(null);
     }
@@ -87,7 +88,7 @@ export default function AutomationSettingsPage() {
         auto_reorder: true,
       });
     } catch {
-      setError("Failed to reset defaults.");
+      setError(t("automation.resetFailed"));
     } finally {
       setSavingRuleId(null);
     }
@@ -97,9 +98,9 @@ export default function AutomationSettingsPage() {
     <ProtectedRoute>
       <>
         <PageHeader
-          eyebrow="Workspace"
-          title="Automation"
-          description="Control when the system creates follow-up tasks."
+          eyebrow={t("nav.workspace")}
+          title={t("settings.automationTitle")}
+          description={t("automation.pageDescription")}
           actions={
             <button
               type="button"
@@ -113,13 +114,13 @@ export default function AutomationSettingsPage() {
               }
               className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50"
             >
-              Reset defaults
+              {t("automation.resetDefaults")}
             </button>
           }
         />
         {!roleLoading && !canManageAutomations(membership) ? (
           <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            You don&apos;t have permission to manage automation settings.
+            {t("automation.noPermission")}
           </div>
         ) : null}
         {(error ?? loadError) ? (
@@ -129,7 +130,10 @@ export default function AutomationSettingsPage() {
         ) : null}
 
         <div className="mb-4 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
-          Enabled rules: {enabledCount}/{RULES.length}
+          {t("automation.enabledRules", {
+            enabled: enabledCount,
+            total: RULES.length,
+          })}
         </div>
 
         <div className="vx-card overflow-hidden">
@@ -140,8 +144,8 @@ export default function AutomationSettingsPage() {
                 className="flex items-center justify-between gap-3 px-4 py-4"
               >
                 <div>
-                  <p className="text-sm font-medium text-gray-900">{rule.title}</p>
-                  <p className="mt-1 text-xs text-gray-500">{rule.description}</p>
+                  <p className="text-sm font-medium text-gray-900">{t(rule.titleKey)}</p>
+                  <p className="mt-1 text-xs text-gray-500">{t(rule.descriptionKey)}</p>
                 </div>
                 <button
                   type="button"

@@ -19,8 +19,10 @@ import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
 import { formatMoney } from "@/src/lib/formatRelative";
 import { ROUTES } from "@/src/lib/product";
 import type { CatalogProduct } from "@/src/types";
+import { useTranslation } from "@/src/context/LocaleContext";
 
 function ProductCatalogCard({ product }: { product: CatalogProduct }) {
+  const { t } = useTranslation();
   const isService = product.product_type === "service";
   return (
     <Link
@@ -36,10 +38,10 @@ function ProductCatalogCard({ product }: { product: CatalogProduct }) {
               : "bg-zinc-100 text-zinc-600"
           )}
         >
-          {isService ? "Service" : "Product"}
+          {isService ? t("catalog.service") : t("catalog.physical")}
         </span>
         {!product.is_active ? (
-          <span className="text-[10px] font-medium text-zinc-400">Archived</span>
+          <span className="text-[10px] font-medium text-zinc-400">{t("catalog.archived")}</span>
         ) : null}
       </div>
       <h3 className="mt-3 text-base font-semibold text-zinc-900 group-hover:text-[var(--vx-accent)]">
@@ -53,7 +55,7 @@ function ProductCatalogCard({ product }: { product: CatalogProduct }) {
           {product.description}
         </p>
       ) : (
-        <p className="mt-2 text-sm text-zinc-400">No description yet</p>
+        <p className="mt-2 text-sm text-zinc-400">{t("catalog.noDescription")}</p>
       )}
       <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-zinc-100 pt-3">
         {product.default_price ? (
@@ -61,10 +63,10 @@ function ProductCatalogCard({ product }: { product: CatalogProduct }) {
             Ref. {formatMoney(Number(product.default_price))}
           </span>
         ) : (
-          <span className="text-xs text-zinc-400">Flexible pricing</span>
+          <span className="text-xs text-zinc-400">{t("catalog.flexiblePricing")}</span>
         )}
         {product.sku ? (
-          <span className="text-[10px] text-zinc-400">SKU {product.sku}</span>
+          <span className="text-[10px] text-zinc-400">{t("catalog.skuLabel", { sku: product.sku })}</span>
         ) : null}
       </div>
       {product.tags && product.tags.length > 0 ? (
@@ -84,6 +86,7 @@ function ProductCatalogCard({ product }: { product: CatalogProduct }) {
 }
 
 export default function ProductsCatalogPage() {
+  const { t } = useTranslation();
   const { isReady, isAuthenticated } = useAuth();
   const [companyId, setCompanyId] = useState<number | null>(null);
   const [products, setProducts] = useState<CatalogProduct[]>([]);
@@ -113,7 +116,7 @@ export default function ProductsCatalogPage() {
       const list = await getProducts(tenantId, { includeInactive: showArchived });
       setProducts(list);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load catalog");
+      setError(err instanceof Error ? err.message : t("catalog.failedLoad"));
       setProducts([]);
     } finally {
       setLoading(false);
@@ -174,7 +177,7 @@ export default function ProductsCatalogPage() {
       setEditing(null);
       await load();
     } catch (err) {
-      setModalError(err instanceof Error ? err.message : "Save failed");
+      setModalError(err instanceof Error ? err.message : t("catalog.saveFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -184,9 +187,9 @@ export default function ProductsCatalogPage() {
     <ProtectedRoute>
       <>
         <PageHeader
-          eyebrow="Commercial context"
-          title="Catalog"
-          description="What your business sells — relationship intelligence, not inventory."
+          eyebrow={t("catalog.pageEyebrow")}
+          title={t("catalog.pageTitle")}
+          description={t("catalog.pageDescription")}
           actions={
             <button
               type="button"
@@ -197,7 +200,7 @@ export default function ProductsCatalogPage() {
               }}
               className="rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-zinc-800"
             >
-              Add product
+              {t("catalog.addProduct")}
             </button>
           }
         />
@@ -205,25 +208,29 @@ export default function ProductsCatalogPage() {
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <input
             type="search"
-            placeholder="Search catalog…"
+            placeholder={t("catalog.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full max-w-sm rounded-xl border border-zinc-200/80 bg-white px-3 py-2 text-sm shadow-sm"
           />
           <div className="flex flex-wrap items-center gap-2">
-            {(["all", "physical", "service"] as const).map((t) => (
+            {(["all", "physical", "service"] as const).map((filterKey) => (
               <button
-                key={t}
+                key={filterKey}
                 type="button"
-                onClick={() => setTypeFilter(t)}
+                onClick={() => setTypeFilter(filterKey)}
                 className={cn(
                   "rounded-lg px-2.5 py-1 text-xs font-medium capitalize",
-                  typeFilter === t
+                  typeFilter === filterKey
                     ? "bg-zinc-900 text-white"
                     : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
                 )}
               >
-                {t === "all" ? "All" : t}
+                {filterKey === "all"
+                  ? t("catalog.filterAll")
+                  : filterKey === "physical"
+                    ? t("catalog.filterPhysical")
+                    : t("catalog.filterService")}
               </button>
             ))}
             <label className="ml-2 flex items-center gap-1.5 text-xs text-zinc-600">
@@ -232,7 +239,7 @@ export default function ProductsCatalogPage() {
                 checked={showArchived}
                 onChange={(e) => setShowArchived(e.target.checked)}
               />
-              Show archived
+              {t("catalog.showArchived")}
             </label>
           </div>
         </div>
@@ -251,10 +258,8 @@ export default function ProductsCatalogPage() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50/50 px-6 py-16 text-center">
-            <p className="text-sm font-medium text-zinc-800">No products yet</p>
-            <p className="mt-1 text-sm text-zinc-500">
-              Build your catalog so deals and client profiles understand what you sell.
-            </p>
+            <p className="text-sm font-medium text-zinc-800">{t("catalog.noProducts")}</p>
+            <p className="mt-1 text-sm text-zinc-500">{t("catalog.emptyDetail")}</p>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

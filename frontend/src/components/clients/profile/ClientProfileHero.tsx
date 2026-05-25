@@ -7,6 +7,7 @@ import {
 } from "@/src/lib/clientRelationship";
 import { initialsFromLabel } from "@/src/lib/nav";
 import type { Client, ClientContact } from "@/src/types";
+import { useTranslation } from "@/src/context/LocaleContext";
 
 export default function ClientProfileHero({
   client,
@@ -17,6 +18,7 @@ export default function ClientProfileHero({
   primaryContact: ClientContact | null;
   children?: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   const isBusiness = (client.client_type ?? "business") === "business";
   const initials = initialsFromLabel(client.name);
 
@@ -35,7 +37,7 @@ export default function ClientProfileHero({
                   isBusiness ? "bg-zinc-100 text-zinc-700" : "bg-violet-50 text-violet-700"
                 )}
               >
-                {isBusiness ? "Business" : "Individual"}
+                {isBusiness ? t("clients.business") : t("clients.individual")}
               </span>
               <span
                 className={cn(
@@ -70,13 +72,11 @@ export default function ClientProfileHero({
             </div>
             {primaryContact ? (
               <p className="mt-2 text-xs text-zinc-500">
-                Primary:{" "}
-                <span className="font-medium text-zinc-700">
-                  {primaryContact.full_name}
-                  {primaryContact.role_title
-                    ? ` · ${primaryContact.role_title}`
-                    : ""}
-                </span>
+                {t("clients.primaryContact", {
+                  name: `${primaryContact.full_name}${
+                    primaryContact.role_title ? ` · ${primaryContact.role_title}` : ""
+                  }`,
+                })}
               </p>
             ) : null}
           </div>

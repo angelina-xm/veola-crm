@@ -28,7 +28,7 @@ function LoginPageInner() {
   if (!isReady) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-zinc-50 p-6">
-        <p className="text-sm text-gray-500">Загрузка…</p>
+        <p className="text-sm text-gray-500">{t("common.loading")}</p>
       </main>
     );
   }
@@ -45,7 +45,7 @@ function LoginPageInner() {
       markAuthenticated();
       router.replace("/");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : t("auth.loginFailed"));
     } finally {
       setLoading(false);
     }
@@ -115,15 +115,18 @@ function LoginPageInner() {
   );
 }
 
+function LoginSuspenseFallback() {
+  const { t } = useTranslation();
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-zinc-50 p-6">
+      <p className="text-sm text-gray-500">{t("common.loading")}</p>
+    </main>
+  );
+}
+
 export default function LoginPage() {
   return (
-    <Suspense
-      fallback={
-        <main className="flex min-h-screen items-center justify-center bg-zinc-50 p-6">
-          <p className="text-sm text-gray-500">Загрузка…</p>
-        </main>
-      }
-    >
+    <Suspense fallback={<LoginSuspenseFallback />}>
       <LoginPageInner />
     </Suspense>
   );

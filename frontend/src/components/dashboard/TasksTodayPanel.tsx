@@ -12,6 +12,7 @@ import {
   taskStatusLabel,
 } from "@/src/lib/taskSemantics";
 import type { CrmTask } from "@/src/types";
+import { useTranslation } from "@/src/context/LocaleContext";
 
 export default function TasksTodayPanel({
   tasks,
@@ -22,21 +23,27 @@ export default function TasksTodayPanel({
   loading?: boolean;
   completedTodayCount?: number;
 }) {
+  const { t } = useTranslation();
+
   return (
     <section className="vx-card">
       <div className="vx-card-head">
         <div>
-          <h2 className="text-[13px] font-semibold text-[var(--vx-text)]">My tasks</h2>
+          <h2 className="text-[13px] font-semibold text-[var(--vx-text)]">
+            {t("dashboardStats.myTasksTitle")}
+          </h2>
           <p className="mt-0.5 text-[11px] text-[var(--vx-text-muted)]">
-            Overdue and due today
-            {completedTodayCount > 0 ? ` · ${completedTodayCount} done` : ""}
+            {t("dashboardStats.tasksPanelHint")}
+            {completedTodayCount > 0
+              ? t("dashboardStats.doneTodaySuffix", { count: completedTodayCount })
+              : ""}
           </p>
         </div>
         <Link
           href={ROUTES.tasks}
           className="text-xs font-medium text-[var(--vx-accent)] hover:text-[var(--vx-accent-hover)]"
         >
-          All tasks
+          {t("dashboardStats.allTasks")}
         </Link>
       </div>
 
@@ -48,9 +55,11 @@ export default function TasksTodayPanel({
         </div>
       ) : tasks.length === 0 ? (
         <div className="px-4 py-8 text-center">
-          <p className="text-sm font-medium text-[var(--vx-text)]">Nothing due today</p>
+          <p className="text-sm font-medium text-[var(--vx-text)]">
+            {t("dashboardStats.nothingDueToday")}
+          </p>
           <p className="mt-1 text-xs text-[var(--vx-text-muted)]">
-            You&apos;re clear on overdue and today&apos;s follow-ups.
+            {t("dashboardStats.tasksClear")}
           </p>
         </div>
       ) : (

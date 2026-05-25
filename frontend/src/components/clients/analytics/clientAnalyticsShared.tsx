@@ -5,6 +5,7 @@ import { formatUsd } from "@/src/components/analytics/analyticsPrimitives";
 import { cn } from "@/src/lib/cn";
 import { ROUTES } from "@/src/lib/product";
 import type { ClientCommercialAnalytics } from "@/src/types";
+import { useTranslation } from "@/src/context/LocaleContext";
 
 export function KpiCard({
   label,
@@ -49,12 +50,13 @@ export function LeaderboardCard({
   rows: ClientCommercialAnalytics["leaderboards"]["most_profitable"];
   valueKey: "total_revenue" | "activity_count" | "revenue_growth_pct";
 }) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[var(--vx-shadow-card)]">
       <h3 className="text-sm font-semibold text-zinc-900">{title}</h3>
       {subtitle ? <p className="mt-0.5 text-xs text-zinc-500">{subtitle}</p> : null}
       {rows.length === 0 ? (
-        <p className="mt-3 text-sm text-zinc-500">No data yet</p>
+        <p className="mt-3 text-sm text-zinc-500">{t("clients.noDataYet")}</p>
       ) : (
         <ul className="mt-3 space-y-1">
           {rows.map((row, i) => (
@@ -97,18 +99,19 @@ export function ProductLensBar({
   onProductFilter: (id: string) => void;
   onClearFilters: () => void;
 }) {
+  const { t } = useTranslation();
   const filterActive = Boolean(productFilter);
   return (
     <div className="flex flex-wrap items-end justify-between gap-4">
       <div className="flex flex-wrap items-center gap-2">
         <label className="text-xs font-medium text-zinc-600">
-          Product lens
+          {t("clients.productLens")}
           <select
             value={productFilter}
             onChange={(e) => onProductFilter(e.target.value)}
-            className="ml-2 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-sm shadow-sm"
+            className="ml-2 max-w-[min(100%,14rem)] rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-sm shadow-sm"
           >
-            <option value="">All products</option>
+            <option value="">{t("clients.allProducts")}</option>
             {data.catalog_filter_options.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
@@ -123,12 +126,14 @@ export function ProductLensBar({
             onClick={onClearFilters}
             className="text-xs font-medium text-zinc-500 hover:text-zinc-800"
           >
-            Clear filter
+            {t("common.clearFilter")}
           </button>
         ) : null}
       </div>
       <p className="text-xs text-zinc-400">
-        Updated {new Date(data.generated_at).toLocaleString()}
+        {t("clients.catalogUpdated", {
+          time: new Date(data.generated_at).toLocaleString(),
+        })}
       </p>
     </div>
   );

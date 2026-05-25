@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { formatRelative } from "@/src/lib/formatRelative";
 import type { ClientRelationshipMemory } from "@/src/types";
+import { useTranslation } from "@/src/context/LocaleContext";
+import { interactionMoodLabel } from "@/src/lib/i18nHelpers";
 
 const MOOD_CLASS: Record<string, string> = {
   Positive: "bg-emerald-50 text-emerald-800",
@@ -61,6 +63,7 @@ export default function ClientRelationshipMemoryCard({
   /** When true, hint points at open interaction form */
   interactionFormOpen?: boolean;
 }) {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(memory);
   const [saving, setSaving] = useState(false);
@@ -91,13 +94,15 @@ export default function ClientRelationshipMemoryCard({
   if (editing && onSave) {
     return (
       <section className="vx-card p-5">
-        <h2 className="text-sm font-semibold text-[var(--vx-text)]">Relationship memory</h2>
+        <h2 className="text-sm font-semibold text-[var(--vx-text)]">
+          {t("clients.relationshipMemory")}
+        </h2>
         <p className="mt-0.5 text-xs text-[var(--vx-text-muted)]">
-          Structured fields — synced when you log interactions
+          {t("clients.memoryEditHint")}
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="block text-xs font-medium text-zinc-600 sm:col-span-2">
-            Discussed topics
+            {t("clients.discussedTopics")}
             <input
               value={draft.last_conversation_topic}
               onChange={(e) =>
@@ -107,7 +112,7 @@ export default function ClientRelationshipMemoryCard({
             />
           </label>
           <label className="block text-xs font-medium text-zinc-600 sm:col-span-2">
-            Concerns / objections
+            {t("clients.concernsLabel")}
             <input
               value={draft.relationship_concerns}
               onChange={(e) =>
@@ -117,7 +122,7 @@ export default function ClientRelationshipMemoryCard({
             />
           </label>
           <label className="block text-xs font-medium text-zinc-600 sm:col-span-2">
-            How it ended
+            {t("clients.howItEnded")}
             <input
               value={draft.last_conversation_outcome}
               onChange={(e) =>
@@ -127,7 +132,7 @@ export default function ClientRelationshipMemoryCard({
             />
           </label>
           <label className="block text-xs font-medium text-zinc-600">
-            Next step
+            {t("clients.nextStep")}
             <input
               value={draft.next_step}
               onChange={(e) => setDraft({ ...draft, next_step: e.target.value })}
@@ -135,7 +140,7 @@ export default function ClientRelationshipMemoryCard({
             />
           </label>
           <label className="block text-xs font-medium text-zinc-600">
-            Follow-up date
+            {t("clients.followUpDate")}
             <input
               type="date"
               value={draft.follow_up_on?.slice(0, 10) ?? ""}
@@ -149,13 +154,13 @@ export default function ClientRelationshipMemoryCard({
             />
           </label>
           <label className="block text-xs font-medium text-zinc-600 sm:col-span-2">
-            Relationship context
+            {t("clients.relationshipContext")}
             <input
               value={draft.relationship_context}
               onChange={(e) =>
                 setDraft({ ...draft, relationship_context: e.target.value })
               }
-              placeholder="Priorities, sensitivities, buying patterns…"
+              placeholder={t("clients.memoryPlaceholder")}
               className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
             />
           </label>
@@ -167,7 +172,7 @@ export default function ClientRelationshipMemoryCard({
             onClick={() => void save()}
             className="rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white"
           >
-            Save
+            {t("common.save")}
           </button>
           <button
             type="button"
@@ -177,7 +182,7 @@ export default function ClientRelationshipMemoryCard({
             }}
             className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       </section>
@@ -188,11 +193,11 @@ export default function ClientRelationshipMemoryCard({
     <section className="vx-card p-5">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <h2 className="text-sm font-semibold text-zinc-900">Relationship memory</h2>
+          <h2 className="text-sm font-semibold text-zinc-900">{t("clients.relationshipMemory")}</h2>
           <p className="mt-0.5 text-xs text-zinc-500">
             {memory.last_conversation_at
-              ? `Last interaction ${formatRelative(memory.last_conversation_at)}`
-              : "Populated when you log an interaction"}
+              ? `${t("clients.lastActivity")} ${formatRelative(memory.last_conversation_at)}`
+              : t("clients.memoryEmpty")}
           </p>
         </div>
         {onSave ? (
@@ -201,16 +206,14 @@ export default function ClientRelationshipMemoryCard({
             onClick={() => setEditing(true)}
             className="text-[11px] font-medium text-zinc-500 hover:text-zinc-800"
           >
-            Refine
+            {t("common.edit")}
           </button>
         ) : null}
       </div>
 
       {!hasContent ? (
         <p className="mt-4 text-sm leading-relaxed text-zinc-500">
-          {interactionFormOpen
-            ? "Complete the interaction form — memory and timeline update together."
-            : "Use Add interaction above — one flow updates timeline and this memory."}
+          {interactionFormOpen ? t("clients.memoryFormHint") : t("clients.memoryCtaHint")}
         </p>
       ) : (
         <div className="mt-4 space-y-3 text-sm">
@@ -220,23 +223,23 @@ export default function ClientRelationshipMemoryCard({
                 MOOD_CLASS[memory.last_conversation_mood] ?? MOOD_CLASS.Neutral
               }`}
             >
-              {memory.last_conversation_mood}
+              {interactionMoodLabel(memory.last_conversation_mood)}
             </span>
           ) : null}
-          <MemoryField label="Discussed" value={memory.last_conversation_topic} />
-          <MemoryField label="Concerns" value={memory.relationship_concerns} />
-          <MemoryField label="Outcome" value={memory.last_conversation_outcome} />
-          <MemoryField label="Next step" value={memory.next_step} accent />
+          <MemoryField label={t("clients.discussed")} value={memory.last_conversation_topic} />
+          <MemoryField label={t("clients.concerns")} value={memory.relationship_concerns} />
+          <MemoryField label={t("clients.outcome")} value={memory.last_conversation_outcome} />
+          <MemoryField label={t("clients.nextStep")} value={memory.next_step} accent />
           {memory.follow_up_on ? (
             <p className="text-xs text-zinc-500">
-              Follow-up:{" "}
+              {t("clients.followUpOn")}:{" "}
               <span className="font-medium text-zinc-700">
                 {new Date(memory.follow_up_on).toLocaleDateString()}
               </span>
             </p>
           ) : null}
           <MemoryField
-            label="Relationship context"
+            label={t("clients.relationshipContext")}
             value={memory.relationship_context}
           />
         </div>

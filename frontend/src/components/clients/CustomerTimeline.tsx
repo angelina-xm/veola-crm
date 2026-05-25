@@ -1,16 +1,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { translate } from "@/src/i18n/translate";
 import { cn } from "@/src/lib/cn";
 import { formatRelative } from "@/src/lib/formatRelative";
 import type { ClientTimeline, TimelineEvent, TimelineFilter } from "@/src/types";
+import { useTranslation } from "@/src/context/LocaleContext";
 
-const FILTERS: { id: TimelineFilter; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "deals", label: "Deals" },
-  { id: "calls", label: "Calls" },
-  { id: "notes", label: "Notes" },
-];
+const FILTER_IDS: TimelineFilter[] = ["all", "deals", "calls", "notes"];
+
+const FILTER_KEYS: Partial<Record<TimelineFilter, string>> = {
+  all: "clients.filterAll",
+  deals: "clients.filterDeals",
+  calls: "clients.filterCalls",
+  notes: "clients.filterNotes",
+};
 
 function iconForEvent(ev: TimelineEvent): string {
   if (ev.event_type === "deal_won") return "✦";
@@ -34,7 +38,7 @@ function cardStyles(importance: TimelineEvent["importance"]): string {
 
 function monthGroupKey(iso: string): string {
   const d = new Date(iso);
-  if (!Number.isFinite(d.getTime())) return "Unknown";
+  if (!Number.isFinite(d.getTime())) return translate("clients.timelineUnknown");
   return d.toLocaleString(undefined, { month: "long", year: "numeric" });
 }
 
@@ -55,6 +59,15 @@ export default function CustomerTimeline({
   activeFilter = "all",
   noteForm,
 }: Props) {
+  const { t } = useTranslation();
+  const filters = useMemo(
+    () =>
+      FILTER_IDS.map((id) => ({
+        id,
+        label: t(FILTER_KEYS[id] ?? "clients.filterAll"),
+      })),
+    [t]
+  );
   const [localFilter, setLocalFilter] = useState<TimelineFilter>(activeFilter);
   const filter = onFilterChange ? activeFilter : localFilter;
 
@@ -79,12 +92,10 @@ export default function CustomerTimeline({
   return (
     <section className="rounded-2xl border border-zinc-200/80 bg-white shadow-[var(--vx-shadow-card)]">
       <div className="border-b border-zinc-100 px-5 py-4">
-        <h2 className="text-sm font-semibold text-zinc-900">Relationship timeline</h2>
-        <p className="mt-0.5 text-xs text-zinc-500">
-          The story of this account — deals, calls, notes, and follow-ups
-        </p>
+        <h2 className="text-sm font-semibold text-zinc-900">{t("clients.timelineTitle")}</h2>
+        <p className="mt-0.5 text-xs text-zinc-500">{t("clients.timelineHint")}</p>
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {FILTERS.map((f) => (
+          {filters.map((f) => (
             <button
               key={f.id}
               type="button"
@@ -112,7 +123,7 @@ export default function CustomerTimeline({
         <p className="px-5 py-8 text-sm text-amber-800">{error}</p>
       ) : events.length === 0 ? (
         <p className="px-5 py-10 text-center text-sm text-zinc-500">
-          No events in this view yet. Log a call or move a deal to build history.
+          {t("clients.timelineEmptyFiltered")}
         </p>
       ) : (
         <div className="max-h-[32rem] space-y-6 overflow-y-auto px-5 py-5">

@@ -1,8 +1,8 @@
 "use client";
 
-import { formatMoney } from "@/src/lib/formatRelative";
-import { formatRelative } from "@/src/lib/formatRelative";
+import { formatMoney, formatRelative } from "@/src/lib/formatRelative";
 import type { ClientProfileMetrics } from "@/src/types";
+import { useTranslation } from "@/src/context/LocaleContext";
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
@@ -20,25 +20,23 @@ export default function ClientMetricsStrip({
 }: {
   metrics: ClientProfileMetrics;
 }) {
+  const { t } = useTranslation();
+  const na = t("common.notAvailable");
   const since = metrics.customer_since
     ? new Date(metrics.customer_since).toLocaleDateString(undefined, {
         month: "short",
         year: "numeric",
       })
-    : "—";
+    : na;
 
   return (
     <div className="flex flex-wrap gap-6">
-      <Stat label="Customer since" value={since} />
-      <Stat label="Revenue" value={formatMoney(metrics.total_revenue)} />
-      <Stat label="Active deals" value={String(metrics.active_deals)} />
+      <Stat label={t("clients.customerSince")} value={since} />
+      <Stat label={t("clients.revenueShort")} value={formatMoney(metrics.total_revenue)} />
+      <Stat label={t("clients.activeDeals")} value={String(metrics.active_deals)} />
       <Stat
-        label="Last activity"
-        value={
-          metrics.last_activity_at
-            ? formatRelative(metrics.last_activity_at)
-            : "—"
-        }
+        label={t("clients.lastActivity")}
+        value={metrics.last_activity_at ? formatRelative(metrics.last_activity_at) : na}
       />
     </div>
   );

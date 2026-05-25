@@ -1,14 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "@/src/context/LocaleContext";
 import type { TaskPreset } from "@/src/lib/quickTask";
-
-const ITEMS: { preset: TaskPreset; label: string }[] = [
-  { preset: "call_client", label: "Call client" },
-  { preset: "send_proposal", label: "Send proposal" },
-  { preset: "schedule_meeting", label: "Schedule meeting" },
-  { preset: "custom", label: "Custom task" },
-];
 
 type Props = {
   disabled?: boolean;
@@ -21,8 +15,20 @@ export default function DealQuickTaskMenu({
   busy = false,
   onSelect,
 }: Props) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+
+  const items = useMemo(
+    () =>
+      [
+        { preset: "call_client" as const, label: t("pipeline.quickCall") },
+        { preset: "send_proposal" as const, label: t("pipeline.quickProposal") },
+        { preset: "schedule_meeting" as const, label: t("pipeline.quickMeeting") },
+        { preset: "custom" as const, label: t("pipeline.quickCustom") },
+      ],
+    [t]
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -47,7 +53,7 @@ export default function DealQuickTaskMenu({
       setOpen(false);
       if (preset === "custom") {
         if (typeof window === "undefined") return;
-        const text = window.prompt("Task description", "");
+        const text = window.prompt(t("pipeline.quickTaskPrompt"), "");
         if (text === null) return;
         const trimmed = text.trim();
         if (!trimmed) return;
@@ -56,7 +62,7 @@ export default function DealQuickTaskMenu({
       }
       onSelect(preset);
     },
-    [busy, disabled, onSelect]
+    [busy, disabled, onSelect, t]
   );
 
   return (
@@ -73,14 +79,14 @@ export default function DealQuickTaskMenu({
           setOpen((v) => !v);
         }}
       >
-        {busy ? "…" : "Task"}
+        {busy ? "…" : t("pipeline.quickTask")}
       </button>
       {open ? (
         <ul
           role="listbox"
           className="absolute right-0 top-full z-20 mt-1.5 min-w-[11rem] overflow-hidden rounded-xl border border-[var(--vx-border)] bg-[var(--vx-surface-raised)] py-1 shadow-lg"
         >
-          {ITEMS.map(({ preset, label }) => (
+          {items.map(({ preset, label }) => (
             <li key={preset}>
               <button
                 type="button"

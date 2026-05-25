@@ -1,3 +1,4 @@
+import { translate } from "@/src/i18n/translate";
 import type { Deal } from "@/src/types";
 import type { DealHealth } from "@/src/components/pipeline/DealCard";
 import { cn } from "@/src/lib/cn";
@@ -60,27 +61,27 @@ export function dealStatusBadges(input: {
     out.push({ label: input.relationshipLabel, tone: "neutral" });
   }
   if (input.isOverdue) {
-    out.push({ label: "Follow-up overdue", tone: "warn" });
+    out.push({ label: translate("pipeline.badgeFollowUpOverdue"), tone: "warn" });
   } else if (input.visual === "hot") {
-    out.push({ label: "Needs action", tone: "warn" });
+    out.push({ label: translate("pipeline.badgeNeedsAction"), tone: "warn" });
   } else if (input.visual === "at_risk") {
     out.push({
       label:
         input.daysIdle != null && input.daysIdle >= 14
-          ? `No reply in ${input.daysIdle}d`
-          : "At risk",
+          ? translate("pipeline.badgeNoReply", { count: input.daysIdle })
+          : translate("pipeline.badgeAtRisk"),
       tone: "risk",
     });
   } else if (input.visual === "stale") {
     out.push({
       label:
         input.daysIdle != null
-          ? `Stalled for ${input.daysIdle}d`
-          : "Needs attention",
+          ? translate("pipeline.badgeStalled", { count: input.daysIdle })
+          : translate("pipeline.badgeNeedsAttention"),
       tone: "warn",
     });
   } else if (input.visual === "closing") {
-    out.push({ label: "Closing soon", tone: "closing" });
+    out.push({ label: translate("pipeline.badgeClosingSoon"), tone: "closing" });
   }
   return out.slice(0, 2);
 }
@@ -88,13 +89,13 @@ export function dealStatusBadges(input: {
 export function dealHealthLabel(visual: DealAttentionVisual): string | null {
   switch (visual) {
     case "hot":
-      return "Needs action";
+      return translate("pipeline.healthNeedsAction");
     case "at_risk":
-      return "At risk";
+      return translate("pipeline.healthAtRisk");
     case "stale":
-      return "Quiet";
+      return translate("pipeline.healthQuiet");
     case "closing":
-      return "Closing";
+      return translate("pipeline.healthClosing");
     default:
       return null;
   }

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { ROUTES } from "@/src/lib/product";
 import { formatMoney } from "@/src/lib/formatRelative";
 import type { ClientOperationalDeal, ClientOperationalTask } from "@/src/types";
+import { useTranslation } from "@/src/context/LocaleContext";
+import { translateStageName } from "@/src/lib/i18nHelpers";
 
 export default function ClientCurrentState({
   deals,
@@ -12,19 +14,19 @@ export default function ClientCurrentState({
   deals: ClientOperationalDeal[];
   tasks: ClientOperationalTask[];
 }) {
+  const { t } = useTranslation();
+
   return (
     <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[var(--vx-shadow-card)]">
-      <h2 className="text-sm font-semibold text-zinc-900">Right now</h2>
-      <p className="mt-0.5 text-xs text-zinc-500">
-        Active deals and open follow-ups — operational, not history
-      </p>
+      <h2 className="text-sm font-semibold text-zinc-900">{t("clients.rightNowTitle")}</h2>
+      <p className="mt-0.5 text-xs text-zinc-500">{t("clients.rightNowHint")}</p>
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <div>
+        <div className="min-w-0">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
-            Active deals
+            {t("clients.activeDeals")}
           </h3>
           {deals.length === 0 ? (
-            <p className="mt-2 text-sm text-zinc-500">No open deals.</p>
+            <p className="mt-2 text-sm text-zinc-500">{t("clients.noOpenDeals")}</p>
           ) : (
             <ul className="mt-2 space-y-2">
               {deals.map((d) => (
@@ -32,9 +34,9 @@ export default function ClientCurrentState({
                   key={d.id}
                   className="rounded-xl border border-zinc-100 bg-zinc-50/50 px-3 py-2.5"
                 >
-                  <p className="text-sm font-medium text-zinc-900">{d.title}</p>
-                  <p className="mt-0.5 text-xs text-zinc-500">
-                    {d.stage_name}
+                  <p className="truncate text-sm font-medium text-zinc-900">{d.title}</p>
+                  <p className="mt-0.5 truncate text-xs text-zinc-500">
+                    {translateStageName(d.stage_name)}
                     {d.amount ? ` · ${formatMoney(d.amount)}` : ""}
                   </p>
                 </li>
@@ -45,26 +47,26 @@ export default function ClientCurrentState({
             href={ROUTES.deals}
             className="mt-2 inline-block text-xs font-medium text-[var(--vx-accent)]"
           >
-            Open deals board →
+            {t("clients.openDealsBoard")}
           </Link>
         </div>
-        <div>
+        <div className="min-w-0">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
-            Open tasks
+            {t("common.viewTasks")}
           </h3>
           {tasks.length === 0 ? (
-            <p className="mt-2 text-sm text-zinc-500">No open tasks linked.</p>
+            <p className="mt-2 text-sm text-zinc-500">{t("clients.noOpenTasks")}</p>
           ) : (
             <ul className="mt-2 space-y-2">
-              {tasks.map((t) => (
+              {tasks.map((task) => (
                 <li
-                  key={t.id}
+                  key={task.id}
                   className="rounded-xl border border-zinc-100 bg-zinc-50/50 px-3 py-2.5"
                 >
-                  <p className="text-sm text-zinc-800">{t.content}</p>
-                  <p className="mt-0.5 text-xs text-zinc-500">
-                    {t.deal_title ?? "Client task"}
-                    {t.assigned_to_email ? ` · ${t.assigned_to_email}` : ""}
+                  <p className="text-sm text-zinc-800">{task.content}</p>
+                  <p className="mt-0.5 truncate text-xs text-zinc-500">
+                    {task.deal_title ?? t("clients.clientTaskFallback")}
+                    {task.assigned_to_email ? ` · ${task.assigned_to_email}` : ""}
                   </p>
                 </li>
               ))}
@@ -74,11 +76,10 @@ export default function ClientCurrentState({
             href={ROUTES.tasks}
             className="mt-2 inline-block text-xs font-medium text-[var(--vx-accent)]"
           >
-            View tasks →
+            {t("clients.viewTasksLink")}
           </Link>
         </div>
       </div>
     </section>
   );
 }
-

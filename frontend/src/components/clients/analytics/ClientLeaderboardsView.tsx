@@ -13,6 +13,7 @@ import {
   LeaderboardCard,
   ProductLensBar,
 } from "./clientAnalyticsShared";
+import { useTranslation } from "@/src/context/LocaleContext";
 
 export default function ClientLeaderboardsView({
   data,
@@ -31,6 +32,7 @@ export default function ClientLeaderboardsView({
   onClearFilters: () => void;
   onRetry: () => void;
 }) {
+  const { t } = useTranslation();
   if (loading && !data) return <AnalyticsLoadingCard />;
   if (error && !data) return <AnalyticsErrorCard error={error} onRetry={onRetry} />;
   if (!data) return null;
@@ -48,20 +50,20 @@ export default function ClientLeaderboardsView({
 
       <div className="grid gap-6 md:grid-cols-3">
         <LeaderboardCard
-          title="Most profitable"
-          subtitle="Total won revenue"
+          title={t("clients.lbProfitable")}
+          subtitle={t("clients.lbProfitableSub")}
           rows={data.leaderboards.most_profitable}
           valueKey="total_revenue"
         />
         <LeaderboardCard
-          title="Most active"
-          subtitle="Touchpoints logged"
+          title={t("clients.lbActive")}
+          subtitle={t("clients.lbActiveSub")}
           rows={data.leaderboards.most_active}
           valueKey="activity_count"
         />
         <LeaderboardCard
-          title="Fastest growing"
-          subtitle="Revenue vs prior 90 days"
+          title={t("clients.lbGrowing")}
+          subtitle={t("clients.lbGrowingSub")}
           rows={data.leaderboards.fastest_growing}
           valueKey="revenue_growth_pct"
         />
@@ -70,10 +72,10 @@ export default function ClientLeaderboardsView({
       {filterActive ? (
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[var(--vx-shadow-card)]">
-            <h3 className="text-sm font-semibold text-zinc-900">Top buyers</h3>
-            <p className="mt-0.5 text-xs text-zinc-500">For selected product</p>
+            <h3 className="text-sm font-semibold text-zinc-900">{t("clients.topBuyers")}</h3>
+            <p className="mt-0.5 text-xs text-zinc-500">{t("clients.topBuyersSub")}</p>
             {data.product_buyers.length === 0 ? (
-              <p className="mt-3 text-sm text-zinc-500">No buyers in this lens yet</p>
+              <p className="mt-3 text-sm text-zinc-500">{t("clients.noBuyersLens")}</p>
             ) : (
               <ul className="mt-3 space-y-1">
                 {data.product_buyers.map((row, i) => (
@@ -101,10 +103,10 @@ export default function ClientLeaderboardsView({
           {data.at_risk_buyers.length > 0 ? (
             <div className="rounded-2xl border border-amber-200/80 bg-amber-50/30 p-5">
               <h3 className="text-sm font-semibold text-amber-950">
-                Slowing or dormant
+                {t("clients.slowingDormant")}
               </h3>
               <p className="mt-0.5 text-xs text-amber-800/80">
-                Buyers who haven&apos;t engaged recently
+                {t("clients.slowingDormantSub")}
               </p>
               <ul className="mt-3 space-y-2">
                 {data.at_risk_buyers.map((row) => (
@@ -123,15 +125,12 @@ export default function ClientLeaderboardsView({
         </div>
       ) : (
         <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50/40 px-5 py-6 text-center">
-          <p className="text-sm text-zinc-600">
-            Select a product above to rank buyers and spot accounts that stopped
-            ordering.
-          </p>
+          <p className="text-sm text-zinc-600">{t("clients.selectProductLens")}</p>
         </div>
       )}
 
       <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[var(--vx-shadow-card)]">
-        <h3 className="text-sm font-semibold text-zinc-900">By category</h3>
+        <h3 className="text-sm font-semibold text-zinc-900">{t("clients.byCategory")}</h3>
         <ul className="mt-4 grid gap-2 sm:grid-cols-2">
           {data.top_categories.map((cat) => (
             <li
@@ -140,7 +139,7 @@ export default function ClientLeaderboardsView({
             >
               <span className="font-medium text-zinc-800">{cat.category}</span>
               <span className="text-xs tabular-nums text-zinc-600">
-                {formatUsd(cat.revenue)} · {cat.unique_clients} clients
+                {formatUsd(cat.revenue)} · {t("clients.clientsCountSuffix", { count: cat.unique_clients })}
               </span>
             </li>
           ))}

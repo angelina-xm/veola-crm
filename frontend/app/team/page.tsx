@@ -16,18 +16,19 @@ import {
 } from "@/src/lib/api";
 import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
 import { canManageTeam } from "@/src/lib/roles";
+import { useTranslation } from "@/src/context/LocaleContext";
 
 const PERMISSION_KEYS: {
   key: keyof TeamMemberUpdatePayload;
-  label: string;
+  labelKey: string;
 }[] = [
-  { key: "can_view_all_deals", label: "View all deals" },
-  { key: "can_create_deals", label: "Create deals" },
-  { key: "can_edit_all_deals", label: "Edit all deals" },
-  { key: "can_delete_deals", label: "Delete deals" },
-  { key: "can_manage_automations", label: "Manage automations" },
-  { key: "can_manage_team", label: "Manage team" },
-  { key: "can_view_analytics", label: "View analytics" },
+  { key: "can_view_all_deals", labelKey: "team.permViewDeals" },
+  { key: "can_create_deals", labelKey: "team.permCreateDeals" },
+  { key: "can_edit_all_deals", labelKey: "team.permEditDeals" },
+  { key: "can_delete_deals", labelKey: "team.permDeleteDeals" },
+  { key: "can_manage_automations", labelKey: "team.permAutomations" },
+  { key: "can_manage_team", labelKey: "team.permTeam" },
+  { key: "can_view_analytics", labelKey: "team.permAnalytics" },
 ];
 
 function formatJoined(iso: string) {
@@ -44,6 +45,7 @@ function formatJoined(iso: string) {
 }
 
 export default function TeamPage() {
+  const { t } = useTranslation();
   const { isReady, isAuthenticated } = useAuth();
   const { membership, loading: membershipLoading, refreshMembership } =
     useMembership();
@@ -89,13 +91,13 @@ export default function TeamPage() {
       setMembers(data.members);
       setPendingInvites(data.pending_invites);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load team");
+      setError(e instanceof Error ? e.message : t("team.failedLoad"));
       setMembers([]);
       setPendingInvites([]);
     } finally {
       setLoading(false);
     }
-  }, [companyId, canAccess]);
+  }, [companyId, canAccess, t]);
 
   useEffect(() => {
     if (!isReady || !isAuthenticated || companyId === null || !canAccess) return;
@@ -138,7 +140,7 @@ export default function TeamPage() {
       void refreshMembership();
       closeEdit();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Save failed");
+      setError(e instanceof Error ? e.message : t("team.saveFailed"));
     } finally {
       setSaveBusy(false);
     }
@@ -146,7 +148,7 @@ export default function TeamPage() {
 
   const removeMember = async (m: TeamMember) => {
     if (m.role === "owner") return;
-    if (!window.confirm(`Remove ${m.email} from this company?`)) return;
+    if (!window.confirm(t("team.removeConfirmEmail", { email: m.email }))) return;
     if (companyId === null) return;
     setRemovingId(m.id);
     setError(null);
@@ -155,7 +157,7 @@ export default function TeamPage() {
       await deleteTeamMember(tenantId, m.id);
       await loadTeam();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Remove failed");
+      setError(e instanceof Error ? e.message : t("team.removeFailed"));
     } finally {
       setRemovingId(null);
     }
@@ -174,16 +176,16 @@ export default function TeamPage() {
       };
       const res = await postTeamInvite(tenantId, payload);
       if (res.status === "attached") {
-        setInviteMsg(`Added ${res.member.email} to the team.`);
+        setInviteMsg(t("team.addedMember", { email: res.member.email }));
       } else {
         setInviteMsg(
-          `Invite created. Token (share with user): ${res.token.slice(0, 8)}…`
+          t("team.inviteCreated", { token: res.token.slice(0, 8) })
         );
       }
       setInviteEmail("");
       await loadTeam();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Invite failed");
+      setError(e instanceof Error ? e.message : t("team.inviteFailed"));
     } finally {
       setInviteBusy(false);
     }
@@ -192,7 +194,7 @@ export default function TeamPage() {
   if (!isReady) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
-        <p className="text-sm text-slate-500">Loading…</p>
+        <p className="text-sm text-slate-500">{t("common.loading")}</p>
       </main>
     );
   }
@@ -201,19 +203,19 @@ export default function TeamPage() {
     <ProtectedRoute>
       <>
           <PageHeader
-            eyebrow="Workspace"
-            title="Team"
-            description="Invite people, assign roles, and tune permissions."
+            eyebrow={t("nav.workspace")}
+            title={t("team.pageTitle")}
+            description={t("team.pageDescriptionInvite")}
           />
 
           {membershipLoading ? (
-            <p className="text-sm text-slate-500">Checking access…</p>
+            <p className="text-sm text-slate-500">{t("team.checkingAccess")}</p>
           ) : !canManageTeam(membership) ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-              You don&apos;t have permission to manage this team.
+              {t("team.noPermission")}
             </div>
           ) : loading ? (
-            <p className="text-sm text-slate-500">Loading team…</p>
+            <p className="text-sm text-slate-500">{t("team.loadingTeam")}</p>
           ) : (
             <>
               {error ? (
@@ -223,7 +225,7 @@ export default function TeamPage() {
               ) : null}
 
               <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-lg font-medium text-slate-800">Members</h2>
+                <h2 className="text-lg font-medium text-slate-800">{t("team.members")}</h2>
                 <button
                   type="button"
                   onClick={() => {
@@ -232,7 +234,7 @@ export default function TeamPage() {
                   }}
                   className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500"
                 >
-                  Invite member
+                  {t("team.invite")}
                 </button>
               </div>
 
@@ -240,10 +242,10 @@ export default function TeamPage() {
                 <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
                   <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
                     <tr>
-                      <th className="px-4 py-3">Member</th>
-                      <th className="px-4 py-3">Role</th>
-                      <th className="px-4 py-3">Joined</th>
-                      <th className="px-4 py-3 text-right">Actions</th>
+                      <th className="px-4 py-3">{t("team.colMember")}</th>
+                      <th className="px-4 py-3">{t("team.colRole")}</th>
+                      <th className="px-4 py-3">{t("team.colJoined")}</th>
+                      <th className="px-4 py-3 text-right">{t("team.colActions")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-800">
@@ -253,7 +255,7 @@ export default function TeamPage() {
                           <div className="font-medium text-slate-900">{m.email}</div>
                           <div className="text-xs text-slate-500">@{m.username}</div>
                           <div className="mt-1 flex flex-wrap gap-1">
-                            {PERMISSION_KEYS.map(({ key, label }) => (
+                            {PERMISSION_KEYS.map(({ key, labelKey }) => (
                               <span
                                 key={key}
                                 className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
@@ -262,7 +264,7 @@ export default function TeamPage() {
                                     : "bg-slate-100 text-slate-500"
                                 }`}
                               >
-                                {label}
+                                {t(labelKey)}
                               </span>
                             ))}
                           </div>
@@ -277,7 +279,7 @@ export default function TeamPage() {
                             onClick={() => openEdit(m)}
                             className="mr-2 text-indigo-600 hover:underline"
                           >
-                            Edit
+                            {t("team.edit")}
                           </button>
                           {m.role !== "owner" ? (
                             <button
@@ -286,7 +288,7 @@ export default function TeamPage() {
                               onClick={() => void removeMember(m)}
                               className="text-red-600 hover:underline disabled:opacity-50"
                             >
-                              Remove
+                              {t("team.removeMember")}
                             </button>
                           ) : null}
                         </td>
@@ -452,12 +454,12 @@ export default function TeamPage() {
                     resets all flags to enabled on the server.
                   </p>
                 ) : null}
-                {PERMISSION_KEYS.map(({ key, label }) => (
+                {PERMISSION_KEYS.map(({ key, labelKey }) => (
                   <label
                     key={key}
                     className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 px-3 py-2 text-sm"
                   >
-                    <span>{label}</span>
+                    <span>{t(labelKey)}</span>
                     <input
                       type="checkbox"
                       disabled={editing.role === "owner"}

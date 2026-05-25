@@ -8,6 +8,7 @@ import ProBadge from "@/src/components/billing/ProBadge";
 import ProPaywallOverlay from "@/src/components/billing/ProPaywallOverlay";
 import Link from "next/link";
 import { ROUTES } from "@/src/lib/product";
+import { useTranslation } from "@/src/context/LocaleContext";
 
 export default function ClientIntelligenceGate({
   title,
@@ -20,6 +21,7 @@ export default function ClientIntelligenceGate({
   children: ReactNode;
   preview?: ReactNode;
 }) {
+  const { t } = useTranslation();
   const { entitlements, isLocked } = useBilling();
   const { membership } = useMembership();
   const roleOk = canViewAnalytics(membership);
@@ -29,16 +31,13 @@ export default function ClientIntelligenceGate({
   if (!roleOk) {
     return (
       <div className="rounded-2xl border border-zinc-200/80 bg-white p-8 shadow-[var(--vx-shadow-card)]">
-        <h2 className="text-lg font-semibold text-zinc-900">Analytics access required</h2>
-        <p className="mt-2 text-sm text-zinc-600">
-          Your role needs &quot;View analytics&quot;. Ask an owner or manager on the Team
-          page.
-        </p>
+        <h2 className="text-lg font-semibold text-zinc-900">{t("clients.gateTitle")}</h2>
+        <p className="mt-2 text-sm text-zinc-600">{t("clients.gateRoleHint")}</p>
         <Link
           href={ROUTES.clients}
           className="mt-4 inline-block text-sm font-medium text-[var(--vx-accent)] hover:underline"
         >
-          ← All clients
+          {t("clients.gateBackToClients")}
         </Link>
       </div>
     );
@@ -61,8 +60,8 @@ export default function ClientIntelligenceGate({
         {preview ?? children}
       </div>
       <ProPaywallOverlay
-        title="Client intelligence — Pro"
-        description="Unlock client analytics, leaderboards, and commercial insights across your portfolio."
+        title={t("clients.gateProTitle")}
+        description={t("clients.gateDescription")}
       />
     </section>
   );

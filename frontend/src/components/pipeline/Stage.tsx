@@ -12,6 +12,8 @@ import DealCard from "./DealCard";
 import type { TaskPreset } from "@/src/lib/quickTask";
 import type { StageFallbackPreset, SuggestedAction } from "./DealCard";
 import { Activity, Client, Deal, PipelineStage } from "@/src/types";
+import { useTranslation } from "@/src/context/LocaleContext";
+import { translateStageName } from "@/src/lib/i18nHelpers";
 
 const STAGE_ACCENTS = [
   "bg-sky-400/80",
@@ -106,7 +108,9 @@ export default function Stage({
   onDealOpen: (deal: Deal) => void;
   onDealDelete: (deal: Deal) => void;
 }) {
+  const { t } = useTranslation();
   const safeDeals = Array.isArray(deals) ? deals : [];
+  const stageLabel = translateStageName(stage.name);
   const totalValue = sumDealAmounts(safeDeals);
   const accent = stageAccentClass(String(stage.id), stageIndex);
 
@@ -134,7 +138,7 @@ export default function Stage({
           <div className="flex min-w-0 items-center gap-2">
             <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", accent)} aria-hidden />
             <h2 className="truncate text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--vx-text-secondary)]">
-              {stage.name}
+              {stageLabel}
             </h2>
             <span className="shrink-0 rounded-md bg-[var(--vx-bg-subtle)]/80 px-1.5 py-0.5 text-[10px] font-medium text-[var(--vx-text-muted)] vx-tabular">
               {safeDeals.length}
@@ -167,7 +171,7 @@ export default function Stage({
               )}
             >
               <p className="text-[12px] font-medium text-[var(--vx-text-muted)]">
-                {activeDrop ? "Release to drop" : "Drop deals here"}
+                {activeDrop ? t("pipeline.dropRelease") : t("pipeline.dropHere")}
               </p>
             </div>
           ) : (

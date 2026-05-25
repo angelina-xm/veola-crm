@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { dealCycleDays } from "@/src/lib/pipelineLifecycle";
 import { formatDealAmountUsd } from "@/src/lib/dealDisplay";
 import type { Deal } from "@/src/types";
+import { useTranslation } from "@/src/context/LocaleContext";
 
 export type CloseDealWonPayload = {
   win_reason?: string;
@@ -26,6 +27,7 @@ export default function CloseDealWonModal({
   onCancel,
   onConfirm,
 }: Props) {
+  const { t } = useTranslation();
   const [winReason, setWinReason] = useState("");
 
   useEffect(() => {
@@ -46,38 +48,41 @@ export default function CloseDealWonModal({
     >
       <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
         <h2 id="close-won-title" className="text-lg font-semibold text-gray-900">
-          Close deal?
+          {t("pipeline.closeWonQuestion")}
         </h2>
-        <p className="mt-1 text-sm text-gray-600">
-          This deal will leave your active board and move to closed history.
-        </p>
+        <p className="mt-1 text-sm text-gray-600">{t("pipeline.closeWonBody")}</p>
 
         <dl className="mt-4 space-y-2 rounded-lg bg-gray-50 px-4 py-3 text-sm">
           <div className="flex justify-between gap-4">
-            <dt className="text-gray-500">Deal</dt>
+            <dt className="text-gray-500">{t("pipeline.closeDealLabel")}</dt>
             <dd className="text-right font-medium text-gray-900">{deal.title}</dd>
           </div>
           <div className="flex justify-between gap-4">
-            <dt className="text-gray-500">Amount</dt>
-            <dd className="font-medium text-gray-900">{amountLabel ?? "—"}</dd>
+            <dt className="text-gray-500">{t("pipeline.closeAmount")}</dt>
+            <dd className="font-medium text-gray-900">
+              {amountLabel ?? t("common.notAvailable")}
+            </dd>
           </div>
           <div className="flex justify-between gap-4">
-            <dt className="text-gray-500">Cycle</dt>
+            <dt className="text-gray-500">{t("pipeline.closeCycle")}</dt>
             <dd className="font-medium text-gray-900">
-              {cycleDays} day{cycleDays === 1 ? "" : "s"}
+              {cycleDays === 1
+                ? t("clients.cycleDays", { count: cycleDays })
+                : t("clients.cycleDaysPlural", { count: cycleDays })}
             </dd>
           </div>
         </dl>
 
         <label className="mt-4 block text-sm font-medium text-gray-700">
-          Win reason <span className="font-normal text-gray-400">(optional)</span>
+          {t("pipeline.winReasonLabel")}{" "}
+          <span className="font-normal text-gray-400">{t("common.optional")}</span>
         </label>
         <textarea
           className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
           rows={2}
           value={winReason}
           onChange={(e) => setWinReason(e.target.value)}
-          placeholder="e.g. Signed annual contract"
+          placeholder={t("pipeline.winReasonPlaceholder")}
           disabled={submitting}
         />
 
@@ -90,7 +95,7 @@ export default function CloseDealWonModal({
             disabled={submitting}
             className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             type="button"
@@ -102,11 +107,10 @@ export default function CloseDealWonModal({
             }
             className="rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-50"
           >
-            {submitting ? "Closing…" : "Confirm close"}
+            {submitting ? t("pipeline.closing") : t("pipeline.confirmClose")}
           </button>
         </div>
       </div>
     </div>
   );
 }
-

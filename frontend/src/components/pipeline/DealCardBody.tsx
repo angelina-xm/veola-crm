@@ -15,6 +15,7 @@ import {
   type DealAttentionVisual,
 } from "@/src/lib/dealAttention";
 import { relationshipStatusLabel } from "@/src/lib/clientRelationship";
+import { translate } from "@/src/i18n/translate";
 import { dueDateVsToday } from "@/src/lib/dealTaskSignal";
 import { cn } from "@/src/lib/cn";
 import type { Activity, Client, Deal } from "@/src/types";
@@ -39,10 +40,10 @@ function ClockIcon() {
 function formatDueHint(due: string | undefined): string | null {
   if (!due) return null;
   const d = dueDateVsToday(due);
-  if (d < 0) return "Overdue";
-  if (d === 0) return "Due today";
-  if (d === 1) return "Due tomorrow";
-  if (d <= 7) return `Due in ${d}d`;
+  if (d < 0) return translate("tasks.overdue");
+  if (d === 0) return translate("tasks.dueToday");
+  if (d === 1) return translate("pipeline.dueTomorrow");
+  if (d <= 7) return translate("pipeline.dueInDays", { count: d });
   return null;
 }
 
@@ -86,7 +87,7 @@ export default function DealCardBody({
   const client = clientById(clients, deal.client);
   const clientLine =
     client?.name ??
-    (deal.client != null && deal.client !== "" ? String(deal.client) : "No client");
+    (deal.client != null && deal.client !== "" ? String(deal.client) : translate("pipeline.noClient"));
   const amount = formatDealAmountUsd(deal.amount);
   const probability = inferStageProbability(stageName);
   const ownerEmail = deal.assigned_to_email ?? null;
@@ -190,7 +191,7 @@ export default function DealCardBody({
               label={ownerName}
               tone="assignee"
               size="sm"
-              title={ownerEmail ?? "Unassigned"}
+              title={ownerEmail ?? translate("deals.unassigned")}
             />
             <span className="truncate text-[11px] font-medium text-[var(--vx-text-secondary)]">
               {ownerName}
@@ -228,7 +229,7 @@ export default function DealCardBody({
         ) : null}
 
         {savingLine ? (
-          <p className="mt-2 text-[10px] text-[var(--vx-text-muted)]">Saving…</p>
+          <p className="mt-2 text-[10px] text-[var(--vx-text-muted)]">{translate("pipeline.saving")}</p>
         ) : null}
       </div>
     </article>

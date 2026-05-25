@@ -3,13 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createActivity, getActivities, patchActivity } from "@/src/lib/api";
 import { Activity, ActivityType } from "@/src/types";
-
-const TYPE_LABELS: Record<ActivityType, string> = {
-  note: "Note",
-  call: "Call",
-  meeting: "Meeting",
-  task: "Task",
-};
+import { useTranslation } from "@/src/context/LocaleContext";
+import { activityTypeLabel } from "@/src/lib/i18nHelpers";
+import { translate } from "@/src/i18n/translate";
 
 const TYPE_STYLES: Record<ActivityType, string> = {
   note: "border-gray-200 bg-gray-50 text-gray-800",
@@ -88,7 +84,7 @@ function ActivityRow({
             onChange={(e) => {
               onToggleTask(a, e.target.checked);
             }}
-            aria-label="Task done"
+            aria-label={translate("pipeline.taskDoneAria")}
           />
         ) : null}
         <div className="min-w-0 flex-1">
@@ -96,13 +92,13 @@ function ActivityRow({
             <span
               className={`font-medium ${completed ? "text-gray-500 line-through" : ""}`}
             >
-              {TYPE_LABELS[a.type]}
+              {activityTypeLabel(a.type)}
             </span>
             <span className="text-xs opacity-75">
               {formatWhen(a.created_at)}
             </span>
             {overdue ? (
-              <span className="text-xs font-medium text-red-600">Overdue</span>
+              <span className="text-xs font-medium text-red-600">{translate("tasks.overdue")}</span>
             ) : null}
           </div>
           {a.author_email ? (
@@ -150,6 +146,8 @@ export default function DealActivitiesTimeline({
   /** После PATCH/создания activity — обновить счётчики на доске (задачи, уведомления). */
   onTasksChanged?: () => void | Promise<void>;
 }) {
+  const { t } = useTranslation();
+  const activityTypes: ActivityType[] = ["note", "call", "meeting", "task"];
   const [items, setItems] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -203,7 +201,7 @@ export default function DealActivitiesTimeline({
       } catch (err) {
         setItems(prev);
         window.alert(
-          err instanceof Error ? err.message : "Failed to update task"
+          err instanceof Error ? err.message : t("pipeline.failedUpdateTask")
         );
       } finally {
         setPatchingId(null);
@@ -260,7 +258,7 @@ export default function DealActivitiesTimeline({
     } catch (err) {
       setItems((prev) => prev.filter((a) => String(a.id) !== tempId));
       window.alert(
-        err instanceof Error ? err.message : "Failed to add activity"
+        err instanceof Error ? err.message : t("pipeline.failedAddActivity")
       );
     } finally {
       setSaving(false);
@@ -288,26 +286,26 @@ export default function DealActivitiesTimeline({
       id="deal-activities-section"
       className="mt-6 border-t border-gray-200 pt-4"
     >
-      <h3 className="mb-3 text-sm font-semibold text-gray-900">Activity</h3>
+      <h3 className="mb-3 text-sm font-semibold text-gray-900">{t("pipeline.activityTitle")}</h3>
 
       <div className="mb-3 flex flex-wrap gap-2">
-        {filterBtn("all", "All")}
-        {filterBtn("tasks", "Tasks")}
-        {filterBtn("overdue", "Overdue")}
+        {filterBtn("all", t("pipeline.filterAll"))}
+        {filterBtn("tasks", t("pipeline.filterTasks"))}
+        {filterBtn("overdue", t("pipeline.filterOverdue"))}
       </div>
 
       {loading ? (
-        <p className="mb-4 text-sm text-gray-500">Loading...</p>
+        <p className="mb-4 text-sm text-gray-500">{t("pipeline.activityLoading")}</p>
       ) : items.length === 0 ? (
-        <p className="mb-4 text-sm text-gray-500">No activity yet.</p>
+        <p className="mb-4 text-sm text-gray-500">{t("pipeline.activityEmpty")}</p>
       ) : taskRows.length === 0 && otherRows.length === 0 ? (
-        <p className="mb-4 text-sm text-gray-500">Nothing matches this filter.</p>
+        <p className="mb-4 text-sm text-gray-500">{t("pipeline.activityNoMatch")}</p>
       ) : (
         <div className="mb-4 max-h-64 space-y-4 overflow-y-auto pr-1">
           {taskRows.length > 0 ? (
             <div>
               <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">
-                Tasks
+                {t("pipeline.tasksSection")}
               </p>
               <ul className="space-y-2">
                 {taskRows.map((a) => (
@@ -325,7 +323,7 @@ export default function DealActivitiesTimeline({
           {otherRows.length > 0 ? (
             <div>
               <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">
-                Other
+                {t("pipeline.otherSection")}
               </p>
               <ul className="space-y-2">
                 {otherRows.map((a) => (
@@ -351,9 +349,9 @@ export default function DealActivitiesTimeline({
             disabled={disabled || saving}
             className="rounded border border-gray-300 px-2 py-1 text-sm"
           >
-            {(Object.keys(TYPE_LABELS) as ActivityType[]).map((k) => (
+            {activityTypes.map((k) => (
               <option key={k} value={k}>
-                {TYPE_LABELS[k]}
+                {activityTypeLabel(k)}
               </option>
             ))}
           </select>
@@ -368,7 +366,7 @@ export default function DealActivitiesTimeline({
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="Details…"
+          placeholder={t("pipeline.activityDetailsPlaceholder")}
           rows={3}
           disabled={disabled || saving}
           className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
@@ -378,7 +376,7 @@ export default function DealActivitiesTimeline({
           disabled={disabled || saving}
           className="rounded bg-gray-800 px-3 py-1.5 text-sm text-white disabled:opacity-50"
         >
-          {saving ? "Loading..." : "Add activity"}
+          {saving ? t("common.loading") : t("pipeline.addActivity")}
         </button>
       </form>
     </div>

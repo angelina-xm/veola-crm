@@ -1,8 +1,8 @@
 "use client";
 
-import { formatRelative } from "@/src/lib/formatRelative";
-import { formatMoney } from "@/src/lib/formatRelative";
+import { formatRelative, formatMoney } from "@/src/lib/formatRelative";
 import type { ClientProfileMetrics } from "@/src/types";
+import { useTranslation } from "@/src/context/LocaleContext";
 
 function Metric({
   label,
@@ -31,36 +31,34 @@ export default function ClientMetricsSnapshot({
 }: {
   metrics: ClientProfileMetrics;
 }) {
+  const { t } = useTranslation();
+  const na = t("common.notAvailable");
   const since = metrics.customer_since
     ? new Date(metrics.customer_since).toLocaleDateString(undefined, {
         month: "short",
         year: "numeric",
       })
-    : "—";
+    : na;
 
   return (
     <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[var(--vx-shadow-card)]">
-      <h2 className="text-sm font-semibold text-zinc-900">Relationship snapshot</h2>
-      <p className="mt-0.5 text-xs text-zinc-500">Compact metrics — not a full analytics wall</p>
+      <h2 className="text-sm font-semibold text-zinc-900">
+        {t("clients.relationshipSnapshot")}
+      </h2>
+      <p className="mt-0.5 text-xs text-zinc-500">{t("clients.relationshipSnapshotHint")}</p>
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Metric label="Customer since" value={since} />
-        <Metric label="Total revenue" value={formatMoney(metrics.total_revenue)} />
-        <Metric label="Won deals" value={String(metrics.won_deals)} />
-        <Metric label="Active deals" value={String(metrics.active_deals)} />
+        <Metric label={t("clients.customerSince")} value={since} />
+        <Metric label={t("clients.totalRevenue")} value={formatMoney(metrics.total_revenue)} />
+        <Metric label={t("clients.wonDeals")} value={String(metrics.won_deals)} />
+        <Metric label={t("clients.activeDeals")} value={String(metrics.active_deals)} />
         <Metric
-          label="Last activity"
+          label={t("clients.lastActivity")}
           value={
-            metrics.last_activity_at
-              ? formatRelative(metrics.last_activity_at)
-              : "—"
+            metrics.last_activity_at ? formatRelative(metrics.last_activity_at) : na
           }
         />
-        <Metric
-          label="Avg deal size"
-          value={formatMoney(metrics.average_deal_size)}
-        />
+        <Metric label={t("clients.avgDealSize")} value={formatMoney(metrics.average_deal_size)} />
       </div>
     </section>
   );
 }
-

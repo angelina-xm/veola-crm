@@ -11,6 +11,7 @@ import { cn } from "@/src/lib/cn";
 import { ROUTES } from "@/src/lib/product";
 import type { ClientCommercialAnalytics } from "@/src/types";
 import { KpiCard } from "./clientAnalyticsShared";
+import { useTranslation } from "@/src/context/LocaleContext";
 
 export default function ClientAnalyticsView({
   data,
@@ -25,6 +26,7 @@ export default function ClientAnalyticsView({
   highlightClientId: string | null;
   onRetry: () => void;
 }) {
+  const { t } = useTranslation();
   if (loading && !data) return <AnalyticsLoadingCard />;
   if (error && !data) return <AnalyticsErrorCard error={error} onRetry={onRetry} />;
   if (!data) return null;
@@ -35,29 +37,29 @@ export default function ClientAnalyticsView({
     <div className="space-y-8">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
-          label="Total client revenue"
+          label={t("clients.totalClientRevenue")}
           value={formatUsd(summary.total_revenue)}
-          hint={`${summary.clients_with_revenue} paying accounts`}
+          hint={t("clients.payingAccounts", { count: summary.clients_with_revenue })}
         />
         <KpiCard
-          label="Avg per client"
+          label={t("clients.avgPerClient")}
           value={formatUsd(summary.avg_revenue_per_client)}
         />
         <KpiCard
-          label="Won deals"
+          label={t("clients.wonDeals")}
           value={String(summary.total_won_deals)}
-          hint={`${summary.total_lost_deals} lost`}
+          hint={t("clients.lostDealsCount", { count: summary.total_lost_deals })}
         />
         <KpiCard
-          label="Product relationships"
+          label={t("clients.productRelationships")}
           value={String(summary.active_product_links)}
-          hint="Catalog links across clients"
+          hint={t("clients.productRelationshipsHint")}
         />
       </div>
 
       <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[var(--vx-shadow-card)]">
-        <h3 className="text-sm font-semibold text-zinc-900">Revenue trend</h3>
-        <p className="mt-0.5 text-xs text-zinc-500">Won deal value by month</p>
+        <h3 className="text-sm font-semibold text-zinc-900">{t("clients.revenueTrendTitle")}</h3>
+        <p className="mt-0.5 text-xs text-zinc-500">{t("clients.revenueTrendSub")}</p>
         <div className="mt-4">
           <RevenueTrendChart points={data.revenue_trend} chartHeightPx={128} />
         </div>
@@ -65,15 +67,15 @@ export default function ClientAnalyticsView({
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[var(--vx-shadow-card)]">
-          <h3 className="text-sm font-semibold text-zinc-900">Top products</h3>
-          <p className="mt-0.5 text-xs text-zinc-500">From deal line items</p>
+          <h3 className="text-sm font-semibold text-zinc-900">{t("clients.topProducts")}</h3>
+          <p className="mt-0.5 text-xs text-zinc-500">{t("clients.topProductsSub")}</p>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[400px] text-left text-sm">
               <thead>
                 <tr className="border-b border-zinc-100 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
-                  <th className="pb-2 pr-3">Product</th>
-                  <th className="pb-2 pr-3 text-right">Revenue</th>
-                  <th className="pb-2 text-right">Clients</th>
+                  <th className="pb-2 pr-3">{t("clients.colProduct")}</th>
+                  <th className="pb-2 pr-3 text-right">{t("clients.colRevenue")}</th>
+                  <th className="pb-2 text-right">{t("clients.colClients")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -98,7 +100,7 @@ export default function ClientAnalyticsView({
           </div>
         </div>
         <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[var(--vx-shadow-card)]">
-          <h3 className="text-sm font-semibold text-zinc-900">Top categories</h3>
+          <h3 className="text-sm font-semibold text-zinc-900">{t("clients.topCategories")}</h3>
           <ul className="mt-4 space-y-2">
             {data.top_categories.slice(0, 8).map((cat) => (
               <li
@@ -116,20 +118,18 @@ export default function ClientAnalyticsView({
       </div>
 
       <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[var(--vx-shadow-card)]">
-        <h3 className="text-sm font-semibold text-zinc-900">Client comparison</h3>
-        <p className="mt-0.5 text-xs text-zinc-500">
-          Relationship health and commercial performance
-        </p>
+        <h3 className="text-sm font-semibold text-zinc-900">{t("clients.clientComparison")}</h3>
+        <p className="mt-0.5 text-xs text-zinc-500">{t("clients.clientComparisonSub")}</p>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead>
               <tr className="border-b border-zinc-100 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
-                <th className="pb-2 pr-3">Client</th>
-                <th className="pb-2 pr-3 text-right">Revenue</th>
-                <th className="pb-2 pr-3 text-right">Win %</th>
-                <th className="pb-2 pr-3 text-right">Active</th>
-                <th className="pb-2 pr-3">Health</th>
-                <th className="pb-2">Categories</th>
+                <th className="pb-2 pr-3">{t("clients.colClient")}</th>
+                <th className="pb-2 pr-3 text-right">{t("clients.colRevenue")}</th>
+                <th className="pb-2 pr-3 text-right">{t("clients.colWinPct")}</th>
+                <th className="pb-2 pr-3 text-right">{t("clients.colActive")}</th>
+                <th className="pb-2 pr-3">{t("clients.colHealth")}</th>
+                <th className="pb-2">{t("clients.colCategories")}</th>
               </tr>
             </thead>
             <tbody>

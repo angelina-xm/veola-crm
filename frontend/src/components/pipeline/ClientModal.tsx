@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "@/src/context/LocaleContext";
 
 type ClientModalProps = {
   open: boolean;
@@ -21,6 +22,7 @@ export default function ClientModal({
   onClose,
   onSubmit,
 }: ClientModalProps) {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [clientType, setClientType] = useState<"business" | "individual">("business");
@@ -43,13 +45,14 @@ export default function ClientModal({
       >
         <div className="mb-4 flex items-start justify-between gap-4">
           <h2 id="client-modal-title" className="text-lg font-semibold text-gray-900">
-            Create client
+            {t("common.createClient")}
           </h2>
           <button
             type="button"
             onClick={onClose}
             disabled={submitting}
             className="rounded px-2 py-1 text-sm text-gray-500 hover:bg-gray-100"
+            aria-label={t("common.close")}
           >
             ✕
           </button>
@@ -74,19 +77,17 @@ export default function ClientModal({
           ) : null}
           <input
             type="text"
-            placeholder="Name"
+            placeholder={t("common.name")}
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
-            disabled={submitting}
             className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
           />
           <input
             type="email"
-            placeholder="Email"
+            placeholder={t("auth.email")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            disabled={submitting}
             className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
           />
           <select
@@ -94,11 +95,10 @@ export default function ClientModal({
             onChange={(e) =>
               setClientType(e.target.value as "business" | "individual")
             }
-            disabled={submitting}
             className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
           >
-            <option value="business">Business</option>
-            <option value="individual">Individual</option>
+            <option value="business">{t("clients.business")}</option>
+            <option value="individual">{t("clients.individual")}</option>
           </select>
           <div className="flex items-center gap-2 pt-1">
             <button
@@ -106,7 +106,7 @@ export default function ClientModal({
               disabled={submitting}
               className="rounded bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50"
             >
-              {submitting ? "Loading..." : "Create"}
+              {submitting ? t("common.loading") : t("common.create")}
             </button>
             <button
               type="button"
@@ -114,7 +114,7 @@ export default function ClientModal({
               disabled={submitting}
               className="rounded border border-gray-300 px-4 py-2 text-sm text-gray-700"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
         </form>

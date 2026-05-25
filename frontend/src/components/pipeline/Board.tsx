@@ -760,8 +760,10 @@ export default function Board({
           count: attentionCount,
           message:
             attentionCount === 1
-              ? "1 deal needs attention"
-              : `${attentionCount} deals need attention`,
+              ? translate("pipeline.notificationDealAttentionOne")
+              : translate("pipeline.notificationDealAttention", {
+                  count: attentionCount,
+                }),
         };
       })
       .filter((item) => item.count > 0);

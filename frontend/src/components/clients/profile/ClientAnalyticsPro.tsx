@@ -3,6 +3,7 @@
 import ProFeatureGate from "@/src/components/billing/ProFeatureGate";
 import { formatMoney } from "@/src/lib/formatRelative";
 import type { ClientProfileMetrics } from "@/src/types";
+import { useTranslation } from "@/src/context/LocaleContext";
 
 function MiniBar({
   label,
@@ -32,7 +33,7 @@ function MiniBar({
   );
 }
 
-function ClientAnalyticsPreview() {
+function ClientAnalyticsPreview({ previewLine }: { previewLine: string }) {
   return (
     <>
       <div className="grid grid-cols-3 gap-3">
@@ -48,14 +49,13 @@ function ClientAnalyticsPreview() {
           </div>
         ))}
       </div>
-      <p className="mt-4 text-xs text-zinc-500">
-        Revenue trend · deal velocity · engagement score
-      </p>
+      <p className="mt-4 text-xs text-zinc-500">{previewLine}</p>
     </>
   );
 }
 
 function ClientAnalyticsContent({ metrics }: { metrics: ClientProfileMetrics }) {
+  const { t } = useTranslation();
   const maxBar = Math.max(
     metrics.total_revenue,
     metrics.average_deal_size,
@@ -64,13 +64,11 @@ function ClientAnalyticsContent({ metrics }: { metrics: ClientProfileMetrics }) 
 
   return (
     <>
-      <p className="text-xs text-zinc-500">
-        Per-account rollup from visible deals — deeper cohort views ship with billing.
-      </p>
+      <p className="text-xs text-zinc-500">{t("clients.profileAnalyticsHint")}</p>
       <div className="mt-4 space-y-2">
-        <MiniBar label="Total revenue" value={metrics.total_revenue} max={maxBar} />
+        <MiniBar label={t("clients.totalRevenue")} value={metrics.total_revenue} max={maxBar} />
         <MiniBar
-          label="Avg deal size"
+          label={t("clients.avgDealSize")}
           value={metrics.average_deal_size}
           max={maxBar}
         />
@@ -78,19 +76,19 @@ function ClientAnalyticsContent({ metrics }: { metrics: ClientProfileMetrics }) 
       <div className="mt-4 grid grid-cols-3 gap-2 text-center">
         <div className="rounded-lg bg-zinc-50 px-2 py-3">
           <p className="text-lg font-semibold text-zinc-900">{metrics.won_deals}</p>
-          <p className="text-[10px] text-zinc-500">Won</p>
+          <p className="text-[10px] text-zinc-500">{t("clients.wonDeals")}</p>
         </div>
         <div className="rounded-lg bg-zinc-50 px-2 py-3">
           <p className="text-lg font-semibold text-zinc-900">{metrics.active_deals}</p>
-          <p className="text-[10px] text-zinc-500">Active</p>
+          <p className="text-[10px] text-zinc-500">{t("clients.activeDeals")}</p>
         </div>
         <div className="rounded-lg bg-zinc-50 px-2 py-3">
           <p className="text-lg font-semibold text-zinc-900">{metrics.total_deals}</p>
-          <p className="text-[10px] text-zinc-500">All deals</p>
+          <p className="text-[10px] text-zinc-500">{t("clients.allDeals")}</p>
         </div>
       </div>
       <p className="mt-4 text-[11px] text-zinc-400">
-        Last activity:{" "}
+        {t("clients.lastActivity")}:{" "}
         {metrics.last_activity_at
           ? new Date(metrics.last_activity_at).toLocaleString()
           : "—"}
@@ -104,13 +102,14 @@ export default function ClientAnalyticsPro({
 }: {
   metrics: ClientProfileMetrics;
 }) {
+  const { t } = useTranslation();
   return (
     <ProFeatureGate
       feature="clientDeepAnalytics"
-      title="Client analytics"
-      paywallTitle="Deep client analytics — trends, cohorts, and forecast-ready insights"
-      paywallDescription="Unlock per-account revenue curves and team engagement benchmarks."
-      preview={<ClientAnalyticsPreview />}
+      title={t("clients.analyticsTitle")}
+      paywallTitle={t("clients.analyticsPaywall")}
+      paywallDescription={t("clients.analyticsPaywallDesc")}
+      preview={<ClientAnalyticsPreview previewLine={t("clients.profileAnalyticsPreview")} />}
     >
       <ClientAnalyticsContent metrics={metrics} />
     </ProFeatureGate>

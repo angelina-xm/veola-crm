@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ROUTES } from "@/src/lib/product";
+import { useTranslation } from "@/src/context/LocaleContext";
 
 export default function ClientQuickActions({
   clientId,
@@ -14,6 +15,8 @@ export default function ClientQuickActions({
   onAddInteraction: () => void;
   onAddTask: () => void;
 }) {
+  const { t } = useTranslation();
+
   return (
     <div className="flex flex-wrap gap-2">
       <button
@@ -21,20 +24,20 @@ export default function ClientQuickActions({
         onClick={onAddInteraction}
         className="inline-flex items-center rounded-xl bg-[var(--vx-accent)] px-3.5 py-2 text-sm font-semibold text-white shadow-[var(--vx-shadow-accent)] hover:bg-[var(--vx-accent-hover)]"
       >
-        Add interaction
+        {t("clients.addInteraction")}
       </button>
       <Link
         href={`${ROUTES.deals}?client=${clientId}`}
         className="inline-flex items-center rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-800 shadow-sm hover:bg-zinc-50"
       >
-        New deal
+        {t("copy.newDeal")}
       </Link>
       <button
         type="button"
         onClick={onAddTask}
         className="inline-flex items-center rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-800 shadow-sm hover:bg-zinc-50"
       >
-        Add task
+        {t("common.createTask")}
       </button>
       <button
         type="button"
@@ -49,7 +52,7 @@ export default function ClientQuickActions({
             : "inline-flex items-center rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-800 shadow-sm hover:bg-zinc-50"
         }
       >
-        {hasPrimaryContact ? "Contacts" : "Add primary contact"}
+        {hasPrimaryContact ? t("clients.contacts") : t("clients.addPrimaryContact")}
       </button>
     </div>
   );

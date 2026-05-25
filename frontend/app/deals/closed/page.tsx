@@ -88,19 +88,19 @@ export default function ClosedDealsPage() {
         </div>
 
         {loading ? (
-          <p className="text-sm text-gray-500">Loading…</p>
+          <p className="text-sm text-gray-500">{t("closedDealsPage.loading")}</p>
         ) : deals.length === 0 ? (
-          <p className="text-sm text-gray-500">No closed deals yet.</p>
+          <p className="text-sm text-gray-500">{t("closedDealsPage.empty")}</p>
         ) : (
           <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
                 <tr>
-                  <th className="px-4 py-3">Deal</th>
-                  <th className="px-4 py-3">Amount</th>
-                  <th className="px-4 py-3">Outcome</th>
-                  <th className="px-4 py-3">Closed</th>
-                  <th className="px-4 py-3">Reason</th>
+                  <th className="px-4 py-3">{t("closedDealsPage.colDeal")}</th>
+                  <th className="px-4 py-3">{t("closedDealsPage.colAmount")}</th>
+                  <th className="px-4 py-3">{t("closedDealsPage.colOutcome")}</th>
+                  <th className="px-4 py-3">{t("closedDealsPage.colClosed")}</th>
+                  <th className="px-4 py-3">{t("closedDealsPage.colReason")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -110,18 +110,18 @@ export default function ClosedDealsPage() {
                       {d.title}
                     </td>
                     <td className="px-4 py-3 text-gray-700">
-                      {formatDealAmountUsd(d.amount) ?? "—"}
+                      {formatDealAmountUsd(d.amount) ?? t("common.notAvailable")}
                     </td>
                     <td className="px-4 py-3 capitalize text-gray-600">
-                      {d.stage_name ?? "—"}
+                      {d.stage_name ?? t("common.notAvailable")}
                     </td>
                     <td className="px-4 py-3 text-gray-600">
                       {d.closed_at
                         ? new Date(d.closed_at).toLocaleDateString()
-                        : "—"}
+                        : t("common.notAvailable")}
                     </td>
                     <td className="px-4 py-3 text-gray-600">
-                      {d.win_reason || d.loss_reason || "—"}
+                      {d.win_reason || d.loss_reason || t("common.notAvailable")}
                     </td>
                   </tr>
                 ))}

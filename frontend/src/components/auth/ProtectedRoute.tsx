@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
 import AppShell from "@/src/components/layout/AppShell";
+import { useTranslation } from "@/src/context/LocaleContext";
 
 export default function ProtectedRoute({
   children,
@@ -11,6 +12,7 @@ export default function ProtectedRoute({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const { isReady, isAuthenticated } = useAuth();
 
   useEffect(() => {
@@ -25,7 +27,7 @@ export default function ProtectedRoute({
       <div
         className="flex min-h-[40vh] items-center justify-center"
         aria-busy="true"
-        aria-label="Loading"
+        aria-label={t("common.loadingAria")}
       >
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-800" />
       </div>

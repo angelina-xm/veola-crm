@@ -5,6 +5,7 @@ import { cn } from "@/src/lib/cn";
 import { formatMoney } from "@/src/lib/formatRelative";
 import { ROUTES } from "@/src/lib/product";
 import type { AnalyticsV1Kpis, PipelineHealth } from "@/src/types";
+import { useTranslation } from "@/src/context/LocaleContext";
 
 type Metric = {
   key: string;
@@ -16,6 +17,7 @@ type Metric = {
 };
 
 function MetricCell({ m, loading }: { m: Metric; loading?: boolean }) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-lg bg-[var(--vx-bg-subtle)] p-3">
       <p
@@ -24,7 +26,7 @@ function MetricCell({ m, loading }: { m: Metric; loading?: boolean }) {
           m.valueClass ?? "text-[var(--vx-text)]"
         )}
       >
-        {loading ? "—" : m.value}
+        {loading ? t("common.notAvailable") : m.value}
       </p>
       <p className="mt-1 text-[11px] text-[var(--vx-text-muted)]">{m.label}</p>
       <div className="mt-2 h-[3px] overflow-hidden rounded-full bg-[var(--vx-border)]">
@@ -46,6 +48,7 @@ export default function DashboardPipelineHealthGrid({
   health: PipelineHealth | null;
   loading?: boolean;
 }) {
+  const { t } = useTranslation();
   const winRate = kpis?.conversion_rate_pct ?? 0;
   const pipelineVal = kpis?.pipeline_value ?? "0";
   const stale = kpis?.stale_health?.stale ?? 0;
@@ -57,7 +60,7 @@ export default function DashboardPipelineHealthGrid({
     {
       key: "win",
       value: `${Math.round(winRate)}%`,
-      label: "Win rate",
+      label: t("dashboardStats.winRate"),
       barPct: Math.min(100, winRate),
       valueClass: "text-emerald-400",
       barClass: "bg-emerald-500",
@@ -65,7 +68,7 @@ export default function DashboardPipelineHealthGrid({
     {
       key: "pipe",
       value: formatMoney(pipelineVal),
-      label: "Pipeline value",
+      label: t("dashboardStats.pipelineValue"),
       barPct:
         kpis && kpis.visible_deals_total > 0
           ? Math.min(100, (kpis.active_deals / kpis.visible_deals_total) * 100)
@@ -75,7 +78,7 @@ export default function DashboardPipelineHealthGrid({
     {
       key: "healthy",
       value: String(healthy),
-      label: "On track",
+      label: t("dashboardStats.onTrack"),
       barPct: total > 0 ? Math.round((healthy / total) * 100) : 0,
       valueClass: "text-amber-400",
       barClass: "bg-amber-500",
@@ -83,7 +86,7 @@ export default function DashboardPipelineHealthGrid({
     {
       key: "risk",
       value: String(atRisk + stale),
-      label: "At risk",
+      label: t("dashboardStats.atRisk"),
       barPct: total > 0 ? Math.min(100, ((atRisk + stale) / total) * 100) : 0,
       valueClass: atRisk + stale > 0 ? "text-rose-400" : undefined,
       barClass: "bg-rose-500",
@@ -94,13 +97,13 @@ export default function DashboardPipelineHealthGrid({
     <section className="vx-card p-4">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-[13px] font-semibold text-[var(--vx-text)]">
-          Pipeline health
+          {t("dashboardStats.pipelineHealthTitle")}
         </h2>
         <Link
           href={ROUTES.deals}
           className="text-[11px] font-medium text-[var(--vx-accent)] hover:text-[var(--vx-accent-hover)]"
         >
-          View deals
+          {t("copy.viewDeals")}
         </Link>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2">

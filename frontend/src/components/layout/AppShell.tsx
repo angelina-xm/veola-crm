@@ -5,10 +5,12 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/src/lib/cn";
 import { ShellLayoutContext } from "@/src/context/ShellLayoutContext";
 import { ROUTES } from "@/src/lib/product";
+import { useTranslation } from "@/src/context/LocaleContext";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation();
   const [mobileNav, setMobileNav] = useState(false);
   const pathname = usePathname();
   const isDealsWorkspace =
@@ -43,7 +45,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             className="fixed inset-0 z-30 bg-black/50 backdrop-blur-[2px] lg:hidden"
-            aria-label="Close menu"
+            aria-label={t("common.closeMenu")}
             onClick={() => setMobileNav(false)}
           />
         ) : null}
