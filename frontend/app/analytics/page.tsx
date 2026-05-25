@@ -13,9 +13,11 @@ import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
 import { canViewAnalytics } from "@/src/lib/roles";
 import type { AnalyticsGranularity, AnalyticsV1Overview } from "@/src/types";
 import AnalyticsWorkspace from "@/src/components/analytics/AnalyticsWorkspace";
-import { COPY, NAV_LABELS, ROUTES } from "@/src/lib/product";
+import { ROUTES } from "@/src/lib/product";
+import { useTranslation } from "@/src/context/LocaleContext";
 
 export default function AnalyticsPage() {
+  const { t } = useTranslation();
   const { isReady, isAuthenticated, logout } = useAuth();
   const { membership, loading: membershipLoading } = useMembership();
   const [companyId, setCompanyId] = useState<number | null>(null);
@@ -53,7 +55,7 @@ export default function AnalyticsPage() {
     } catch (e) {
       setData(null);
       setClosedSummary(null);
-      setError(e instanceof Error ? e.message : "Failed to load analytics");
+      setError(e instanceof Error ? e.message : t("analytics.failedLoad"));
     } finally {
       setLoading(false);
       setClosedLoading(false);
@@ -69,7 +71,11 @@ export default function AnalyticsPage() {
     <ProtectedRoute>
       <div className="min-h-screen bg-zinc-50/80">
         <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-          <PageHeader eyebrow={COPY.historicalEyebrow} title="Analytics" description={COPY.analyticsHint} />
+          <PageHeader
+            eyebrow={t("copy.historicalEyebrow")}
+            title={t("analytics.pageTitle")}
+            description={t("copy.analyticsHint")}
+          />
           {membershipLoading ? (
             <div className="flex min-h-[30vh] items-center justify-center rounded-2xl border border-zinc-200 bg-white py-16 text-sm text-zinc-500">
               Loading…
@@ -85,7 +91,7 @@ export default function AnalyticsPage() {
                 href={ROUTES.deals}
                 className="mt-6 inline-flex rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
               >
-                {COPY.backToDeals}
+                {t("copy.backToDeals")}
               </Link>
             </div>
           ) : (
@@ -95,7 +101,7 @@ export default function AnalyticsPage() {
                   href={ROUTES.deals}
                   className="text-sm font-medium text-zinc-500 transition hover:text-zinc-900"
                 >
-                  ← {NAV_LABELS.deals}
+                  ← {t("nav.deals")}
                 </Link>
                 <button
                   type="button"

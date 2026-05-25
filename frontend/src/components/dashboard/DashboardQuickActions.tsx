@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { cn } from "@/src/lib/cn";
-import { COPY, ROUTES } from "@/src/lib/product";
+import { ROUTES } from "@/src/lib/product";
+import { useTranslation } from "@/src/context/LocaleContext";
 
 type Action = {
   href: string;
@@ -31,76 +32,80 @@ function IconArrow() {
   );
 }
 
-const ACTIONS: Action[] = [
-  {
-    href: ROUTES.deals,
-    label: COPY.newDeal,
-    iconClass: "bg-[var(--vx-accent-muted)] text-[var(--vx-accent)]",
-    icon: (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-        <path
-          d="M4 7h6M14 7h6M4 12h4M10 12h10M4 17h8M14 17h6"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
-      </svg>
-    ),
-  },
-  {
-    href: ROUTES.clients,
-    label: "Add client",
-    iconClass: "vx-badge-success",
-    icon: (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-        <path
-          d="M16 11a4 4 0 10-8 0M4 20a8 8 0 0116 0"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
-      </svg>
-    ),
-  },
-  {
-    href: `${ROUTES.tasks}?create=1`,
-    label: "Create task",
-    iconClass: "vx-badge-success",
-    icon: (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-        <path
-          d="M9 11l2 2 4-4M7 4h10a2 2 0 012 2v14l-4-2-4 2-4-2-4 2V6a2 2 0 012-2z"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinejoin="round"
-        />
-      </svg>
-    ),
-  },
-  {
-    href: ROUTES.clients,
-    label: "Log interaction",
-    iconClass: "vx-badge-warning",
-    icon: (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-        <path
-          d="M6 4h4l2 5-3 2a11 11 0 005 5l2-3 5v4H6V4z"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinejoin="round"
-        />
-      </svg>
-    ),
-  },
-];
-
 export default function DashboardQuickActions() {
+  const { t } = useTranslation();
+
+  const actions: Action[] = [
+    {
+      href: ROUTES.deals,
+      label: t("copy.newDeal"),
+      iconClass: "bg-[var(--vx-accent-muted)] text-[var(--vx-accent)]",
+      icon: (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path
+            d="M4 7h6M14 7h6M4 12h4M10 12h10M4 17h8M14 17h6"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+        </svg>
+      ),
+    },
+    {
+      href: ROUTES.clients,
+      label: t("common.addClient"),
+      iconClass: "vx-badge-success",
+      icon: (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path
+            d="M16 11a4 4 0 10-8 0M4 20a8 8 0 0116 0"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+        </svg>
+      ),
+    },
+    {
+      href: `${ROUTES.tasks}?create=1`,
+      label: t("common.createTask"),
+      iconClass: "vx-badge-success",
+      icon: (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path
+            d="M9 11l2 2 4-4M7 4h10a2 2 0 012 2v14l-4-2-4 2-4-2-4 2V6a2 2 0 012-2z"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ),
+    },
+    {
+      href: ROUTES.clients,
+      label: t("common.logInteraction"),
+      iconClass: "vx-badge-warning",
+      icon: (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path
+            d="M6 4h4l2 5-3 2a11 11 0 005 5l2-3 5v4H6V4z"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ),
+    },
+  ];
+
   return (
     <section className="vx-card p-4">
-      <h2 className="text-[13px] font-semibold text-[var(--vx-text)]">Quick actions</h2>
+      <h2 className="text-[13px] font-semibold text-[var(--vx-text)]">
+        {t("dashboard.quickActions")}
+      </h2>
       <ul className="mt-3 space-y-1.5">
-        {ACTIONS.map((action) => (
-          <li key={action.label}>
+        {actions.map((action) => (
+          <li key={action.href + action.label}>
             <Link
               href={action.href}
               className={cn(

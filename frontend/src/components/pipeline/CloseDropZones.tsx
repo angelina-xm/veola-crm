@@ -2,6 +2,7 @@
 
 import { useDroppable } from "@dnd-kit/core";
 import { cn } from "@/src/lib/cn";
+import { useTranslation } from "@/src/context/LocaleContext";
 import type { CloseOutcome } from "@/src/lib/pipelineLifecycle";
 import { CLOSE_ZONE_LOST, CLOSE_ZONE_WON } from "@/src/lib/pipelineLifecycle";
 
@@ -50,14 +51,18 @@ type Props = {
 };
 
 export default function CloseDropZones({ canClose, hasWon, hasLost }: Props) {
+  const { t } = useTranslation();
+
   if (!canClose || (!hasWon && !hasLost)) return null;
 
   return (
     <div className="vx-deals-close-panel flex flex-col gap-3">
       <div className="border-b border-[var(--vx-border-subtle)] pb-3">
-        <h2 className="text-[13px] font-medium text-[var(--vx-text)]">Close deal</h2>
+        <h2 className="text-[13px] font-medium text-[var(--vx-text)]">
+          {t("deals.closeDeal")}
+        </h2>
         <p className="mt-1 text-[11px] text-[var(--vx-text-muted)]">
-          Drag here to finish
+          {t("deals.closeDealHint")}
         </p>
       </div>
       <div className="flex flex-1 flex-col gap-3">
@@ -65,8 +70,8 @@ export default function CloseDropZones({ canClose, hasWon, hasLost }: Props) {
           <Zone
             id={CLOSE_ZONE_WON}
             variant="won"
-            label="Won"
-            hint="Confirm outcome"
+            label={t("deals.dropWon")}
+            hint={t("deals.closeWonConfirm")}
             disabled={!canClose}
           />
         ) : null}
@@ -74,8 +79,8 @@ export default function CloseDropZones({ canClose, hasWon, hasLost }: Props) {
           <Zone
             id={CLOSE_ZONE_LOST}
             variant="lost"
-            label="Lost"
-            hint="Reason required"
+            label={t("deals.dropLost")}
+            hint={t("deals.closeLostReason")}
             disabled={!canClose}
           />
         ) : null}

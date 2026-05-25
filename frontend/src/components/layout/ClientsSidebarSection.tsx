@@ -7,7 +7,8 @@ import { useBilling } from "@/src/hooks/useBilling";
 import { useMembership } from "@/src/context/MembershipContext";
 import { canViewAnalytics } from "@/src/lib/roles";
 import PremiumNavChild from "@/src/components/clients/PremiumNavChild";
-import { NAV_LABELS, ROUTES } from "@/src/lib/product";
+import { ROUTES } from "@/src/lib/product";
+import { useTranslation } from "@/src/context/LocaleContext";
 
 const STORAGE_KEY = "vexora:sidebar:clients-expanded";
 
@@ -17,26 +18,6 @@ type ChildItem = {
   match: (path: string) => boolean;
   premium?: boolean;
 };
-
-const CHILDREN: ChildItem[] = [
-  {
-    href: ROUTES.clients,
-    label: NAV_LABELS.clientAll,
-    match: (p) => p === ROUTES.clients,
-  },
-  {
-    href: ROUTES.clientsAnalytics,
-    label: NAV_LABELS.clientAnalytics,
-    match: (p) => p.startsWith(ROUTES.clientsAnalytics),
-    premium: true,
-  },
-  {
-    href: ROUTES.clientsLeaderboards,
-    label: NAV_LABELS.clientLeaderboards,
-    match: (p) => p.startsWith(ROUTES.clientsLeaderboards),
-    premium: true,
-  },
-];
 
 function IconClients() {
   return (
@@ -81,7 +62,28 @@ export default function ClientsSidebarSection({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const { t } = useTranslation();
   const { membership } = useMembership();
+
+  const children: ChildItem[] = [
+    {
+      href: ROUTES.clients,
+      label: t("nav.clientAll"),
+      match: (p) => p === ROUTES.clients,
+    },
+    {
+      href: ROUTES.clientsAnalytics,
+      label: t("nav.clientAnalytics"),
+      match: (p) => p.startsWith(ROUTES.clientsAnalytics),
+      premium: true,
+    },
+    {
+      href: ROUTES.clientsLeaderboards,
+      label: t("nav.clientLeaderboards"),
+      match: (p) => p.startsWith(ROUTES.clientsLeaderboards),
+      premium: true,
+    },
+  ];
   const { entitlements, isLocked } = useBilling();
   const inClientsSection = pathname.startsWith(ROUTES.clients);
 
@@ -132,7 +134,7 @@ export default function ClientsSidebarSection({
           <IconClients />
         </span>
         <span className="min-w-0 flex-1 truncate text-left">
-          {NAV_LABELS.clients}
+          {t("nav.clients")}
         </span>
         <IconChevron open={expanded} />
       </button>
@@ -145,7 +147,7 @@ export default function ClientsSidebarSection({
       >
         <div className="overflow-hidden" onClick={onNavigate}>
           <ul className="ml-[1.35rem] space-y-0.5 border-l border-[var(--vx-border)] py-0.5 pl-2">
-            {CHILDREN.map((child) => {
+            {children.map((child) => {
               const active = child.match(pathname);
               const locked = Boolean(child.premium && intelligenceLocked);
               return (
@@ -157,8 +159,8 @@ export default function ClientsSidebarSection({
                     locked={locked}
                     lockHint={
                       !canViewAnalytics(membership)
-                        ? "Requires analytics permission"
-                        : "Upgrade to Pro for client intelligence"
+                        ? t("common.requiresAnalytics")
+                        : t("common.upgradeProIntelligence")
                     }
                     devUnlock={entitlements.devUnlock}
                     onNavigate={onNavigate}

@@ -1,22 +1,30 @@
+import { translate } from "@/src/i18n/translate";
 import type {
   ClientRelationshipStatus,
   RelationshipHealth,
 } from "@/src/types";
 
+const STATUS_KEYS: Record<ClientRelationshipStatus, string> = {
+  active: "clients.statusActive",
+  vip: "clients.statusVip",
+  growing: "clients.statusGrowing",
+  returning: "clients.statusReturning",
+  dormant: "clients.statusDormant",
+  at_risk: "clients.statusAtRisk",
+  lost_momentum: "clients.statusLostMomentum",
+  seasonal: "clients.statusSeasonal",
+  high_potential: "clients.statusHighPotential",
+};
+
 export const CLIENT_RELATIONSHIP_STATUSES: {
   value: ClientRelationshipStatus;
   label: string;
-}[] = [
-  { value: "active", label: "Active" },
-  { value: "vip", label: "VIP" },
-  { value: "growing", label: "Growing" },
-  { value: "returning", label: "Returning" },
-  { value: "dormant", label: "Dormant" },
-  { value: "at_risk", label: "At risk" },
-  { value: "lost_momentum", label: "Lost momentum" },
-  { value: "seasonal", label: "Seasonal" },
-  { value: "high_potential", label: "High potential" },
-];
+}[] = (
+  Object.entries(STATUS_KEYS) as [ClientRelationshipStatus, string][]
+).map(([value, key]) => ({
+  value,
+  label: translate(key),
+}));
 
 export const HEALTH_CLASS: Record<RelationshipHealth, string> = {
   healthy: "bg-emerald-500/15 text-emerald-300",
@@ -46,19 +54,30 @@ export const SIGNAL_DOT: Record<string, string> = {
 };
 
 export function relationshipStatusLabel(status: string | undefined): string {
-  const row = CLIENT_RELATIONSHIP_STATUSES.find((s) => s.value === status);
-  if (row) return row.label;
-  if (!status) return "Active";
+  const key = STATUS_KEYS[status as ClientRelationshipStatus];
+  if (key) return translate(key);
+  if (!status) return translate("clients.statusActive");
   return status.replace(/_/g, " ");
 }
 
 export function relationshipHealthLabel(health: string | undefined): string {
   const map: Record<string, string> = {
-    healthy: "Healthy",
-    cooling_down: "Cooling down",
-    needs_attention: "Needs attention",
-    re_engagement: "Re-engagement opportunity",
+    healthy: "clients.healthHealthy",
+    cooling_down: "clients.healthCooling",
+    needs_attention: "clients.healthNeedsAttention",
+    re_engagement: "clients.healthReEngagement",
   };
-  if (!health) return "Healthy";
-  return map[health] ?? health.replace(/_/g, " ");
+  if (!health) return translate("clients.healthHealthy");
+  const key = map[health];
+  return key ? translate(key) : health.replace(/_/g, " ");
+}
+
+/** Rebuild status list when locale changes (call from components via useMemo). */
+export function getClientRelationshipStatuses() {
+  return (Object.entries(STATUS_KEYS) as [ClientRelationshipStatus, string][]).map(
+    ([value, key]) => ({
+      value,
+      label: translate(key),
+    })
+  );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/src/lib/cn";
+import { useTranslation } from "@/src/context/LocaleContext";
 import { useTheme } from "@/src/context/ThemeContext";
 import type { ThemeMode } from "@/src/lib/theme";
 
@@ -33,17 +34,18 @@ function IconMoon({ className }: { className?: string }) {
 
 export function ThemeToggleRow({ onSelect }: { onSelect?: () => void }) {
   const { mode, resolved, setMode } = useTheme();
+  const { t } = useTranslation();
 
   const options: { id: ThemeMode; label: string }[] = [
-    { id: "dark", label: "Dark" },
-    { id: "light", label: "Light" },
-    { id: "system", label: "System" },
+    { id: "dark", label: t("theme.dark") },
+    { id: "light", label: t("theme.light") },
+    { id: "system", label: t("theme.system") },
   ];
 
   return (
     <div className="border-t border-[var(--vx-border-subtle)] px-2 py-2">
       <p className="px-2 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--vx-text-muted)]">
-        Appearance
+        {t("theme.appearance")}
       </p>
       <div className="flex gap-1 rounded-lg bg-[var(--vx-bg-subtle)] p-1">
         {options.map((opt) => (
@@ -66,7 +68,9 @@ export function ThemeToggleRow({ onSelect }: { onSelect?: () => void }) {
         ))}
       </div>
       <p className="mt-1.5 px-2 text-[10px] text-[var(--vx-text-muted)]">
-        Active: {resolved === "dark" ? "Dark" : "Light"}
+        {t("theme.activeResolved", {
+          mode: resolved === "dark" ? t("theme.dark") : t("theme.light"),
+        })}
       </p>
     </div>
   );
@@ -75,6 +79,7 @@ export function ThemeToggleRow({ onSelect }: { onSelect?: () => void }) {
 /** Inline Light / Dark control (reference topbar) */
 export function ThemeSegmentedToggle({ className }: { className?: string }) {
   const { mode, resolved, setMode } = useTheme();
+  const { t } = useTranslation();
 
   const pick = (next: "light" | "dark") => {
     setMode(next);
@@ -87,21 +92,21 @@ export function ThemeSegmentedToggle({ className }: { className?: string }) {
         className
       )}
       role="group"
-      aria-label="Theme"
+      aria-label={t("theme.themeGroup")}
     >
-      {(["light", "dark"] as const).map((t) => (
+      {(["light", "dark"] as const).map((themeId) => (
         <button
-          key={t}
+          key={themeId}
           type="button"
-          onClick={() => pick(t)}
+          onClick={() => pick(themeId)}
           className={cn(
             "rounded-md px-2.5 py-1 text-[11px] font-medium capitalize transition-colors",
-            (mode === t || (mode === "system" && resolved === t))
+            (mode === themeId || (mode === "system" && resolved === themeId))
               ? "bg-[var(--vx-surface)] text-[var(--vx-text)] shadow-sm"
               : "text-[var(--vx-text-muted)] hover:text-[var(--vx-text-secondary)]"
           )}
         >
-          {t}
+          {themeId === "light" ? t("theme.light") : t("theme.dark")}
         </button>
       ))}
     </div>
@@ -116,6 +121,7 @@ export function ThemeToggleIcon({
   onClick?: () => void;
 }) {
   const { resolved, toggle } = useTheme();
+  const { t } = useTranslation();
   return (
     <button
       type="button"
@@ -127,7 +133,9 @@ export function ThemeToggleIcon({
         "flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--vx-border)] bg-[var(--vx-surface)] text-[var(--vx-text-secondary)] transition-colors hover:bg-[var(--vx-bg-subtle)] hover:text-[var(--vx-text)]",
         className
       )}
-      aria-label={resolved === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+      aria-label={
+        resolved === "dark" ? t("theme.switchToLight") : t("theme.switchToDark")
+      }
     >
       {resolved === "dark" ? <IconSun /> : <IconMoon />}
     </button>

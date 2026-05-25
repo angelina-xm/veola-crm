@@ -1,10 +1,13 @@
+import { translate } from "@/src/i18n/translate";
 import type { AnalyticsFeedKind, AnalyticsV1FeedItem, CrmTask, TaskPriority } from "@/src/types";
 
 /** Task lifecycle labels — not deal states, not CTAs. */
-export type TaskStatusLabel = "To do" | "Done";
+export type TaskStatusLabel = string;
 
 export function taskStatusLabel(task: CrmTask): TaskStatusLabel {
-  return task.is_completed ? "Done" : "To do";
+  return task.is_completed
+    ? translate("tasks.statusDone")
+    : translate("tasks.statusTodo");
 }
 
 export function taskStatusBadgeClass(task: CrmTask): string {
@@ -22,10 +25,10 @@ export function taskDueChip(
 ): { label: string; className: string } | null {
   if (task.is_completed) return null;
   if (task.state === "overdue") {
-    return { label: "Overdue", className: "vx-badge-danger" };
+    return { label: translate("tasks.overdue"), className: "vx-badge-danger" };
   }
   if (task.state === "today") {
-    return { label: "Due today", className: "vx-badge-warning" };
+    return { label: translate("tasks.dueToday"), className: "vx-badge-warning" };
   }
   return null;
 }
@@ -44,12 +47,19 @@ const PRIORITY_CLASS: Record<TaskPriority, string> = {
   low: "vx-badge-neutral",
 };
 
+const PRIORITY_KEYS: Record<TaskPriority, string> = {
+  urgent: "tasks.priorityUrgent",
+  high: "tasks.priorityHigh",
+  medium: "tasks.priorityMedium",
+  low: "tasks.priorityLow",
+};
+
 export function priorityBadgeClass(priority: TaskPriority): string {
   return PRIORITY_CLASS[priority] ?? PRIORITY_CLASS.medium;
 }
 
 export function priorityLabel(priority: TaskPriority): string {
-  return priority.charAt(0).toUpperCase() + priority.slice(1);
+  return translate(PRIORITY_KEYS[priority] ?? PRIORITY_KEYS.medium);
 }
 
 /** Sort operational queue: overdue → today → priority. */
@@ -103,16 +113,16 @@ export function activityFeedBadge(item: AnalyticsV1FeedItem): {
 } {
   switch (item.kind as AnalyticsFeedKind) {
     case "deal_won":
-      return { label: "Won", className: "vx-badge-success" };
+      return { label: translate("activity.won"), className: "vx-badge-success" };
     case "deal_moved":
-      return { label: "Moved", className: "vx-badge-neutral" };
+      return { label: translate("activity.moved"), className: "vx-badge-neutral" };
     case "task_completed":
-      return { label: "Task done", className: "vx-badge-success" };
+      return { label: translate("activity.taskDone"), className: "vx-badge-success" };
     case "task_open":
-      return { label: "New task", className: "vx-badge-warning" };
+      return { label: translate("activity.newTask"), className: "vx-badge-warning" };
     case "note_added":
-      return { label: "Note", className: "vx-badge-neutral" };
+      return { label: translate("activity.note"), className: "vx-badge-neutral" };
     default:
-      return { label: "Activity", className: "vx-badge-neutral" };
+      return { label: translate("activity.activity"), className: "vx-badge-neutral" };
   }
 }

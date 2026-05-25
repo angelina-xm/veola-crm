@@ -1,3 +1,4 @@
+import { translate } from "@/src/i18n/translate";
 import type { Activity } from "@/src/types";
 
 function startOfLocalDay(d: Date): number {
@@ -24,7 +25,6 @@ export type DealTaskSignal = {
 
 /**
  * Открытые задачи (type=task, is_completed=false) по одной сделке.
- * Приоритет отображения: overdue → due today → будущие / без срока → нет задач.
  */
 export function getDealTaskSignal(
   openTasksForDeal: Activity[],
@@ -37,7 +37,7 @@ export function getDealTaskSignal(
   if (tasks.length === 0) {
     return {
       tone: "gray",
-      text: "No open tasks",
+      text: translate("deals.noOpenTasks"),
       borderClass: "border-l-4 border-l-gray-200",
       textClass: "text-gray-500",
     };
@@ -62,7 +62,7 @@ export function getDealTaskSignal(
   if (overdue > 0) {
     return {
       tone: "red",
-      text: `⚠️ ${overdue} overdue`,
+      text: `⚠ ${translate("deals.overdueCount", { count: overdue })}`,
       borderClass: "border-l-4 border-l-red-500",
       textClass: "text-red-700",
     };
@@ -71,7 +71,7 @@ export function getDealTaskSignal(
   if (today > 0) {
     return {
       tone: "yellow",
-      text: `🟡 ${today} due today`,
+      text: translate("deals.dueTodayCount", { count: today }),
       borderClass: "border-l-4 border-l-amber-400",
       textClass: "text-amber-800",
     };
@@ -81,7 +81,10 @@ export function getDealTaskSignal(
     const n = future + noDue;
     return {
       tone: "green",
-      text: n === 1 ? "🟢 1 open task" : `🟢 ${n} open tasks`,
+      text:
+        n === 1
+          ? translate("deals.openTaskOne")
+          : translate("deals.openTasksCount", { count: n }),
       borderClass: "border-l-4 border-l-emerald-500",
       textClass: "text-emerald-800",
     };
@@ -89,7 +92,7 @@ export function getDealTaskSignal(
 
   return {
     tone: "gray",
-    text: "No open tasks",
+    text: translate("deals.noOpenTasks"),
     borderClass: "border-l-4 border-l-gray-200",
     textClass: "text-gray-500",
   };

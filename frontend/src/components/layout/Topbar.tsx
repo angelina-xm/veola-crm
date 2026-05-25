@@ -14,7 +14,9 @@ import {
 import { cn } from "@/src/lib/cn";
 import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
 import { initialsFromLabel, pageTitleForPath } from "@/src/lib/nav";
-import { COPY, ROUTES } from "@/src/lib/product";
+import { ROUTES } from "@/src/lib/product";
+import { useTranslation } from "@/src/context/LocaleContext";
+import { LanguageSwitcherRow } from "@/src/components/i18n/LanguageSwitcher";
 
 export default function Topbar({
   onMenuToggle,
@@ -28,6 +30,7 @@ export default function Topbar({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useTranslation();
   const { logout } = useAuth();
   const { membership } = useMembership();
   const [companyId, setCompanyId] = useState<number | null>(null);
@@ -48,8 +51,8 @@ export default function Topbar({
     companyId != null
   );
 
-  const pageTitle = pageTitleForPath(pathname ?? "/");
-  const userName = membership?.user_display_name ?? "Account";
+  const pageTitle = pageTitleForPath(pathname ?? "/", t);
+  const userName = membership?.user_display_name ?? t("common.account");
   const userInitials = initialsFromLabel(userName);
   const companyName = membership?.company_name ?? "Vexora";
 
@@ -85,7 +88,7 @@ export default function Topbar({
           minimal ? "hidden" : "lg:hidden"
         )}
         onClick={onMenuToggle}
-        aria-label="Toggle menu"
+        aria-label={t("topbar.toggleMenu")}
         aria-expanded={menuOpen}
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -129,7 +132,7 @@ export default function Topbar({
           </span>
           <input
             type="search"
-            placeholder="Search clients, deals…"
+            placeholder={t("topbar.searchPlaceholder")}
             className="vx-input pl-9"
             onKeyDown={(e) => {
               if (e.key === "Enter") router.push(ROUTES.clients);
@@ -150,7 +153,7 @@ export default function Topbar({
               "relative flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--vx-border)] text-[var(--vx-text-secondary)] transition-colors hover:bg-[var(--vx-bg-subtle)]",
               notifOpen && "bg-[var(--vx-bg-subtle)]"
             )}
-            aria-label="Notifications"
+            aria-label={t("topbar.notifications")}
             aria-expanded={notifOpen}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -174,11 +177,11 @@ export default function Topbar({
           {notifOpen ? (
             <div className="absolute right-0 top-full z-50 mt-2 w-72 overflow-hidden rounded-xl border border-[var(--vx-border)] bg-[var(--vx-surface-raised)] py-1 shadow-lg vx-animate-in">
               <p className="border-b border-[var(--vx-border-subtle)] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--vx-text-muted)]">
-                Notifications
+                {t("topbar.notifications")}
               </p>
               {notifications.length === 0 ? (
                 <p className="px-3 py-4 text-sm text-[var(--vx-text-muted)]">
-                  You&apos;re all caught up.
+                  {t("topbar.allCaughtUp")}
                 </p>
               ) : (
                 notifications.slice(0, 6).map((n) => (
@@ -200,7 +203,7 @@ export default function Topbar({
                 className="block border-t border-[var(--vx-border-subtle)] px-3 py-2 text-center text-xs font-medium text-[var(--vx-accent)] hover:bg-[var(--vx-bg-subtle)]"
                 onClick={() => setNotifOpen(false)}
               >
-                View tasks
+                {t("common.viewTasks")}
               </Link>
             </div>
           ) : null}
@@ -221,7 +224,7 @@ export default function Topbar({
                 strokeLinecap="round"
               />
             </svg>
-            Create
+            {t("common.create")}
           </button>
           {createOpen ? (
             <div className="absolute right-0 top-full z-50 mt-2 w-44 overflow-hidden rounded-xl border border-[var(--vx-border)] bg-[var(--vx-surface-raised)] py-1 shadow-lg vx-animate-in">
@@ -230,21 +233,21 @@ export default function Topbar({
                 className="block px-3 py-2 text-sm text-[var(--vx-text-secondary)] hover:bg-[var(--vx-bg-subtle)]"
                 onClick={() => setCreateOpen(false)}
               >
-                {COPY.newDeal}
+                {t("copy.newDeal")}
               </Link>
               <Link
                 href={ROUTES.tasks}
                 className="block px-3 py-2 text-sm text-[var(--vx-text-secondary)] hover:bg-[var(--vx-bg-subtle)]"
                 onClick={() => setCreateOpen(false)}
               >
-                New task
+                {t("common.newTask")}
               </Link>
               <Link
                 href={ROUTES.clients}
                 className="block px-3 py-2 text-sm text-[var(--vx-text-secondary)] hover:bg-[var(--vx-bg-subtle)]"
                 onClick={() => setCreateOpen(false)}
               >
-                New client
+                {t("common.newClient")}
               </Link>
             </div>
           ) : null}
@@ -255,7 +258,7 @@ export default function Topbar({
             type="button"
             onClick={() => setProfileOpen((v) => !v)}
             className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--vx-accent-muted)] text-xs font-semibold text-[var(--vx-accent)] ring-2 ring-[var(--vx-surface)]"
-            aria-label="Account menu"
+            aria-label={t("topbar.accountMenu")}
             aria-expanded={profileOpen}
           >
             {userInitials}
@@ -268,13 +271,14 @@ export default function Topbar({
                   {membership?.user_email}
                 </p>
               </div>
+              <LanguageSwitcherRow onSelect={() => setProfileOpen(false)} />
               <ThemeToggleRow onSelect={() => setProfileOpen(false)} />
               <Link
                 href={ROUTES.team}
                 className="block px-3 py-2 text-sm text-[var(--vx-text-secondary)] hover:bg-[var(--vx-bg-subtle)]"
                 onClick={() => setProfileOpen(false)}
               >
-                Billing
+                {t("common.billing")}
               </Link>
               <button
                 type="button"
@@ -284,7 +288,7 @@ export default function Topbar({
                   logout("manual_logout");
                 }}
               >
-                Sign out
+                {t("common.signOut")}
               </button>
             </div>
           ) : null}

@@ -8,13 +8,13 @@ import ClientSectionNav from "@/src/components/clients/ClientSectionNav";
 import ClientAnalyticsView from "@/src/components/clients/analytics/ClientAnalyticsView";
 import PageHeader from "@/src/components/ui/PageHeader";
 import { useClientCommercialAnalytics } from "@/src/hooks/useClientCommercialAnalytics";
-import { NAV_LABELS } from "@/src/lib/product";
+import { useTranslation } from "@/src/context/LocaleContext";
 
 export default function ClientAnalyticsPage() {
   return (
     <Suspense
       fallback={
-        <div className="py-16 text-center text-sm text-zinc-500">Loading…</div>
+        <div className="py-16 text-center text-sm text-zinc-500">…</div>
       }
     >
       <ClientAnalyticsPageContent />
@@ -23,6 +23,7 @@ export default function ClientAnalyticsPage() {
 }
 
 function ClientAnalyticsPageContent() {
+  const { t } = useTranslation();
   const searchParams = useSearchParams();
   const highlightClientId = searchParams.get("highlight");
   const { data, loading, error, load } = useClientCommercialAnalytics("");
@@ -32,14 +33,14 @@ function ClientAnalyticsPageContent() {
       <div className="space-y-6 pb-10">
         <ClientSectionNav />
         <PageHeader
-          eyebrow="Client intelligence"
-          title={NAV_LABELS.clientAnalytics}
-          description="Revenue trends, commercial metrics, and relationship health across your client base."
+          eyebrow={t("clients.intelligenceEyebrow")}
+          title={t("nav.clientAnalytics")}
+          description={t("clients.intelligenceDescription")}
         />
 
         <ClientIntelligenceGate
-          title={NAV_LABELS.clientAnalytics}
-          description="Portfolio-level client intelligence"
+          title={t("nav.clientAnalytics")}
+          description={t("clients.intelligencePortfolio")}
         >
           <ClientAnalyticsView
             data={data}

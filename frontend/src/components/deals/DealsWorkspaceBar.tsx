@@ -3,23 +3,11 @@
 import Link from "next/link";
 import { cn } from "@/src/lib/cn";
 import { ROUTES } from "@/src/lib/product";
+import { useTranslation } from "@/src/context/LocaleContext";
 import { formatPipelineMetric } from "./DealsWorkspaceBar.utils";
 
 export type DealsBoardView = "all" | "attention" | "closing" | "high_value";
 export type DealsTimeframe = "quarter" | "month" | "all";
-
-const VIEWS: { id: DealsBoardView; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "attention", label: "Attention" },
-  { id: "closing", label: "Closing" },
-  { id: "high_value", label: "High value" },
-];
-
-const TIMEFRAMES: { id: DealsTimeframe; label: string }[] = [
-  { id: "quarter", label: "This quarter" },
-  { id: "month", label: "This month" },
-  { id: "all", label: "All time" },
-];
 
 export { formatPipelineMetric };
 
@@ -66,29 +54,47 @@ export default function DealsWorkspaceBar({
   createDisabled?: boolean;
   onMenuToggle?: () => void;
 }) {
+  const { t } = useTranslation();
+
+  const VIEWS: { id: DealsBoardView; label: string }[] = [
+    { id: "all", label: t("deals.viewAll") },
+    { id: "attention", label: t("deals.viewAttention") },
+    { id: "closing", label: t("deals.viewClosing") },
+    { id: "high_value", label: t("deals.viewHighValue") },
+  ];
+
+  const TIMEFRAMES: { id: DealsTimeframe; label: string }[] = [
+    { id: "quarter", label: t("deals.timeframeQuarter") },
+    { id: "month", label: t("deals.timeframeMonth") },
+    { id: "all", label: t("deals.timeframeAll") },
+  ];
+
+  const inProgressLabel = t("deals.statusInProgress");
+
   const statusRows = [
     {
-      label: "In progress",
+      label: inProgressLabel,
       value: inProgressValue,
       count: activeCount,
       dot: "bg-sky-400/80",
+      isInProgress: true,
     },
     {
-      label: "At risk",
+      label: t("deals.statusAtRisk"),
       value: 0,
       count: atRiskCount,
       dot: "bg-rose-400/80",
       hide: atRiskCount === 0,
     },
     {
-      label: "Need attention",
+      label: t("deals.statusNeedAttention"),
       value: 0,
       count: attentionCount,
       dot: "bg-amber-400/80",
       hide: attentionCount === 0,
     },
     {
-      label: "Closing soon",
+      label: t("deals.statusClosingSoon"),
       value: 0,
       count: closingCount,
       dot: "bg-violet-400/80",
@@ -99,7 +105,6 @@ export default function DealsWorkspaceBar({
   return (
     <header className="vx-deals-command-bar">
       <div className="flex flex-col gap-5">
-        {/* Row 1 — title + controls */}
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex min-w-0 items-center gap-3">
             {onMenuToggle ? (
@@ -107,7 +112,7 @@ export default function DealsWorkspaceBar({
                 type="button"
                 className="vx-deals-icon-btn lg:hidden"
                 onClick={onMenuToggle}
-                aria-label="Open menu"
+                aria-label={t("deals.openMenu")}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
                   <path
@@ -121,7 +126,7 @@ export default function DealsWorkspaceBar({
             ) : null}
             <div className="min-w-0">
               <h1 className="text-xl font-semibold tracking-tight text-[var(--vx-text)]">
-                Deals
+                {t("deals.title")}
               </h1>
               <p className="mt-0.5 flex items-center gap-1.5 text-[12px] text-[var(--vx-text-muted)]">
                 <span className="inline-block h-1 w-1 rounded-full bg-[var(--vx-accent)]" />
@@ -147,7 +152,7 @@ export default function DealsWorkspaceBar({
                 type="search"
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="Search deals, clients…"
+                placeholder={t("deals.searchPlaceholder")}
                 className="vx-deals-search vx-input w-full pr-14"
               />
               <kbd className="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 rounded border border-[var(--vx-border-subtle)] bg-[var(--vx-bg-subtle)] px-1.5 py-0.5 text-[10px] text-[var(--vx-text-muted)] sm:inline">
@@ -158,7 +163,7 @@ export default function DealsWorkspaceBar({
             <div
               className="vx-deals-filter-tabs hidden sm:inline-flex"
               role="tablist"
-              aria-label="Filters"
+              aria-label={t("deals.filters")}
             >
               {VIEWS.map((v) => (
                 <button
@@ -178,7 +183,7 @@ export default function DealsWorkspaceBar({
               type="button"
               onClick={onSortToggle}
               className={cn("vx-deals-icon-btn", sortByPriority && "is-active")}
-              title="Sort by priority"
+              title={t("deals.sortByPriority")}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
                 <path
@@ -190,7 +195,11 @@ export default function DealsWorkspaceBar({
               </svg>
             </button>
 
-            <Link href={ROUTES.dealsClosed} className="vx-deals-icon-btn" title="Closed deals">
+            <Link
+              href={ROUTES.dealsClosed}
+              className="vx-deals-icon-btn"
+              title={t("deals.closedDealsTitle")}
+            >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
                 <path
                   d="M12 15a3 3 0 100-6 3 3 0 000 6z"
@@ -212,18 +221,17 @@ export default function DealsWorkspaceBar({
               className="vx-deals-cta disabled:opacity-50"
             >
               <span aria-hidden>+</span>
-              New deal
+              {t("deals.newDeal")}
             </button>
           </div>
         </div>
 
-        {/* Row 2 — pipeline metrics */}
         <div className="vx-deals-metrics-panel">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div className="flex flex-wrap items-end gap-8">
               <div>
                 <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--vx-text-muted)]">
-                  Pipeline value
+                  {t("deals.pipelineValue")}
                 </p>
                 <p className="mt-1 flex items-center gap-2 text-2xl font-semibold tracking-tight text-[var(--vx-text)] vx-tabular">
                   {pipelineValue}
@@ -241,12 +249,12 @@ export default function DealsWorkspaceBar({
               </div>
               <div>
                 <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--vx-text-muted)]">
-                  Active deals
+                  {t("deals.activeDeals")}
                 </p>
                 <p className="mt-1 text-lg font-semibold text-[var(--vx-text)] vx-tabular">
                   {activeCount}
                   <span className="ml-1.5 text-[13px] font-normal text-[var(--vx-text-muted)]">
-                    across {stageCount} stages
+                    {t("deals.acrossStages", { count: stageCount })}
                   </span>
                 </p>
               </div>
@@ -257,11 +265,11 @@ export default function DealsWorkspaceBar({
                 value={timeframe}
                 onChange={(e) => onTimeframeChange(e.target.value as DealsTimeframe)}
                 className="vx-deals-timeframe"
-                aria-label="Timeframe"
+                aria-label={t("deals.timeframe")}
               >
-                {TIMEFRAMES.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.label}
+                {TIMEFRAMES.map((tf) => (
+                  <option key={tf.id} value={tf.id}>
+                    {tf.label}
                   </option>
                 ))}
               </select>
@@ -275,12 +283,12 @@ export default function DealsWorkspaceBar({
                   key={row.label}
                   className="flex items-center justify-between gap-2 text-[12px]"
                 >
-                  <span className="flex items-center gap-2 text-[var(--vx-text-secondary)]">
-                    <span className={cn("h-1.5 w-1.5 rounded-full", row.dot)} />
-                    {row.label}
+                  <span className="flex min-w-0 items-center gap-2 text-[var(--vx-text-secondary)]">
+                    <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", row.dot)} />
+                    <span className="truncate">{row.label}</span>
                   </span>
-                  <span className="text-[var(--vx-text-muted)] vx-tabular">
-                    {row.label === "In progress"
+                  <span className="shrink-0 text-[var(--vx-text-muted)] vx-tabular">
+                    {"isInProgress" in row && row.isInProgress
                       ? formatPipelineMetric(row.value)
                       : `${row.count}`}
                   </span>
@@ -290,11 +298,10 @@ export default function DealsWorkspaceBar({
           ) : null}
         </div>
 
-        {/* Mobile filters */}
         <div
           className="vx-deals-filter-tabs inline-flex sm:hidden"
           role="tablist"
-          aria-label="Filters"
+          aria-label={t("deals.filters")}
         >
           {VIEWS.map((v) => (
             <button

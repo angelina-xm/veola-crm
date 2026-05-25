@@ -4,7 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/src/lib/cn";
 import { initialsFromLabel } from "@/src/lib/nav";
-import { NAV_LABELS, ROUTES } from "@/src/lib/product";
+import { ROUTES } from "@/src/lib/product";
+import { useTranslation } from "@/src/context/LocaleContext";
 import { useMembership } from "@/src/context/MembershipContext";
 import {
   canManageAutomations,
@@ -128,7 +129,13 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
   );
 }
 
-function WorkspaceMark({ companyName }: { companyName: string }) {
+function WorkspaceMark({
+  companyName,
+  workspaceLabel,
+}: {
+  companyName: string;
+  workspaceLabel: string;
+}) {
   const initials = initialsFromLabel(companyName);
   return (
     <Link
@@ -142,7 +149,7 @@ function WorkspaceMark({ companyName }: { companyName: string }) {
         <span className="block truncate text-sm font-semibold text-[var(--vx-text)]">
           {companyName}
         </span>
-        <span className="block text-[10px] text-[var(--vx-text-muted)]">Workspace</span>
+        <span className="block text-[10px] text-[var(--vx-text-muted)]">{workspaceLabel}</span>
       </span>
     </Link>
   );
@@ -150,9 +157,10 @@ function WorkspaceMark({ companyName }: { companyName: string }) {
 
 export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const { t } = useTranslation();
   const { membership } = useMembership();
   const companyName = membership?.company_name ?? "Vexora";
-  const userName = membership?.user_display_name ?? "User";
+  const userName = membership?.user_display_name ?? t("common.user");
   const userEmail = membership?.user_email ?? "";
   const userInitials = initialsFromLabel(userName);
 
@@ -161,24 +169,24 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const menuMain: NavItem[] = [
     {
       href: ROUTES.dashboard,
-      label: NAV_LABELS.dashboard,
+      label: t("nav.dashboard"),
       icon: <IconDashboard />,
       match: (p) => p === ROUTES.dashboard || p === "/",
     },
     {
       href: ROUTES.deals,
-      label: NAV_LABELS.deals,
+      label: t("nav.deals"),
       icon: <IconDeals />,
       match: (p) => p === ROUTES.deals || p === ROUTES.pipeline,
     },
   ];
 
   const menuWork: NavItem[] = [
-    { href: ROUTES.products, label: NAV_LABELS.catalog, icon: <IconCatalog /> },
-    { href: ROUTES.tasks, label: NAV_LABELS.tasks, icon: <IconTasks /> },
+    { href: ROUTES.products, label: t("nav.catalog"), icon: <IconCatalog /> },
+    { href: ROUTES.tasks, label: t("nav.tasks"), icon: <IconTasks /> },
     {
       href: ROUTES.analytics,
-      label: NAV_LABELS.analytics,
+      label: t("nav.analytics"),
       icon: <IconChart />,
       muted: !analyticsAllowed,
     },
@@ -186,12 +194,12 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
   const systemNav: NavItem[] = [];
   if (canManageTeam(membership)) {
-    systemNav.push({ href: ROUTES.team, label: NAV_LABELS.team, icon: <IconTeam /> });
+    systemNav.push({ href: ROUTES.team, label: t("nav.team"), icon: <IconTeam /> });
   }
   if (canManageAutomations(membership)) {
     systemNav.push({
       href: ROUTES.automation,
-      label: NAV_LABELS.automation,
+      label: t("nav.automation"),
       icon: <IconAutomation />,
     });
   }
@@ -213,7 +221,10 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <aside className="flex h-full flex-col border-r border-[var(--vx-border)] bg-[var(--vx-surface)] px-2 py-3 shadow-[var(--vx-shadow-sidebar)]">
       <div className="px-0.5" onClick={onNavigate}>
-        <WorkspaceMark companyName={companyName} />
+        <WorkspaceMark
+          companyName={companyName}
+          workspaceLabel={t("nav.workspaceMark")}
+        />
       </div>
       <nav className="flex-1 overflow-y-auto">
         <div className="space-y-0.5" onClick={onNavigate}>
@@ -225,7 +236,7 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             <NavLink key={item.href} item={item} pathname={pathname} />
           ))}
         </div>
-        {section("Workspace", systemNav)}
+        {section(t("nav.workspace"), systemNav)}
       </nav>
 
       <div

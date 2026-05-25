@@ -1,4 +1,12 @@
+import { getRuntimeLocale } from "@/src/i18n/translate";
+import { translate } from "@/src/i18n/translate";
+import { LOCALE_META, type Locale } from "@/src/i18n/types";
 import type { Client } from "@/src/types";
+
+function intlLocale(): string {
+  const code = getRuntimeLocale();
+  return LOCALE_META[code as Locale]?.bcp47 ?? "ru";
+}
 
 /** Календарные дни между двумя датами (локальная полуночь). */
 function calendarDaysBetween(from: Date, to: Date): number {
@@ -8,17 +16,17 @@ function calendarDaysBetween(from: Date, to: Date): number {
 }
 
 /**
- * Дата создания сделки: "Today" | "Yesterday" | "N days ago".
+ * Дата создания сделки: Today | Yesterday | N days ago.
  */
 export function formatCreatedRelative(iso: string | undefined): string {
-  if (!iso) return "—";
+  if (!iso) return translate("common.notAvailable");
   const created = new Date(iso);
-  if (!Number.isFinite(created.getTime())) return "—";
+  if (!Number.isFinite(created.getTime())) return translate("common.notAvailable");
   const now = new Date();
   const days = calendarDaysBetween(created, now);
-  if (days <= 0) return "Today";
-  if (days === 1) return "Yesterday";
-  return `${days} days ago`;
+  if (days <= 0) return translate("time.today");
+  if (days === 1) return translate("time.yesterday");
+  return translate("time.daysAgo", { count: days });
 }
 
 export function formatDealIdLabel(id: string | number): string {
@@ -33,7 +41,7 @@ export function formatDealAmountUsd(
   const n =
     typeof amount === "number" ? amount : Number.parseFloat(String(amount));
   if (!Number.isFinite(n)) return null;
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat(intlLocale(), {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 0,
@@ -55,20 +63,20 @@ export function clientById(
   return clients.find((x) => String(x.id) === String(clientId));
 }
 
-/** Short relative time for card footers — "2h ago", "Yesterday", "15d". */
+/** Short relative time for card footers. */
 export function formatActivityShort(iso: string | undefined | null): string {
-  if (!iso) return "—";
+  if (!iso) return translate("common.notAvailable");
   const ts = new Date(iso).getTime();
-  if (!Number.isFinite(ts)) return "—";
+  if (!Number.isFinite(ts)) return translate("common.notAvailable");
   const diffMs = Date.now() - ts;
   const mins = Math.floor(diffMs / 60_000);
   const hours = Math.floor(diffMs / 3_600_000);
   const days = Math.floor(diffMs / 86_400_000);
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days === 1) return "Yesterday";
-  if (days < 14) return `${days}d ago`;
+  if (mins < 1) return translate("time.justNow");
+  if (mins < 60) return translate("time.minutesAgo", { count: mins });
+  if (hours < 24) return translate("time.hoursAgo", { count: hours });
+  if (days === 1) return translate("time.yesterday");
+  if (days < 14) return translate("time.daysShortAgo", { count: days });
   return formatCreatedRelative(iso);
 }
 
@@ -94,9 +102,9 @@ export function inferStageProbability(stageName?: string | null): number | null 
 
 export function assigneeLabel(
   email?: string | null,
-  fallback = "Unassigned"
+  fallback?: string
 ): string {
-  if (!email) return fallback;
+  if (!email) return fallback ?? translate("deals.unassigned");
   const local = email.split("@")[0] ?? email;
   return local.replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }

@@ -19,6 +19,7 @@ import { useAuth } from "@/src/components/auth/AuthProvider";
 import { useSettings } from "@/src/context/SettingsContext";
 import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
 import EmptyState from "@/src/components/ui/EmptyState";
+import { useTranslation } from "@/src/context/LocaleContext";
 import { Client, DealsByStage, PipelineStage } from "@/src/types";
 
 type ApiDealRow = {
@@ -31,6 +32,7 @@ type ApiDealRow = {
 };
 
 export default function DealsPage() {
+  const { t } = useTranslation();
   const { isReady, isAuthenticated, logout } = useAuth();
   const {
     settings: automationSettings,
@@ -94,7 +96,7 @@ export default function DealsPage() {
           setClientsError(
             clientsErr instanceof Error
               ? clientsErr.message
-              : "Could not load clients."
+              : t("deals.failedLoadClients")
           );
         }
 
@@ -106,7 +108,7 @@ export default function DealsPage() {
         }));
 
         if (normalizedStages.length === 0) {
-          setError("No deal stages configured for this company.");
+          setError(t("deals.noStagesConfigured"));
         }
 
         const normalizedDeals = normalizeApiList(
@@ -136,12 +138,12 @@ export default function DealsPage() {
           return;
         }
         if (err instanceof AuthError) {
-          setError("Session expired. Redirecting to sign in…");
+          setError(t("deals.sessionExpired"));
           logout(err.reason);
           return;
         }
         setError(
-          err instanceof Error ? err.message : "Failed to load deals"
+          err instanceof Error ? err.message : t("deals.failedLoad")
         );
         setStages([]);
         setDealsByStage({});
@@ -175,8 +177,8 @@ export default function DealsPage() {
 
         {!loading && totalDeals === 0 ? (
           <EmptyState
-            title="No deals yet"
-            description="Use Create → New deal. It will appear on your board in the selected stage."
+            title={t("deals.emptyBoard")}
+            description={t("deals.emptyHint")}
           />
         ) : null}
 

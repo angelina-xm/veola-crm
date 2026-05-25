@@ -12,9 +12,11 @@ import { formatDealAmountUsd } from "@/src/lib/dealDisplay";
 import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
 import type { ClosedDealsSummary, Deal } from "@/src/types";
 import { normalizeApiList } from "@/src/lib/api";
-import { COPY, ROUTES } from "@/src/lib/product";
+import { ROUTES } from "@/src/lib/product";
+import { useTranslation } from "@/src/context/LocaleContext";
 
 export default function ClosedDealsPage() {
+  const { t } = useTranslation();
   const { isReady, isAuthenticated } = useAuth();
   const [companyId, setCompanyId] = useState<number | null>(null);
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -47,7 +49,7 @@ export default function ClosedDealsPage() {
       setDeals(rows);
       setSummary(closedSummary);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load closed deals");
+      setError(e instanceof Error ? e.message : t("deals.failedLoad"));
       setDeals([]);
       setSummary(null);
     } finally {
@@ -64,15 +66,15 @@ export default function ClosedDealsPage() {
     <ProtectedRoute>
       <>
         <PageHeader
-          eyebrow={COPY.historicalEyebrow}
-          title="Closed deals"
-          description={COPY.closedDealsHint}
+          eyebrow={t("copy.historicalEyebrow")}
+          title={t("nav.closedDeals")}
+          description={t("copy.closedDealsHint")}
           actions={
             <Link
               href={ROUTES.deals}
               className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
             >
-              {COPY.backToDeals}
+              {t("copy.backToDeals")}
             </Link>
           }
         />

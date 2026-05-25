@@ -16,6 +16,8 @@ import {
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "@/src/context/LocaleContext";
+import { translate } from "@/src/i18n/translate";
 import Stage from "./Stage";
 import DealModal from "./DealModal";
 import {
@@ -297,7 +299,7 @@ function readDealPatch(raw: unknown): Deal {
     !("id" in raw) ||
     !("title" in raw)
   ) {
-    throw new Error("Invalid deal response");
+    throw new Error(translate("deals.invalidDealResponse"));
   }
   const o = raw as {
     id: string | number;
@@ -323,6 +325,7 @@ export default function Board({
   automationSettingsLoading,
 }: BoardProps) {
   const { membership, loading: membershipLoading } = useMembership();
+  const { t } = useTranslation();
   const router = useRouter();
   const allowCreateDeals =
     !membershipLoading && canCreateDeals(membership);
@@ -346,7 +349,7 @@ export default function Board({
       setAnalyticsOverview(data);
     } catch (err) {
       setAnalyticsError(
-        err instanceof Error ? err.message : "Failed to load analytics"
+        err instanceof Error ? err.message : t("analytics.failedLoad")
       );
     } finally {
       setAnalyticsLoading(false);
@@ -446,8 +449,8 @@ export default function Board({
   const [searchQuery, setSearchQuery] = useState("");
   const { toggleMobileNav } = useShellLayout();
   const pipelineName = membership?.company_name
-    ? `${membership.company_name} Sales Pipeline`
-    : "Sales Pipeline";
+    ? `${membership.company_name} · ${t("deals.pipelineSuffix")}`
+    : t("common.defaultPipelineName");
   const [priorityStageOrder, setPriorityStageOrder] = useState<string[] | null>(
     null
   );
@@ -629,7 +632,7 @@ export default function Board({
   const handleAddNote = useCallback(
     async (dealId: string) => {
       if (typeof window === "undefined") return;
-      const content = window.prompt("Note", "");
+      const content = window.prompt(t("deals.notePrompt"), "");
       if (content === null) return;
       const trimmed = content.trim();
       if (!trimmed) return;
@@ -1027,7 +1030,7 @@ export default function Board({
         setPendingClose(null);
       } catch (err) {
         setCloseError(
-          err instanceof Error ? err.message : "Failed to close deal"
+          err instanceof Error ? err.message : t("deals.failedClose")
         );
       } finally {
         setCloseSubmitting(false);
@@ -1054,7 +1057,7 @@ export default function Board({
         setPendingClose(null);
       } catch (err) {
         setCloseError(
-          err instanceof Error ? err.message : "Failed to close deal"
+          err instanceof Error ? err.message : t("deals.failedClose")
         );
       } finally {
         setCloseSubmitting(false);
@@ -1199,7 +1202,7 @@ export default function Board({
       if (!canCreateDeals(membership)) return;
       if (!stages.length) {
         if (typeof window !== "undefined") {
-          window.alert("Нет доступных стадий. Сначала добавьте этапы воронки.");
+          window.alert(t("deals.noStages"));
         }
         return;
       }
@@ -1251,7 +1254,7 @@ export default function Board({
 
   const handleDelete = useCallback(
     async (deal: Deal) => {
-      if (typeof window !== "undefined" && !window.confirm("Are you sure?")) {
+      if (typeof window !== "undefined" && !window.confirm(t("common.confirmSure"))) {
         return;
       }
 
@@ -1269,7 +1272,7 @@ export default function Board({
       try {
         await deleteDeal(companyId, deal.id);
         if (typeof window !== "undefined") {
-          window.alert("Deal deleted");
+          window.alert(t("deals.dealDeleted"));
         }
       } catch (err) {
         setDealsByStage((prev) => upsertDealInGrouped(prev, snapshot));
@@ -1361,7 +1364,7 @@ export default function Board({
         });
         setModalOpen(false);
         if (typeof window !== "undefined") {
-          window.alert("Deal created");
+          window.alert(t("deals.dealCreated"));
         }
       } catch (err) {
         setDealsByStage((prev) => removeDealFromGrouped(prev, tempId));
@@ -1424,7 +1427,7 @@ export default function Board({
         setModalOpen(false);
         setDealInModal(null);
         if (typeof window !== "undefined") {
-          window.alert("Deal updated");
+          window.alert(t("deals.dealUpdated"));
         }
       } catch (err) {
         setDealsByStage((prev) => upsertDealInGrouped(prev, prevSnapshot));

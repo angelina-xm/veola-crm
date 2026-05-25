@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getLoginReasonMessage, login } from "@/src/lib/auth";
 import { useAuth } from "@/src/components/auth/AuthProvider";
+import { useTranslation } from "@/src/context/LocaleContext";
 
 function LoginPageInner() {
+  const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isReady, isAuthenticated, markAuthenticated } = useAuth();
@@ -55,7 +57,7 @@ function LoginPageInner() {
         onSubmit={handleSubmit}
         className="w-full max-w-md rounded-lg border border-gray-200 bg-white p-6 shadow-sm"
       >
-        <h1 className="text-2xl font-semibold text-gray-900 mb-5">Login</h1>
+        <h1 className="text-2xl font-semibold text-gray-900 mb-5">{t("auth.login")}</h1>
         {reasonMessage && (
           <p className="mb-4 rounded bg-blue-50 border border-blue-200 text-blue-700 px-3 py-2 text-sm">
             {reasonMessage}
@@ -63,7 +65,7 @@ function LoginPageInner() {
         )}
 
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Email
+          {t("auth.email")}
         </label>
         <input
           type="email"
@@ -75,7 +77,7 @@ function LoginPageInner() {
         />
 
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Password
+          {t("auth.password")}
         </label>
         <input
           type="password"
@@ -97,16 +99,15 @@ function LoginPageInner() {
           disabled={loading}
           className="w-full rounded bg-blue-600 text-white py-2 font-medium disabled:opacity-60"
         >
-          {loading ? "Signing in..." : "Sign in"}
+          {loading ? t("auth.signingIn") : t("auth.login")}
         </button>
 
         <p className="mt-4 text-center text-sm text-gray-600">
-          Нет аккаунта?{" "}
           <Link
             href="/register"
             className="font-medium text-blue-600 hover:underline"
           >
-            Регистрация
+            {t("auth.register")}
           </Link>
         </p>
       </form>

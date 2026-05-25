@@ -18,6 +18,7 @@ import {
 } from "@/src/lib/api";
 import { getStoredCompanyId, readEnvCompanyId } from "@/src/lib/auth";
 import { useAuth } from "@/src/components/auth/AuthProvider";
+import { translate } from "@/src/i18n/translate";
 import type { AutomationSettings } from "@/src/lib/autoTaskRules";
 
 type SettingsContextValue = {
@@ -94,7 +95,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         console.log("SETTINGS AFTER SET", next);
         return next;
       });
-      setError("Failed to load settings. Using safe defaults.");
+      setError(translate("settings.failedLoad"));
     } finally {
       if (requestId === requestIdRef.current) {
         setLoading(false);
@@ -138,7 +139,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             return next;
           });
         }
-        setError("Failed to save setting. Please try again.");
+        setError(translate("settings.failedSave"));
         throw e;
       } finally {
         setSaving(false);

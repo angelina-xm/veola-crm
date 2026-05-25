@@ -3,14 +3,17 @@
 import Link from "next/link";
 import { cn } from "@/src/lib/cn";
 import { formatRelative } from "@/src/lib/formatRelative";
-import { COPY, ROUTES } from "@/src/lib/product";
+import { ROUTES } from "@/src/lib/product";
+import { useTranslation } from "@/src/context/LocaleContext";
+import { translate } from "@/src/i18n/translate";
 import { activityFeedBadge } from "@/src/lib/taskSemantics";
 import type { AnalyticsV1FeedItem } from "@/src/types";
 
 function feedTitle(item: AnalyticsV1FeedItem): string {
   if (item.deal_title) return item.deal_title;
-  if (item.author_email) return item.author_email.split("@")[0] ?? "Team";
-  return "Workspace";
+  if (item.author_email)
+    return item.author_email.split("@")[0] ?? translate("activity.team");
+  return translate("activity.workspace");
 }
 
 function feedDescription(item: AnalyticsV1FeedItem): string {
@@ -18,17 +21,17 @@ function feedDescription(item: AnalyticsV1FeedItem): string {
   if (text) return text;
   switch (item.kind) {
     case "deal_won":
-      return "Deal won";
+      return translate("activity.dealWon");
     case "deal_moved":
-      return "Deal moved";
+      return translate("activity.dealMoved");
     case "task_completed":
-      return "Task completed";
+      return translate("activity.taskCompleted");
     case "task_open":
-      return "Task created";
+      return translate("activity.taskCreated");
     case "note_added":
-      return "Note added";
+      return translate("activity.noteAdded");
     default:
-      return "Activity logged";
+      return translate("activity.activityLogged");
   }
 }
 
@@ -50,22 +53,24 @@ export default function RecentActivityFeed({
   items: AnalyticsV1FeedItem[];
   loading?: boolean;
 }) {
+  const { t } = useTranslation();
+
   return (
     <section className="vx-card">
       <div className="vx-card-head">
         <div>
           <h2 className="text-[13px] font-semibold text-[var(--vx-text)]">
-            Recent activity
+            {t("dashboard.recentActivity")}
           </h2>
           <p className="mt-0.5 text-[11px] text-[var(--vx-text-muted)]">
-            Latest across deals and follow-ups
+            {t("dashboard.recentActivityHint")}
           </p>
         </div>
         <Link
           href={ROUTES.deals}
           className="text-xs font-medium text-[var(--vx-accent)] hover:text-[var(--vx-accent-hover)]"
         >
-          {COPY.viewDeals}
+          {t("copy.viewDeals")}
         </Link>
       </div>
       {loading ? (
